@@ -1,3 +1,15 @@
+---
+title: Autonomous Executive Email Copilot
+emoji: "📧"
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: "1.35.0"
+python_version: "3.10"
+app_file: streamlit_app.py
+pinned: false
+---
+
 # Autonomous Executive Email Copilot
 
 Autonomous Executive Email Copilot is an OpenEnv-style environment that simulates executive inbox management under time pressure and business risk.
