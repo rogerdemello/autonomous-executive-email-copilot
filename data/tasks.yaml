@@ -1,0 +1,13 @@
+tasks:
+  - id: easy_classification
+    name: Email Classification
+    difficulty: easy
+    description: Classify emails as spam, normal, or urgent.
+  - id: medium_prioritization
+    name: Inbox Prioritization
+    difficulty: medium
+    description: Rank emails by urgency and business value under deadlines.
+  - id: hard_full_management
+    name: Full Email Management
+    difficulty: hard
+    description: Classify, choose actions, draft replies, and manage risk/time.

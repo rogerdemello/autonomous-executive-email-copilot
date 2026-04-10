@@ -1,0 +1,44 @@
+action_cost_minutes:
+  classify: 2
+  reply: 8
+  defer: 1
+  escalate: 3
+  prioritize: 4
+
+persona_profiles:
+  strict_ceo:
+    deadline_penalty_multiplier: 1.35
+    terminal_penalty_multiplier: 1.35
+    urgent_defer_penalty_multiplier: 1.2
+    redundant_penalty_multiplier: 1.1
+  balanced:
+    deadline_penalty_multiplier: 1.0
+    terminal_penalty_multiplier: 1.0
+    urgent_defer_penalty_multiplier: 1.0
+    redundant_penalty_multiplier: 1.0
+  chill_manager:
+    deadline_penalty_multiplier: 0.65
+    terminal_penalty_multiplier: 0.7
+    urgent_defer_penalty_multiplier: 0.85
+    redundant_penalty_multiplier: 0.9
+
+classifier_terms:
+  spam:
+    - discount
+    - subscribe
+    - offer
+    - register now
+    - limited deal
+  urgent:
+    - urgent
+    - asap
+    - immediately
+    - outage
+    - failed
+    - mismatch
+
+agent_config:
+  model: gpt-4o-mini
+  temperature: 0.2
+  timeout_seconds: 30.0
+  max_tokens: 1000

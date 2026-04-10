@@ -1,0 +1,77 @@
+time_budget: 90
+risk_level: low
+emails:
+  - id: e1
+    sender: deals@clientco.com
+    sender_role: client
+    subject: "URGENT: Contract redlines needed"
+    body: Need final legal redlines in 2 hours.
+    priority_hint: high
+    deadline_minutes: 120
+    business_value: 0.95
+    risk_tag: legal
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [redlines, timeline]
+    critical: true
+  - id: e2
+    sender: newsletter@randomsite.com
+    sender_role: unknown
+    subject: Top 50 productivity hacks
+    body: Subscribe now and save 80 percent.
+    priority_hint: low
+    deadline_minutes: 1000
+    business_value: 0.05
+    expected_label: spam
+    expected_action: ignore
+  - id: e3
+    sender: finance@company.com
+    sender_role: internal
+    subject: Budget review tomorrow
+    body: Please review Q2 budget draft before tomorrow noon.
+    priority_hint: medium
+    deadline_minutes: 720
+    business_value: 0.7
+    risk_tag: finance
+    expected_label: normal
+    expected_action: defer
+  - id: e4
+    sender: vendor@supply.com
+    sender_role: vendor
+    subject: Invoice reminder
+    body: Invoice 7821 pending for 14 days.
+    priority_hint: medium
+    deadline_minutes: 480
+    business_value: 0.4
+    risk_tag: finance
+    expected_label: normal
+    expected_action: reply
+    expected_reply_keywords: [invoice, payment]
+  - id: e5
+    sender: security@company.com
+    sender_role: internal
+    subject: Security patch verification
+    body: Confirm executive laptop patch completion by EOD.
+    priority_hint: high
+    deadline_minutes: 300
+    business_value: 0.8
+    risk_tag: security
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [confirmed, patch]
+    critical: true
+interruptions:
+  - trigger_minute_range: [24, 30]
+    email:
+      id: e6
+      sender: exec.assistant@company.com
+      sender_role: internal
+      subject: Quick approval needed for travel hold
+      body: Approve reservation hold in the next hour.
+      priority_hint: medium
+      deadline_minutes: 70
+      business_value: 0.55
+      risk_tag: ops
+      expected_label: normal
+      expected_action: reply
+      expected_reply_keywords: [approve, travel]

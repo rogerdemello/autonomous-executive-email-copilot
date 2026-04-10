@@ -1,0 +1,129 @@
+time_budget: 180
+risk_level: high
+emails:
+  - id: h1
+    sender: major.client@clientco.com
+    sender_role: client
+    subject: "URGENT: Contract liability term mismatch"
+    body: Clause 14 differs from discussed terms. Need fix before signing call.
+    priority_hint: high
+    deadline_minutes: 90
+    business_value: 0.98
+    risk_tag: legal
+    expected_label: urgent
+    expected_action: escalate
+    recommended_escalation: legal_team
+    expected_reply_keywords: [legal, review, today]
+    critical: true
+  - id: h2
+    sender: security@company.com
+    sender_role: internal
+    subject: Potential credential leak
+    body: Suspicious sign-in on executive account. Confirm reset approval.
+    priority_hint: high
+    deadline_minutes: 60
+    business_value: 0.95
+    risk_tag: security
+    expected_label: urgent
+    expected_action: escalate
+    recommended_escalation: chief_of_staff
+    expected_reply_keywords: [reset, approved]
+    critical: true
+  - id: h3
+    sender: finance.controller@company.com
+    sender_role: internal
+    subject: Wire transfer approval needed
+    body: Approve vendor transfer before banking cutoff.
+    priority_hint: high
+    deadline_minutes: 75
+    business_value: 0.88
+    risk_tag: finance
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [approve, transfer]
+    critical: true
+  - id: h4
+    sender: team.lead@company.com
+    sender_role: internal
+    subject: Quarterly hiring plan draft
+    body: Please review by Friday.
+    priority_hint: medium
+    deadline_minutes: 2880
+    business_value: 0.45
+    risk_tag: ops
+    expected_label: normal
+    expected_action: defer
+  - id: h5
+    sender: billing@cloudvendor.com
+    sender_role: vendor
+    subject: Subscription renewal failure
+    body: Card charge failed. Service pauses in 48 hours.
+    priority_hint: medium
+    deadline_minutes: 2880
+    business_value: 0.7
+    risk_tag: finance
+    expected_label: normal
+    expected_action: reply
+    expected_reply_keywords: [renewal, payment]
+  - id: h6
+    sender: newsletter@shopping-site.com
+    sender_role: unknown
+    subject: Exclusive discount for executives
+    body: Click here for premium offers.
+    priority_hint: low
+    deadline_minutes: 9999
+    business_value: 0.05
+    expected_label: spam
+    expected_action: ignore
+  - id: h7
+    sender: partner.ops@partnerco.com
+    sender_role: client
+    subject: Integration outage report
+    body: API errors rising. Need ETA and mitigation plan.
+    priority_hint: high
+    deadline_minutes: 110
+    business_value: 0.84
+    risk_tag: ops
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [eta, mitigation]
+  - id: h8
+    sender: press@media.org
+    sender_role: unknown
+    subject: Interview request
+    body: Can we schedule a 20-minute interview next week?
+    priority_hint: low
+    deadline_minutes: 4320
+    business_value: 0.4
+    expected_label: normal
+    expected_action: defer
+interruptions:
+  - trigger_minute_range: [20, 30]
+    email:
+      id: i1
+      sender: legal.ops@company.com
+      sender_role: internal
+      subject: Follow-up from partner counsel
+      body: Need acknowledgement before filing window closes.
+      priority_hint: low
+      deadline_minutes: 45
+      business_value: 0.9
+      risk_tag: legal
+      expected_label: urgent
+      expected_action: escalate
+      recommended_escalation: legal_team
+      expected_reply_keywords: [legal, acknowledge]
+      critical: true
+  - trigger_minute_range: [60, 72]
+    email:
+      id: i2
+      sender: ops.pm@company.com
+      sender_role: internal
+      subject: Status check on office move checklist
+      body: Can you confirm review by end of week?
+      priority_hint: low
+      deadline_minutes: 1440
+      business_value: 0.35
+      risk_tag: ops
+      expected_label: normal
+      expected_action: defer

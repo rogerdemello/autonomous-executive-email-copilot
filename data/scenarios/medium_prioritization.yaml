@@ -1,0 +1,89 @@
+time_budget: 140
+risk_level: medium
+emails:
+  - id: m1
+    sender: ceo.office@company.com
+    sender_role: internal
+    subject: Board prep deck updates
+    body: Need revised slides before 5 PM.
+    priority_hint: high
+    deadline_minutes: 240
+    business_value: 0.9
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [deck, updated]
+  - id: m2
+    sender: client.apac@clientco.com
+    sender_role: client
+    subject: Renewal terms clarification
+    body: Please confirm pricing tiers by tomorrow.
+    priority_hint: high
+    deadline_minutes: 600
+    business_value: 0.92
+    risk_tag: legal
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [pricing, confirm]
+    critical: true
+  - id: m3
+    sender: marketing@company.com
+    sender_role: internal
+    subject: Draft campaign taglines
+    body: Need quick review of 3 options this week.
+    priority_hint: low
+    deadline_minutes: 1800
+    business_value: 0.3
+    expected_label: normal
+    expected_action: defer
+  - id: m4
+    sender: alerts@bank.com
+    sender_role: vendor
+    subject: Payment failed for cloud subscription
+    body: Retry required in 24h to prevent service interruption.
+    priority_hint: high
+    deadline_minutes: 1440
+    business_value: 0.85
+    risk_tag: finance
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [retry, payment]
+  - id: m5
+    sender: events@conference.org
+    sender_role: unknown
+    subject: Register now for summit
+    body: Early bird registration offer.
+    priority_hint: low
+    deadline_minutes: 5000
+    business_value: 0.1
+    expected_label: spam
+    expected_action: ignore
+  - id: m6
+    sender: legal@company.com
+    sender_role: internal
+    subject: NDA clause approval
+    body: Approve revised NDA clause for strategic partner.
+    priority_hint: medium
+    deadline_minutes: 900
+    business_value: 0.8
+    risk_tag: legal
+    expected_label: normal
+    expected_action: escalate
+    recommended_escalation: legal_team
+    critical: true
+interruptions:
+  - trigger_minute_range: [26, 34]
+    email:
+      id: m7
+      sender: client.eu@clientco.com
+      sender_role: client
+      subject: "Escalation: pricing mismatch in draft"
+      body: Need immediate clarification before procurement review.
+      priority_hint: high
+      deadline_minutes: 95
+      business_value: 0.9
+      risk_tag: legal
+      expected_label: urgent
+      expected_action: escalate
+      recommended_escalation: legal_team
+      expected_reply_keywords: [clarification, pricing]
+      critical: true
