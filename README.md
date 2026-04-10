@@ -196,12 +196,15 @@ Hugging Face Spaces (Azure OpenAI) recommended secrets:
 API_BASE_URL="https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
 MODEL_NAME="gpt-4o"
 HF_TOKEN="<azure-api-key>"
+APP_API_BASE_URL="http://127.0.0.1:8000"
 ```
 
 Notes:
 
 - API_BASE_URL must include `/openai/deployments/<deployment>` for Azure with the OpenAI client.
 - If `api-version` is omitted, code auto-adds `2024-02-15-preview` (or `AZURE_API_VERSION` if set).
+- APP_API_BASE_URL is used by the Streamlit dashboard to call this app's FastAPI endpoints (`/health`, `/tasks`, `/baseline`, etc.).
+- Do not set APP_API_BASE_URL to Azure/OpenAI endpoints.
 - Keep temperature low (0.1 to 0.2) for stable hackathon runs.
 
 Run AI baseline:

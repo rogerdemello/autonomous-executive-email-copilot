@@ -11,7 +11,36 @@ import streamlit as st
 import uvicorn
 
 
-DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+def _default_dashboard_api_base() -> str:
+    app_api_base = os.getenv("APP_API_BASE_URL", "").strip()
+    if app_api_base:
+        return app_api_base.rstrip("/")
+
+    legacy_api_base = os.getenv("API_BASE_URL", "").strip()
+    if legacy_api_base:
+        parsed = urlparse(legacy_api_base)
+        if parsed.hostname in {"127.0.0.1", "localhost"}:
+            return legacy_api_base.rstrip("/")
+
+    return "http://127.0.0.1:8000"
+
+
+def _looks_like_llm_provider_url(api_base: str) -> bool:
+    parsed = urlparse(api_base)
+    host = (parsed.hostname or "").lower()
+    path = (parsed.path or "").lower()
+    return (
+        "openai.azure.com" in host
+        or "api.openai.com" in host
+        or "/openai/deployments/" in path
+    )
+
+
+def _api_url(api_base: str, path: str) -> str:
+    return f"{api_base.rstrip('/')}{path}"
+
+
+DEFAULT_API_BASE = _default_dashboard_api_base()
 
 
 def _is_local_api_base(api_base: str) -> bool:
@@ -22,7 +51,7 @@ def _is_local_api_base(api_base: str) -> bool:
 def _health_ok(api_base: str, timeout: float = 1.0) -> bool:
     try:
         with httpx.Client(timeout=timeout) as client:
-            response = client.get(f"{api_base}/health")
+            response = client.get(_api_url(api_base, "/health"))
             return response.status_code == 200
     except Exception:  # noqa: BLE001
         return False
@@ -75,16 +104,21 @@ st.caption("Interactive control center for tasks, grading, baseline runs, and le
 with st.sidebar:
     st.header("Connection")
     api_base = st.text_input("API Base URL", value=DEFAULT_API_BASE)
+    if _looks_like_llm_provider_url(api_base):
+        st.error(
+            "This looks like an LLM provider URL, not the app API. "
+            "Use APP_API_BASE_URL for the dashboard API (default: http://127.0.0.1:8000)."
+        )
     if _is_local_api_base(api_base) and not _health_ok(api_base):
         if _start_local_api_server(api_base):
             st.success(f"Local API auto-started at {api_base}")
         else:
-            st.warning("Could not auto-start local API. Verify API_BASE_URL and port settings.")
+            st.warning("Could not auto-start local API. Verify APP_API_BASE_URL and port settings.")
     check_health = st.button("Check API Health")
 
 if check_health:
     try:
-        health = _get(f"{api_base}/health")
+        health = _get(_api_url(api_base, "/health"))
         st.success(f"API connected: {health}")
     except Exception as exc:  # noqa: BLE001
         st.error(f"API health check failed: {exc}")
@@ -99,14 +133,14 @@ with overview_tab:
     col1, col2 = st.columns(2)
     with col1:
         try:
-            health = _get(f"{api_base}/health")
+            health = _get(_api_url(api_base, "/health"))
             st.success("API is online")
             st.json(health)
         except Exception as exc:  # noqa: BLE001
             st.error(f"API unavailable: {exc}")
     with col2:
         st.info("Open API docs at /docs")
-        st.code(f"{api_base}/docs", language="text")
+        st.code(_api_url(api_base, "/docs"), language="text")
 
     st.subheader("Quick Start")
     st.markdown(
@@ -124,7 +158,7 @@ with tasks_tab:
         st.rerun()
 
     try:
-        data = _get(f"{api_base}/tasks")
+        data = _get(_api_url(api_base, "/tasks"))
         st.success("Loaded task metadata")
         st.dataframe(data.get("tasks", []), use_container_width=True)
 
@@ -163,7 +197,7 @@ with baseline_tab:
             "max_steps": int(max_steps),
         }
         try:
-            result = _post(f"{api_base}/baseline", payload)
+            result = _post(_api_url(api_base, "/baseline"), payload)
             st.success("Baseline run complete")
 
             m1, m2, m3 = st.columns(3)
@@ -218,7 +252,7 @@ with leaderboard_tab:
                 "csv_out": csv_out or None,
             }
             try:
-                data = _post(f"{api_base}/leaderboard", payload)
+                data = _post(_api_url(api_base, "/leaderboard"), payload)
                 st.success("Leaderboard generated")
                 st.dataframe(data.get("rows", []), use_container_width=True)
 
@@ -257,7 +291,7 @@ with grader_tab:
                 "persona": g_persona,
                 "actions": parsed_actions,
             }
-            result = _post(f"{api_base}/grader", payload)
+            result = _post(_api_url(api_base, "/grader"), payload)
             st.success("Trajectory scored")
             st.json(result)
         except Exception as exc:  # noqa: BLE001
@@ -357,12 +391,12 @@ with ai_demo_tab:
                 # Run baseline first
                 baseline_payload = payload.copy()
                 baseline_payload["mode"] = "baseline"
-                baseline_result = _post(f"{api_base}/baseline", baseline_payload)
+                baseline_result = _post(_api_url(api_base, "/baseline"), baseline_payload)
                 
                 # Run LLM
                 llm_payload = payload.copy()
                 llm_payload["mode"] = "llm"
-                llm_result = _post(f"{api_base}/baseline", llm_payload)
+                llm_result = _post(_api_url(api_base, "/baseline"), llm_payload)
                 
                 # Display comparison
                 st.success("Comparison run complete")
@@ -444,7 +478,7 @@ with ai_demo_tab:
                 
             else:
                 # Original single-mode behavior
-                result = _post(f"{api_base}/baseline", payload)
+                result = _post(_api_url(api_base, "/baseline"), payload)
                 st.success("AI Demo run complete")
 
                 m1, m2, m3 = st.columns(3)
