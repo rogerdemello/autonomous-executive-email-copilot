@@ -9,7 +9,7 @@
 | ✅ Dockerfile exists | Ready | 11 lines, Python 3.12-slim |
 | ✅ 3 tasks with graders | Ready | easy/medium/hard |
 | ✅ All tests pass | Ready | 40/40 tests |
-| ⚠️ HF_TOKEN set | TODO | Needed for API calls |
+| ✅ Runtime secrets documented | Ready | API_BASE_URL, MODEL_NAME, HF_TOKEN, APP_API_BASE_URL |
 
 ---
 
@@ -35,9 +35,11 @@ CMD ["uvicorn", "env.api:app", "--host", "0.0.0.0", "--port", "8000"]
 ### Environment Variables (Required for HF Space)
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `API_BASE_URL` | LLM endpoint | `https://api.openai.com/v1` |
+| `APP_API_BASE_URL` | Dashboard -> FastAPI URL | `http://127.0.0.1:8000` |
+| `API_BASE_URL` | LLM provider endpoint | `https://api.openai.com/v1` |
 | `MODEL_NAME` | Model ID | `gpt-4o-mini` |
 | `HF_TOKEN` | API key | `hf_...` |
+| `AZURE_API_VERSION` (optional) | Azure API version override | `2024-02-15-preview` |
 
 ---
 
@@ -59,7 +61,7 @@ ls -la inference.py openenv.yaml Dockerfile README.md requirements.txt
    - **Space name**: `email-copilot-env` (or your choice)
    - **License**: MIT
    - **Visibility**: Public (or Private)
-   - **SDK**: Docker
+   - **SDK**: Streamlit
    - **Hardware**: CPU (2 vCPU, 8GB RAM)
 
 ### Step 3: Add Secrets (Environment Variables)
@@ -68,7 +70,8 @@ In your HF Space settings, add these secrets:
 
 | Secret | Value |
 |--------|-------|
-| `API_BASE_URL` | `https://api.openai.com/v1` (or your LLM endpoint) |
+| `APP_API_BASE_URL` | `http://127.0.0.1:8000` |
+| `API_BASE_URL` | `https://api.openai.com/v1` (or Azure/OpenAI endpoint) |
 | `MODEL_NAME` | `gpt-4o-mini` |
 | `HF_TOKEN` | Your OpenAI/HF API key |
 
@@ -96,14 +99,10 @@ huggingface-cli upload-space email-copilot-env . --token HF_TOKEN
 
 Test your Space:
 
-```bash
-# Test the reset endpoint
-curl -X POST https://<your-space>.hf.space/reset \
-  -H "Content-Type: application/json" \
-  -d '{"task_id": "easy_classification"}'
-```
-
-Expected response should return an observation.
+1. Open the Space URL and confirm the Overview tab shows API online.
+2. In the sidebar, confirm API Base URL is `http://127.0.0.1:8000`.
+3. Click **Check API Health**.
+4. Open docs at `http://127.0.0.1:8000/docs`.
 
 ---
 
@@ -128,9 +127,10 @@ Your inference.py must:
 - Ensure requirements.txt is valid
 - Check build logs in HF Space
 
-### /reset Returns 404
-- Verify endpoint path in env/api.py
-- Check uvicorn is running on port 8000
+### /health Returns 404 or Connection Refused
+- Verify `APP_API_BASE_URL` is set to `http://127.0.0.1:8000`
+- Do not set dashboard API URL to Azure/OpenAI provider URL
+- Check Space runtime logs for FastAPI auto-start failures
 
 ### API Errors
 - Verify HF_TOKEN is set in Space secrets
@@ -173,16 +173,14 @@ export MODEL_NAME="gpt-4o-mini"
 export HF_TOKEN="sk-..."
 python inference.py
 
-# 2. Build Docker
-docker build -t email-env .
+# 2. Test API locally
+uvicorn env.api:app --host 0.0.0.0 --port 8000
 
-# 3. Run Docker
-docker run -p 8000:8000 email-env
+# 3. Test health and tasks
+curl http://localhost:8000/health
+curl http://localhost:8000/tasks
 
-# 4. Test API
-curl -X POST http://localhost:8000/reset -H "Content-Type: application/json" -d '{"task_id": "easy_classification"}'
-
-# 5. Run all tests
+# 4. Run all tests
 python -m pytest -q
 ```
 
