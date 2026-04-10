@@ -190,6 +190,20 @@ export MODEL_NAME="gpt-4o-mini"
 export HF_TOKEN="sk-..."  # Or use OPENAI_API_KEY as fallback
 ```
 
+Hugging Face Spaces (Azure OpenAI) recommended secrets:
+
+```bash
+API_BASE_URL="https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
+MODEL_NAME="gpt-4o"
+HF_TOKEN="<azure-api-key>"
+```
+
+Notes:
+
+- API_BASE_URL must include `/openai/deployments/<deployment>` for Azure with the OpenAI client.
+- If `api-version` is omitted, code auto-adds `2024-02-15-preview` (or `AZURE_API_VERSION` if set).
+- Keep temperature low (0.1 to 0.2) for stable hackathon runs.
+
 Run AI baseline:
 
 ```bash

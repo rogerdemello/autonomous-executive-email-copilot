@@ -6,6 +6,7 @@ import json
 import os
 import time
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from openai import OpenAI
 
@@ -22,6 +23,7 @@ from .models import (
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT_SECONDS = 30.0
+DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
 
 # System prompt for AI Chief of Staff
 SYSTEM_PROMPT = """You are an AI Chief of Staff helping an executive manage their inbox efficiently.
@@ -55,6 +57,39 @@ Output your decision as JSON with these fields:
 - priority_order: (optional) list of email IDs in order (for prioritize)
 - escalate_to: (optional) "legal_team" | "chief_of_staff" (for escalate)
 """
+
+
+def _normalize_openai_base_url(api_base_url: str) -> str:
+    """Normalize API base URL for OpenAI and Azure OpenAI compatibility."""
+    cleaned = api_base_url.strip()
+    if not cleaned:
+        return "https://api.openai.com/v1"
+
+    parsed = urlsplit(cleaned)
+    host = (parsed.netloc or "").lower()
+
+    if "openai.azure.com" not in host:
+        return cleaned
+
+    if "/openai/deployments/" not in parsed.path:
+        raise ValueError(
+            "Azure API_BASE_URL must include /openai/deployments/<deployment>. "
+            "Example: https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
+        )
+
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if "api-version" not in query:
+        query["api-version"] = os.environ.get("AZURE_API_VERSION", DEFAULT_AZURE_API_VERSION)
+
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(query),
+            parsed.fragment,
+        )
+    )
 
 
 def _build_user_prompt(observation: Observation) -> str:
@@ -223,7 +258,9 @@ class LLMAgent:
         """Lazy initialization of OpenAI client."""
         if self._client is None:
             # Get API configuration from environment variables
-            api_base_url = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+            api_base_url = _normalize_openai_base_url(
+                os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+            )
             api_key = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
             
             if not api_key:

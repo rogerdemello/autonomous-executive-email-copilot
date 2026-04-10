@@ -6,3 +6,4 @@ httpx
 scipy
 pytest
 streamlit
+openai

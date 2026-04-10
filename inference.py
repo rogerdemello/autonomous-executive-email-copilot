@@ -3,11 +3,48 @@
 
 import os
 import sys
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from openai import OpenAI
 
 from env.environment import ExecutiveEmailEnv
 from env.models import Action
+
+
+DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
+
+
+def _normalize_openai_base_url(api_base_url: str) -> str:
+    """Normalize API base URL for OpenAI and Azure OpenAI compatibility."""
+    cleaned = api_base_url.strip()
+    if not cleaned:
+        return "https://api.openai.com/v1"
+
+    parsed = urlsplit(cleaned)
+    host = (parsed.netloc or "").lower()
+
+    if "openai.azure.com" not in host:
+        return cleaned
+
+    if "/openai/deployments/" not in parsed.path:
+        raise ValueError(
+            "Azure API_BASE_URL must include /openai/deployments/<deployment>. "
+            "Example: https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
+        )
+
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if "api-version" not in query:
+        query["api-version"] = os.environ.get("AZURE_API_VERSION", DEFAULT_AZURE_API_VERSION)
+
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(query),
+            parsed.fragment,
+        )
+    )
 
 
 def main(task: str = "hard_full_management", max_steps: int = 100):
@@ -18,7 +55,9 @@ def main(task: str = "hard_full_management", max_steps: int = 100):
         max_steps: Maximum number of steps to run
     """
     # Configuration from environment variables
-    api_base_url = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+    api_base_url = _normalize_openai_base_url(
+        os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+    )
     model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
     hf_token = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
     
@@ -62,7 +101,7 @@ def main(task: str = "hard_full_management", max_steps: int = 100):
                     {"role": "system", "content": "You are an executive email assistant. Analyze the inbox and take appropriate actions."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
+                temperature=0.2,
                 max_tokens=500,
             )
             action_text = response.choices[0].message.content

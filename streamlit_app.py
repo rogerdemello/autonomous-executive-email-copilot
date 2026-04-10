@@ -1,12 +1,56 @@
 from __future__ import annotations
 
 import json
+import os
+import threading
+import time
+from urllib.parse import urlparse
 
 import httpx
 import streamlit as st
+import uvicorn
 
 
-DEFAULT_API_BASE = "http://127.0.0.1:8000"
+DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+
+
+def _is_local_api_base(api_base: str) -> bool:
+    parsed = urlparse(api_base)
+    return parsed.hostname in {"127.0.0.1", "localhost"}
+
+
+def _health_ok(api_base: str, timeout: float = 1.0) -> bool:
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            response = client.get(f"{api_base}/health")
+            return response.status_code == 200
+    except Exception:  # noqa: BLE001
+        return False
+
+
+@st.cache_resource(show_spinner=False)
+def _start_local_api_server(api_base: str) -> bool:
+    if not _is_local_api_base(api_base):
+        return False
+
+    if _health_ok(api_base):
+        return True
+
+    parsed = urlparse(api_base)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 8000
+
+    config = uvicorn.Config("env.api:app", host=host, port=port, reload=False, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True, name="embedded-fastapi")
+    thread.start()
+
+    for _ in range(40):
+        if _health_ok(api_base, timeout=0.5):
+            return True
+        time.sleep(0.25)
+
+    return False
 
 
 def _get(url: str) -> dict:
@@ -31,6 +75,11 @@ st.caption("Interactive control center for tasks, grading, baseline runs, and le
 with st.sidebar:
     st.header("Connection")
     api_base = st.text_input("API Base URL", value=DEFAULT_API_BASE)
+    if _is_local_api_base(api_base) and not _health_ok(api_base):
+        if _start_local_api_server(api_base):
+            st.success(f"Local API auto-started at {api_base}")
+        else:
+            st.warning("Could not auto-start local API. Verify API_BASE_URL and port settings.")
     check_health = st.button("Check API Health")
 
 if check_health:
