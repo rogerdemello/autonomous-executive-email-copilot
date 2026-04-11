@@ -5,9 +5,11 @@ from fastapi.responses import HTMLResponse, Response
 
 from baseline.leaderboard import build_leaderboard
 from baseline.run_baseline import run as run_baseline
+from .environment import ExecutiveEmailEnv
 from .grader import evaluate_trajectory
 from .models import (
     Action,
+    ActionResult,
     BaselineRequest,
     BaselineResponse,
     GraderRequest,
@@ -15,11 +17,14 @@ from .models import (
     LeaderboardRequest,
     LeaderboardResponse,
     Observation,
+    ResetRequest,
+    StateSnapshot,
     TasksResponse,
 )
 from .tasks import list_tasks
 
 app = FastAPI(title="Autonomous Executive Email Copilot", version="0.1.0")
+runtime_env = ExecutiveEmailEnv()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -73,6 +78,27 @@ def tasks() -> TasksResponse:
         action_schema=Action.model_json_schema(),
         observation_schema=Observation.model_json_schema(),
     )
+
+
+@app.post("/reset", response_model=Observation)
+def reset(request: ResetRequest) -> Observation:
+    return runtime_env.reset(task_id=request.task_id, seed=request.seed, persona=request.persona)
+
+
+@app.post("/step", response_model=ActionResult)
+def step(action: Action) -> ActionResult:
+    return runtime_env.step(action)
+
+
+@app.get("/state", response_model=StateSnapshot)
+def state() -> StateSnapshot:
+    return runtime_env.state()
+
+
+@app.post("/state", response_model=StateSnapshot)
+def state_post() -> StateSnapshot:
+    # Keep POST variant for compatibility with method-style runtime checks.
+    return runtime_env.state()
 
 
 @app.post("/grader", response_model=GraderResponse)

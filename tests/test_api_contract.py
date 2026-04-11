@@ -19,6 +19,41 @@ def test_tasks_endpoint_and_persona_surface() -> None:
     assert "remaining_interruptions" in observation_schema["properties"]
 
 
+def test_runtime_reset_step_state_endpoints() -> None:
+    reset_response = client.post(
+        "/reset",
+        json={
+            "task_id": "easy_classification",
+            "seed": 42,
+            "persona": "balanced",
+        },
+    )
+    assert reset_response.status_code == 200
+    observation = reset_response.json()
+    assert "emails" in observation
+    assert observation["persona"] == "balanced"
+
+    first_email_id = observation["emails"][0]["id"]
+    step_response = client.post(
+        "/step",
+        json={
+            "action_type": "classify",
+            "email_id": first_email_id,
+            "label": "normal",
+        },
+    )
+    assert step_response.status_code == 200
+    step_payload = step_response.json()
+    assert "observation" in step_payload
+    assert "reward" in step_payload
+    assert "done" in step_payload
+
+    state_response = client.post("/state", json={})
+    assert state_response.status_code == 200
+    state_payload = state_response.json()
+    assert state_payload["task_id"] == "easy_classification"
+
+
 def test_interruptions_arrive_mid_episode() -> None:
     env = ExecutiveEmailEnv(task_id="hard_full_management", seed=42, persona="balanced")
     observation = env.reset(task_id="hard_full_management", seed=42, persona="balanced")

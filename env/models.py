@@ -96,6 +96,12 @@ class TasksResponse(BaseModel):
     observation_schema: dict[str, Any]
 
 
+class ResetRequest(BaseModel):
+    task_id: str = "hard_full_management"
+    seed: int = 42
+    persona: PersonaType = "balanced"
+
+
 class AIDecisionTrace(BaseModel):
     reason: str
     confidence: float = Field(ge=0.0, le=1.0)

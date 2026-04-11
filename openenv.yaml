@@ -19,6 +19,9 @@ tasks:
   - id: hard_full_management
     difficulty: hard
 endpoints:
+  - path: /reset
+  - path: /step
+  - path: /state
   - path: /tasks
   - path: /grader
   - path: /baseline
