@@ -8,10 +8,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from openai import OpenAI
 
 from env.environment import ExecutiveEmailEnv
+from env.grader import evaluate_trajectory
 from env.models import Action
 
 
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
+DEFAULT_TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 
 
 def _normalize_openai_base_url(api_base_url: str) -> str:
@@ -47,7 +49,70 @@ def _normalize_openai_base_url(api_base_url: str) -> str:
     )
 
 
-def main(task: str = "hard_full_management", max_steps: int = 100):
+def _run_single_task(task: str, max_steps: int, client: OpenAI, model_name: str) -> float:
+    """Run inference for one task and print structured logs."""
+    env = ExecutiveEmailEnv(task_id=task, seed=42, persona="balanced")
+    env.reset(task_id=task, seed=42, persona="balanced")
+
+    print(f"[START] task={task} env=local model={model_name}")
+
+    step_count = 0
+    total_reward = 0.0
+    action_trace: list[Action] = []
+
+    while step_count < max_steps:
+        if env._is_done():
+            break
+
+        obs = env._build_observation()
+        prompt = _build_prompt(obs)
+
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an executive email assistant. Analyze the inbox and take appropriate actions.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.2,
+                max_tokens=500,
+            )
+            action_text = response.choices[0].message.content
+            if action_text is None:
+                action_text = ""
+            action = _parse_action(action_text, obs)
+        except Exception as e:
+            print(f"[STEP] step={step_count} action=none reward=0.0 done=False error={str(e)}")
+            step_count += 1
+            continue
+
+        action_trace.append(action)
+        result = env.step(action)
+
+        action_str = f"{action.action_type}"
+        if action.email_id:
+            action_str += f":{action.email_id}"
+        error_str = result.info.get("error", "none")
+
+        print(f"[STEP] step={step_count} action={action_str} reward={result.reward} done={result.done} error={error_str}")
+
+        step_count += 1
+        total_reward += result.reward
+
+        if result.done:
+            break
+
+    graded = evaluate_trajectory(task_id=task, seed=42, actions=action_trace, persona="balanced")
+    score = float(graded.score)
+    success = score >= 0.5
+    print(f"[END] success={success} steps={step_count} score={score:.6f} rewards={total_reward:.4f}")
+    return score
+
+
+def main(task: str | None = None, max_steps: int = 100):
     """Run inference on the Executive Email environment.
     
     Args:
@@ -61,12 +126,6 @@ def main(task: str = "hard_full_management", max_steps: int = 100):
     model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
     hf_token = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
     
-    # Initialize environment
-    env = ExecutiveEmailEnv(task_id=task, seed=42, persona="balanced")
-    observation = env.reset()
-    
-    print(f"[START] task={task} env=local model={model_name}")
-    
     # Initialize OpenAI client
     if not hf_token:
         print("[END] success=False steps=0 score=0.0 rewards=0.0", file=sys.stderr)
@@ -77,73 +136,18 @@ def main(task: str = "hard_full_management", max_steps: int = 100):
         base_url=api_base_url,
         api_key=hf_token,
     )
-    
-    step_count = 0
-    total_reward = 0.0
-    
-    while step_count < max_steps:
-        # Check if done
-        state = env.state()
-        if env._is_done():
-            break
-        
-        # Get current observation
-        obs = env._build_observation()
-        
-        # Build prompt for the LLM
-        prompt = _build_prompt(obs)
-        
-        # Call LLM to get action
-        try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": "You are an executive email assistant. Analyze the inbox and take appropriate actions."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.2,
-                max_tokens=500,
-            )
-            action_text = response.choices[0].message.content
-            if action_text is None:
-                action_text = ""
-            action = _parse_action(action_text, obs)
-        except Exception as e:
-            # Log error and continue
-            print(f"[STEP] step={step_count} action=none reward=0.0 done=False error={str(e)}")
-            step_count += 1
-            continue
-        
-        # Execute action
-        result = env.step(action)
-        
-        # Log step
-        action_str = f"{action.action_type}"
-        if action.email_id:
-            action_str += f":{action.email_id}"
-        error_str = result.info.get("error", "none")
-        
-        print(f"[STEP] step={step_count} action={action_str} reward={result.reward} done={result.done} error={error_str}")
-        
-        step_count += 1
-        total_reward += result.reward
-        
-        if result.done:
-            break
-    
-    # Calculate final score
-    metrics = env.metrics()
-    score = (
-        0.3 * metrics.get("classification_accuracy", 0.0) +
-        0.3 * metrics.get("action_correctness", 0.0) +
-        0.4 * metrics.get("response_quality", 0.0)
-    )
-    
-    # Log end
-    success = score >= 0.5
-    print(f"[END] success={success} steps={step_count} score={score:.4f} rewards={total_reward:.4f}")
-    
-    return score
+
+    task_list = [task] if task else DEFAULT_TASKS
+    last_score = 0.0
+    for current_task in task_list:
+        last_score = _run_single_task(
+            task=current_task,
+            max_steps=max_steps,
+            client=client,
+            model_name=model_name,
+        )
+
+    return last_score
 
 
 def _build_prompt(observation) -> str:
@@ -219,9 +223,12 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Run inference on Executive Email Copilot")
-    parser.add_argument("--task", type=str, default="hard_full_management",
-                        choices=["easy_classification", "medium_prioritization", "hard_full_management"],
-                        help="Task to run")
+    parser.add_argument(
+        "--task",
+        type=str,
+        choices=DEFAULT_TASKS,
+        help="Single task to run. Omit to run all tasks.",
+    )
     parser.add_argument("--max-steps", type=int, default=100,
                         help="Maximum number of steps")
     
