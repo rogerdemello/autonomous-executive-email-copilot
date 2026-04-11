@@ -1,4 +1,37 @@
 .venv/
+venv/
+ENV/
+env.bak/
+env.local/
+
+# Python caches and build artifacts
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Logs and local env files
+*.log
+.env
+.env.*
+
+# IDE/editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local agent/tool outputs
+.playwright-mcp/
+.sisyphus/
+playwright-output/
