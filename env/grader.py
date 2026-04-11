@@ -5,6 +5,9 @@ from .models import Action, GraderResponse, PersonaType
 from .utils import clip_score
 
 
+SCORE_EPSILON = 1e-6
+
+
 def evaluate_trajectory(
     task_id: str,
     seed: int,
@@ -50,11 +53,14 @@ def evaluate_trajectory(
     else:
         raise ValueError(f"Unknown task_id: {task_id}")
 
+    bounded_score = clip_score(score)
+    strict_score = min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, bounded_score))
+
     return GraderResponse(
         task_id=task_id,
         seed=seed,
         persona=persona,
-        score=round(clip_score(score), 6),
+        score=round(strict_score, 6),
         breakdown={k: round(v, 6) for k, v in breakdown.items()},
         total_reward=round(total_reward, 6),
     )
