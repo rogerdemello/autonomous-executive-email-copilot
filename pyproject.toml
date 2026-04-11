@@ -18,7 +18,11 @@ dependencies = [
   "pytest",
   "streamlit",
   "openai",
+  "openenv-core>=0.2.0",
 ]
 
+[project.scripts]
+server = "server.app:main"
+
 [tool.setuptools]
-packages = ["env", "baseline"]
+packages = ["env", "baseline", "server"]
