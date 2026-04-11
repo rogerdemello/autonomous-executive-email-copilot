@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response
 
 from baseline.leaderboard import build_leaderboard
@@ -81,8 +81,9 @@ def tasks() -> TasksResponse:
 
 
 @app.post("/reset", response_model=Observation)
-def reset(request: ResetRequest) -> Observation:
-    return runtime_env.reset(task_id=request.task_id, seed=request.seed, persona=request.persona)
+def reset(request: ResetRequest | None = Body(default=None)) -> Observation:
+    payload = request or ResetRequest()
+    return runtime_env.reset(task_id=payload.task_id, seed=payload.seed, persona=payload.persona)
 
 
 @app.post("/step", response_model=ActionResult)

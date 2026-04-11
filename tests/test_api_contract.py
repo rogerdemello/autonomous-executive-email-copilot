@@ -54,6 +54,14 @@ def test_runtime_reset_step_state_endpoints() -> None:
     assert state_payload["task_id"] == "easy_classification"
 
 
+def test_runtime_reset_accepts_empty_body() -> None:
+    response = client.post("/reset")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "emails" in payload
+    assert payload["persona"] == "balanced"
+
+
 def test_interruptions_arrive_mid_episode() -> None:
     env = ExecutiveEmailEnv(task_id="hard_full_management", seed=42, persona="balanced")
     observation = env.reset(task_id="hard_full_management", seed=42, persona="balanced")
