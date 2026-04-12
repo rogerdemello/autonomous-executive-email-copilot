@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,7 +52,14 @@ def get_classifier_terms() -> tuple[list[str], list[str]]:
 
 
 def clip_score(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    if not math.isfinite(value):
+        return low
     return max(low, min(high, value))
+
+
+def strict_unit_interval(value: float, epsilon: float = 1e-6) -> float:
+    bounded = clip_score(value)
+    return min(1.0 - epsilon, max(epsilon, bounded))
 
 
 def get_persona_profile(persona: str) -> PersonaProfile:

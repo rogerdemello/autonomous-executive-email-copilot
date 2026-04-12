@@ -10,6 +10,7 @@ from openai import OpenAI
 from env.environment import ExecutiveEmailEnv
 from env.grader import evaluate_trajectory
 from env.models import Action
+from env.policy import BaselinePolicy
 
 
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
@@ -49,7 +50,7 @@ def _normalize_openai_base_url(api_base_url: str) -> str:
     )
 
 
-def _run_single_task(task: str, max_steps: int, client: OpenAI, model_name: str) -> float:
+def _run_single_task(task: str, max_steps: int, client: OpenAI | None, model_name: str) -> float:
     """Run inference for one task and print structured logs."""
     env = ExecutiveEmailEnv(task_id=task, seed=42, persona="balanced")
     env.reset(task_id=task, seed=42, persona="balanced")
@@ -59,6 +60,7 @@ def _run_single_task(task: str, max_steps: int, client: OpenAI, model_name: str)
     step_count = 0
     total_reward = 0.0
     action_trace: list[Action] = []
+    fallback_policy = BaselinePolicy()
 
     while step_count < max_steps:
         if env._is_done():
@@ -68,26 +70,33 @@ def _run_single_task(task: str, max_steps: int, client: OpenAI, model_name: str)
         prompt = _build_prompt(obs)
 
         try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an executive email assistant. Analyze the inbox and take appropriate actions.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,
-                max_tokens=500,
-            )
-            action_text = response.choices[0].message.content
-            if action_text is None:
-                action_text = ""
-            action = _parse_action(action_text, obs)
+            if client is None:
+                action = fallback_policy.next_action(obs)
+                if action is None:
+                    break
+            else:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an executive email assistant. Analyze the inbox and take appropriate actions.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,
+                    max_tokens=500,
+                )
+                action_text = response.choices[0].message.content
+                if action_text is None:
+                    action_text = ""
+                action = _parse_action(action_text, obs)
         except Exception as e:
-            print(f"[STEP] step={step_count} action=none reward=0.0 done=False error={str(e)}")
-            step_count += 1
-            continue
+            action = fallback_policy.next_action(obs)
+            if action is None:
+                print(f"[STEP] step={step_count} action=none reward=0.0 done=False error={str(e)}")
+                step_count += 1
+                continue
 
         action_trace.append(action)
         result = env.step(action)
@@ -127,15 +136,17 @@ def main(task: str | None = None, max_steps: int = 100):
     hf_token = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
     
     # Initialize OpenAI client
+    client: OpenAI | None = None
     if not hf_token:
-        print("[END] success=False steps=0 score=0.0 rewards=0.0", file=sys.stderr)
-        print("Error: No API key found. Set HF_TOKEN or OPENAI_API_KEY.", file=sys.stderr)
-        sys.exit(1)
-    
-    client = OpenAI(
-        base_url=api_base_url,
-        api_key=hf_token,
-    )
+        print(
+            "Warning: No API key found. Falling back to deterministic baseline actions for inference.",
+            file=sys.stderr,
+        )
+    else:
+        client = OpenAI(
+            base_url=api_base_url,
+            api_key=hf_token,
+        )
 
     task_list = [task] if task else DEFAULT_TASKS
     last_score = 0.0

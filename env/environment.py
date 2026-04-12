@@ -12,7 +12,6 @@ from .models import (
 )
 from .tasks import build_scenario
 from .utils import (
-    clip_score,
     compute_gold_priority_order,
     compute_pending_actions,
     derive_risk_level,
@@ -20,6 +19,7 @@ from .utils import (
     get_persona_profile,
     ranking_similarity,
     reply_keyword_score,
+    strict_unit_interval,
 )
 
 
@@ -168,11 +168,11 @@ class ExecutiveEmailEnv:
             resolved_ratio = sum(1 for e in non_spam if e.resolved) / len(non_spam)
 
         return {
-            "classification_accuracy": clip_score(classification_accuracy),
-            "action_correctness": clip_score(action_correctness),
-            "response_quality": clip_score(reply_quality),
-            "prioritization": clip_score(prioritization),
-            "resolved_ratio": clip_score(resolved_ratio),
+            "classification_accuracy": strict_unit_interval(classification_accuracy),
+            "action_correctness": strict_unit_interval(action_correctness),
+            "response_quality": strict_unit_interval(reply_quality),
+            "prioritization": strict_unit_interval(prioritization),
+            "resolved_ratio": strict_unit_interval(resolved_ratio),
         }
 
     def _build_observation(self) -> Observation:
