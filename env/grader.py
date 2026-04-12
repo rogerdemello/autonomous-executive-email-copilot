@@ -1,11 +1,24 @@
 from __future__ import annotations
 
+import math
+
 from .environment import ExecutiveEmailEnv
 from .models import Action, GraderResponse, PersonaType
 from .utils import clip_score
 
 
 SCORE_EPSILON = 1e-6
+
+
+def _strict_unit_interval(value: float) -> float:
+    bounded = clip_score(value)
+    return min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, bounded))
+
+
+def _normalize_reward(value: float) -> float:
+    # Map unbounded cumulative reward into (0,1) while preserving order.
+    mapped = 0.5 + (math.atan(value) / math.pi)
+    return min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, mapped))
 
 
 def evaluate_trajectory(
@@ -53,14 +66,15 @@ def evaluate_trajectory(
     else:
         raise ValueError(f"Unknown task_id: {task_id}")
 
-    bounded_score = clip_score(score)
-    strict_score = min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, bounded_score))
+    strict_score = _strict_unit_interval(score)
+    strict_breakdown = {k: _strict_unit_interval(v) for k, v in breakdown.items()}
+    strict_total_reward = _normalize_reward(total_reward)
 
     return GraderResponse(
         task_id=task_id,
         seed=seed,
         persona=persona,
         score=round(strict_score, 6),
-        breakdown={k: round(v, 6) for k, v in breakdown.items()},
-        total_reward=round(total_reward, 6),
+        breakdown={k: round(v, 6) for k, v in strict_breakdown.items()},
+        total_reward=round(strict_total_reward, 6),
     )
