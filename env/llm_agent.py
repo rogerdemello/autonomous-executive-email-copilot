@@ -2,28 +2,175 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import os
 import time
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from openai import OpenAI
 
+from .approval import get_approval_store
 from .models import (
     AIResponse,
     AIDecisionTrace,
     Action,
     AIStatusType,
     Observation,
+    TokenUsage,
 )
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+logger = logging.getLogger(__name__)
+
+# Cache configuration (must be before functions using them)
+DEFAULT_CACHE_TTL_SECONDS = 3600
+DEFAULT_CACHE_MAX_ENTRIES = 256
+DEFAULT_CONFIDENCE_THRESHOLD = 0.7
+
+# Forbidden escalation targets (illegal, harmful topics)
+FORBIDDEN_ESCALATION_TARGETS = {
+    "illegal",
+    "weapons",
+    "violence",
+    "hate",
+    "self_harm",
+    "self-harm",
+    "harmful",
+    "fraud",
+    "scam",
+    "illegal_activity",
+}
+
+# Prompt injection patterns to detect
+PROMPT_INJECTION_PATTERNS = [
+    r"ignore\s+(all\s+)?(previous|prior|instructions)",
+    r"disregard\s+(all\s+)?(previous|prior|instructions)",
+    r"forget\s+(everything|all\s+instructions)",
+    r"system\s*:\s*",
+    r"assistant\s*:\s*",
+    r"<\|system\|>",
+    r"<\|user\|>",
+    r"<\|assistant\|>",
+    r"you\s+are\s+now\s+(a|an)\s+",
+    r"roleplay\s+as\s+",
+    r"new\s+instructions?",
+    r"override\s+(your|the)\s+(instructions?|system)",
+    r"\\(system\\)",
+    r"\\[system\\]",
+    r"\bskip\b.*\binstruction",
+]
+
+# Risky content patterns for reply content
+RISKY_REPLY_PATTERNS = [
+    r"(?i)(violent|violence)\s+(threat|act|attack)",
+    r"(?i)(harm|kill|murder)\s+(someone|person|people|a|the|\w+)",
+    r"(?i)(illegal|unlawful)\s+(activity|act)",
+    r"(?i)weapon[s]?\s+(sales?|trafficking|manufacturing)",
+    r"(?i)(hate|racist|discriminat)\s+(speech|content|against)",
+    r"(?i)(self[\s-]?harm|suicide)\s+(method|way|plan|instruct)",
+    r"(?i)(fraud|scam|phishing)\s+(instruction|guide|how)",
+    r"(?i)bypass\s+(security|authentication|verification)",
+    r"(?i)exploit\s+(vulnerability|system|security)",
+]
+
+import re
+_PROMPT_INJECTION_REGEXES = [re.compile(p, re.IGNORECASE) for p in PROMPT_INJECTION_PATTERNS]
+_RISKY_REPLY_REGEXES = [re.compile(p, re.IGNORECASE) for p in RISKY_REPLY_PATTERNS]
+
+
+def _compute_observation_hash(observation: Observation) -> str:
+    obs_dict = observation.model_dump()
+    obs_json = json.dumps(obs_dict, sort_keys=True)
+    return hashlib.sha256(obs_json.encode()).hexdigest()[:32]
+
+
+def _get_cached_response(observation: Observation, ttl: int = DEFAULT_CACHE_TTL_SECONDS) -> AIResponse | None:
+    obs_hash = _compute_observation_hash(observation)
+    if obs_hash in _response_cache:
+        cached_resp, timestamp = _response_cache[obs_hash]
+        if time.time() - timestamp < ttl:
+            cached_resp.cached = True
+            logger.info(f"Cache hit for observation hash {obs_hash[:8]}...")
+            return cached_resp
+        else:
+            del _response_cache[obs_hash]
+    return None
+
+
+def _cache_response(
+    observation: Observation,
+    response: AIResponse,
+    max_entries: int = DEFAULT_CACHE_MAX_ENTRIES,
+) -> None:
+    obs_hash = _compute_observation_hash(observation)
+    # Evict the oldest entries (insertion order) once the cache is full so it
+    # cannot grow without bound now that it persists across calls.
+    while len(_response_cache) >= max_entries and obs_hash not in _response_cache:
+        oldest_key = next(iter(_response_cache))
+        del _response_cache[oldest_key]
+    _response_cache[obs_hash] = (response, time.time())
+
+
+def _calculate_cost(model: str, usage: TokenUsage) -> float:
+    pricing = MODEL_PRICING.get(model, {"prompt": 0.0, "completion": 0.0})
+    prompt_cost = (usage.prompt_tokens / 1_000_000) * pricing["prompt"]
+    completion_cost = (usage.completion_tokens / 1_000_000) * pricing["completion"]
+    return prompt_cost + completion_cost
+
+
+def _detect_prompt_injection(text: str) -> bool:
+    """Detect if text contains prompt injection patterns."""
+    if not text:
+        return False
+    for regex in _PROMPT_INJECTION_REGEXES:
+        if regex.search(text):
+            return True
+    return False
+
+
+def _detect_risky_content(text: str) -> bool:
+    """Detect if text contains risky/unsafe content patterns."""
+    if not text:
+        return False
+    for regex in _RISKY_REPLY_REGEXES:
+        if regex.search(text):
+            return True
+    return False
+
+
+def _is_forbidden_escalation(target: str | None) -> bool:
+    """Check if escalation target is forbidden."""
+    if not target:
+        return False
+    target_lower = target.lower().replace("_", " ")
+    return target_lower in FORBIDDEN_ESCALATION_TARGETS or any(
+        target_lower == forbidden.replace("_", " ").replace("-", " ") 
+        for forbidden in FORBIDDEN_ESCALATION_TARGETS
+    ) or any(
+        forbidden in target_lower for forbidden in FORBIDDEN_ESCALATION_TARGETS
+    )
 
 
 # Default configuration
 DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_LARGER_MODEL = "gpt-4o"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT_SECONDS = 30.0
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
+
+# Model pricing (USD per 1M tokens)
+MODEL_PRICING = {
+    "gpt-4o-mini": {"prompt": 0.15, "completion": 0.60},
+    "gpt-4o": {"prompt": 2.50, "completion": 10.00},
+}
+
+_response_cache: dict[str, tuple[AIResponse, float]] = {}
+
+
+def _clear_cache() -> None:
+    _response_cache.clear()
 
 # System prompt for AI Chief of Staff
 SYSTEM_PROMPT = """You are an AI Chief of Staff helping an executive manage their inbox efficiently.
@@ -247,12 +394,24 @@ class LLMAgent:
         model: str = DEFAULT_MODEL,
         temperature: float = DEFAULT_TEMPERATURE,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        require_approval: bool | None = None,
     ):
         self._model = model
         self._temperature = temperature
         self._timeout_seconds = timeout_seconds
         self._client: OpenAI | None = None
         self._did_prioritize = False
+        # Human-in-the-loop approval gating for reply/escalate actions.
+        # Off by default so the raw agent returns the action it decided on; the
+        # API/product path can enable it (constructor arg or REQUIRE_APPROVAL env).
+        if require_approval is None:
+            require_approval = os.environ.get("REQUIRE_APPROVAL", "").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+        self._require_approval = require_approval
 
     def _get_client(self) -> OpenAI:
         """Lazy initialization of OpenAI client."""
@@ -346,57 +505,163 @@ class LLMAgent:
                     ),
                 )
 
-        # Call LLM
-        try:
-            client = self._get_client()
-            response = client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": _build_user_prompt(observation)},
-                ],
-                temperature=self._temperature,
-                response_format={"type": "json_object"},
-            )
+        # Try cache first. Skip when approval is required so a cached response
+        # can never short-circuit the human-approval gate below.
+        if not self._require_approval:
+            cached = _get_cached_response(observation)
+            if cached:
+                logger.info("Cache hit - returning immediately (latency <1ms)")
+                return cached
 
-            content = response.choices[0].message.content
-            if not content:
-                return self._fallback_response("fallback_parse_error", start_time)
+        # Dynamic model selection: small model first, larger fallback
+        small_model = os.environ.get("MODEL_NAME", DEFAULT_MODEL)
+        large_model = os.environ.get("LARGER_MODEL", DEFAULT_LARGER_MODEL)
+        confidence_threshold = float(os.environ.get("CONFIDENCE_THRESHOLD", str(DEFAULT_CONFIDENCE_THRESHOLD)))
+        current_model = small_model
 
-            action_dict = _parse_llm_response(content)
-            if action_dict is None:
-                return self._fallback_response("fallback_parse_error", start_time)
+        # Call LLM with dynamic model selection
+        client = self._get_client()
+        retry_with_larger = False
 
-            action = _validate_action(action_dict)
-            if action is None:
-                return self._fallback_response("fallback_validation_error", start_time)
+        while True:
+            try:
+                response = client.chat.completions.create(
+                    model=current_model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": _build_user_prompt(observation)},
+                    ],
+                    temperature=self._temperature,
+                    response_format={"type": "json_object"},
+                )
 
-            # Apply remaining guardrails to LLM response
+                content = response.choices[0].message.content
+                break
+
+            except Exception as e:
+                error_str = str(e).lower()
+                if "timeout" in error_str or "timed out" in error_str:
+                    return self._fallback_response("fallback_timeout", start_time)
+                # Retry once with larger model if small model fails
+                if current_model == small_model and not retry_with_larger:
+                    current_model = large_model
+                    retry_with_larger = True
+                    continue
+                return self._fallback_response("provider_error", start_time)
+
+        if not content:
+            return self._fallback_response("fallback_parse_error", start_time)
+
+        action_dict = _parse_llm_response(content)
+        if action_dict is None:
+            return self._fallback_response("fallback_parse_error", start_time)
+
+        action = _validate_action(action_dict)
+        if action is None:
+            return self._fallback_response("fallback_validation_error", start_time)
+
+        # Check confidence and fallback to larger model if needed
+        confidence = action_dict.get("confidence", 0.5)
+        if current_model == small_model and confidence < confidence_threshold and not retry_with_larger:
+            retry_with_larger = True
+            current_model = large_model
+            try:
+                response = client.chat.completions.create(
+                    model=current_model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": _build_user_prompt(observation)},
+                    ],
+                    temperature=self._temperature,
+                    response_format={"type": "json_object"},
+                )
+                content = response.choices[0].message.content
+                if not content:
+                    return self._fallback_response("fallback_parse_error", start_time)
+                action_dict = _parse_llm_response(content)
+                if action_dict is None:
+                    return self._fallback_response("fallback_parse_error", start_time)
+                action = _validate_action(action_dict)
+                if action is None:
+                    return self._fallback_response("fallback_validation_error", start_time)
+                confidence = action_dict.get("confidence", 0.5)
+            except Exception as exc:
+                logger.warning("Larger-model confidence retry failed: %s", exc)
+
+        # Apply remaining guardrails to LLM response
+        if action:
             action = _apply_guardrails(observation, action, is_first_action)
 
-            # Track state
-            if action.action_type == "prioritize":
-                self._did_prioritize = True
+        # Apply safety check
+        if action:
+            safe_action, safety_reason = self.safety_check(action, observation)
+            if safe_action is None:
+                return self._fallback_response(f"safety_{safety_reason}", start_time)
+            action = safe_action
 
-            latency_ms = int((time.time() - start_time) * 1000)
-            return AIResponse(
-                action=action,
-                trace=AIDecisionTrace(
-                    reason=action_dict.get("reason", "LLM decision"),
-                    confidence=action_dict.get("confidence", 0.5),
-                    alternatives_considered=action_dict.get("alternatives_considered", []),
-                    why_not=action_dict.get("why_not", ""),
-                    latency_ms=latency_ms,
-                    model_name=self._model,
-                    status="success",
-                ),
-            )
+        if self._require_approval and action and action.action_type in {"escalate", "reply"}:
+            if action.email_id:
+                store = get_approval_store()
+                pending = store.get_pending_requests()
+                existing = [p for p in pending if p.email_id == action.email_id and p.action_type == action.action_type]
+                if not existing:
+                    approval_req = store.submit_request(
+                        action_type=action.action_type,
+                        email_id=action.email_id,
+                        content=action.content,
+                        escalate_to=action.escalate_to,
+                    )
+                    return AIResponse(
+                        action=Action(action_type="defer", email_id=action.email_id),
+                        trace=AIDecisionTrace(
+                            reason=f"Pending approval for {action.action_type}: request {approval_req.id}",
+                            confidence=1.0,
+                            alternatives_considered=[],
+                            why_not="Requires human approval",
+                            latency_ms=int((time.time() - start_time) * 1000),
+                            model_name=self._model,
+                            status="success",
+                        ),
+                    )
 
-        except Exception as e:
-            error_str = str(e).lower()
-            if "timeout" in error_str or "timed out" in error_str:
-                return self._fallback_response("fallback_timeout", start_time)
-            return self._fallback_response("provider_error", start_time)
+        # Track state
+        if action and action.action_type == "prioritize":
+            self._did_prioritize = True
+
+        # Track token usage and calculate cost
+        usage = response.usage
+        token_usage = TokenUsage(
+            prompt_tokens=usage.prompt_tokens if usage else 0,
+            completion_tokens=usage.completion_tokens if usage else 0,
+            total_tokens=usage.total_tokens if usage else 0,
+        )
+        cost_usd = _calculate_cost(current_model, token_usage)
+
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        if action is None:
+            return self._fallback_response("fallback_validation_error", start_time)
+
+        ai_response = AIResponse(
+            action=action,
+            trace=AIDecisionTrace(
+                reason=action_dict.get("reason", "LLM decision") if action_dict else "LLM decision",
+                confidence=confidence,
+                alternatives_considered=action_dict.get("alternatives_considered", []) if action_dict else [],
+                why_not=action_dict.get("why_not", "") if action_dict else "",
+                latency_ms=latency_ms,
+                model_name=current_model,
+                status="success",
+                token_usage=token_usage,
+                cost_usd=cost_usd,
+            ),
+        )
+
+        logger.info(f"API call: model={current_model}, tokens={token_usage.total_tokens}, cost=${cost_usd:.4f}")
+        logger.info(f"Savings: small model tokens would have cost ~${_calculate_cost(small_model, token_usage):.4f}")
+
+        _cache_response(observation, ai_response)
+        return ai_response
 
     def _fallback_response(self, status: str, start_time: float) -> AIResponse:
         """Create fallback response on error."""
@@ -413,6 +678,9 @@ class LLMAgent:
             "fallback_parse_error": "fallback_parse_error",
             "fallback_validation_error": "fallback_validation_error",
             "provider_error": "provider_error",
+            "safety_prompt_injection_detected": "provider_error",
+            "safety_forbidden_escalation_target": "provider_error",
+            "safety_risky_reply_content": "provider_error",
         }
         status_literal: AIStatusType = status_map.get(status, "provider_error")
         
@@ -432,6 +700,50 @@ class LLMAgent:
     def reset(self) -> None:
         """Reset agent state for new episode."""
         self._did_prioritize = False
+
+    def safety_check(
+        self,
+        action: Action,
+        observation: Observation,
+    ) -> tuple[Action | None, str | None]:
+        """
+        Analyze action for safety concerns.
+        
+        Checks:
+        - Email content for prompt injection patterns
+        - Escalation targets against forbidden list
+        - Reply content for risky/unsafe patterns
+        
+        Returns:
+        - (None, reason) if dangerous content detected (fallback)
+        - (action, None) if safe
+        """
+        if not action.email_id:
+            return action, None
+        
+        target_email = None
+        for email in observation.emails:
+            if email.id == action.email_id:
+                target_email = email
+                break
+        
+        if not target_email:
+            return action, None
+        
+        if _detect_prompt_injection(target_email.body):
+            return None, "prompt_injection_detected"
+        
+        if _detect_prompt_injection(target_email.subject):
+            return None, "prompt_injection_detected"
+        
+        if action.action_type == "escalate" and _is_forbidden_escalation(action.escalate_to):
+            return None, "forbidden_escalation_target"
+        
+        if action.action_type == "reply" and action.content:
+            if _detect_risky_content(action.content):
+                return None, "risky_reply_content"
+        
+        return action, None
 
 
 # Default agent instance
