@@ -47,11 +47,24 @@ class Settings(BaseSettings):
     # Behavior
     require_approval: bool = False
 
+    # Security (all opt-in; the API runs open by default)
+    api_auth_token: str | None = None
+    cors_origins: str = "*"
+    rate_limit_per_minute: int = 0  # 0 disables rate limiting
+
     # Dashboard / UI
     app_api_base_url: str = "http://localhost:8000"
 
     # Logging
     log_level: str = "INFO"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """CORS origins as a list; '*' (or empty) means allow all."""
+        raw = (self.cors_origins or "*").strip()
+        if raw == "*":
+            return ["*"]
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
     @property
     def resolved_api_key(self) -> str | None:

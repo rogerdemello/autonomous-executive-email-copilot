@@ -19,7 +19,16 @@ days.
 
 ## Scope notes
 
-This project is an evaluation environment and reference product. As of this
-writing the API ships **without authentication, CORS restrictions, or rate
-limiting** by default — do not expose it directly to untrusted networks. Adding
-these controls is tracked in [docs/ROADMAP.md](docs/ROADMAP.md) (Phase 2).
+This project is an evaluation environment and reference product. The API ships
+**open by default** so local development, tests, and the OpenEnv validator work
+with zero configuration. Security controls are **opt-in** via environment
+variables (see [.env.example](.env.example)):
+
+- `API_AUTH_TOKEN` — when set, all mutating routes (POST/PUT/PATCH/DELETE)
+  require the token via `Authorization: Bearer <token>` or `X-API-Key`.
+- `CORS_ORIGINS` — restrict allowed browser origins (defaults to `*`).
+- `RATE_LIMIT_PER_MINUTE` — per-client-IP request cap (defaults to off).
+
+When exposing the API to untrusted networks, set all three. Identifier inputs
+are validated and pagination is bounded; unhandled errors return a generic JSON
+500 without leaking stack traces.

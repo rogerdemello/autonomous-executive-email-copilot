@@ -5,8 +5,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -40,13 +41,14 @@ from .approval import (
 from .approval import (
     reject_request as _reject_request,
 )
+from .config import get_settings
 from .dashboard_api import dashboard_router
 from .db import migrate_db
 from .environment import ExecutiveEmailEnv
 from .grader import evaluate_trajectory
 from .learning.example_extractor import example_extractor
 from .learning.trajectory_store import feedback_store, trajectory_store
-from .logging_config import configure_logging, set_request_id
+from .logging_config import configure_logging, get_request_id, set_request_id
 from .models import (
     Action,
     ActionResult,
@@ -65,6 +67,7 @@ from .models import (
     TasksResponse,
 )
 from .repositories import EpisodeRepository, TeamSettingsRepository, UserPreferenceRepository
+from .security import is_valid_identifier, rate_limiter, request_is_authorized
 from .tasks import list_tasks
 
 configure_logging()
@@ -79,37 +82,89 @@ team_settings_repo = TeamSettingsRepository()
 episode_history_store: dict[str, EpisodeHistory] = {}
 
 app = FastAPI(title="Autonomous Executive Email Copilot", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(dashboard_router)
 runtime_env = ExecutiveEmailEnv()
 
 
+def _client_key(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
 @app.middleware("http")
-async def _telemetry_middleware(request, call_next):
-    """Set a request id, record per-request latency/count/error metrics, and
-    echo the id back as the X-Request-ID header for log correlation."""
+async def _gateway_middleware(request, call_next):
+    """Per-request gateway: request id, opt-in rate limiting, opt-in auth, and
+    latency/count/error telemetry. Echoes X-Request-ID for log correlation."""
     request_id = set_request_id(request.headers.get("X-Request-ID"))
+    settings = get_settings()
     start = time.perf_counter()
-    # Prefer the matched route template (e.g. /episodes/{episode_id}) over the
-    # concrete path to keep metric label cardinality bounded.
+    path = request.url.path  # refined to the route template after routing
+
+    # Opt-in rate limiting (disabled when RATE_LIMIT_PER_MINUTE <= 0).
+    if not rate_limiter.allow(_client_key(request), settings.rate_limit_per_minute):
+        record_request(0.0, {"path": path, "method": request.method, "status": "429"})
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded", "request_id": request_id},
+            headers={"X-Request-ID": request_id, "Retry-After": "60"},
+        )
+
+    # Opt-in auth (open when API_AUTH_TOKEN is unset; only gates mutating methods).
+    if not request_is_authorized(
+        request.method,
+        settings.api_auth_token,
+        request.headers.get("Authorization"),
+        request.headers.get("X-API-Key"),
+    ):
+        record_request(0.0, {"path": path, "method": request.method, "status": "401"})
+        record_api_error("unauthorized")
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Missing or invalid API token", "request_id": request_id},
+            headers={"X-Request-ID": request_id},
+        )
+
     try:
         response = await call_next(request)
     except Exception:
         duration_ms = (time.perf_counter() - start) * 1000.0
-        path = _metric_path(request)
-        record_request(duration_ms, {"path": path, "method": request.method, "status": "500"})
+        record_request(
+            duration_ms, {"path": _metric_path(request), "method": request.method, "status": "500"}
+        )
         record_api_error("unhandled_exception")
         logger.exception("Unhandled error handling %s %s", request.method, request.url.path)
         raise
     duration_ms = (time.perf_counter() - start) * 1000.0
-    path = _metric_path(request)
+    # Prefer the matched route template (e.g. /episodes/{episode_id}) over the
+    # concrete path to keep metric label cardinality bounded.
     record_request(
         duration_ms,
-        {"path": path, "method": request.method, "status": str(response.status_code)},
+        {
+            "path": _metric_path(request),
+            "method": request.method,
+            "status": str(response.status_code),
+        },
     )
     if response.status_code >= 500:
         record_api_error(str(response.status_code))
     response.headers["X-Request-ID"] = request_id
     return response
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Return a consistent JSON error without leaking stack traces."""
+    logger.exception("Unhandled exception for %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "request_id": get_request_id()},
+    )
 
 
 def _metric_path(request) -> str:
@@ -319,6 +374,8 @@ def leaderboard(request: LeaderboardRequest) -> LeaderboardResponse:
 
 @app.get("/replay/{episode_id}", response_model=EpisodeHistory)
 def replay(episode_id: str) -> EpisodeHistory:
+    if not is_valid_identifier(episode_id):
+        raise HTTPException(status_code=400, detail="Invalid episode_id")
     if episode_id in episode_history_store:
         return episode_history_store[episode_id]
     # Fall back to the persisted episode so replay survives a restart.
@@ -427,6 +484,8 @@ def list_episodes(
     page: int = 1,
     limit: int = 20,
 ) -> dict:
+    page = max(1, page)
+    limit = max(1, min(limit, 100))
     filters = {}
     if task_id:
         filters["task_id"] = task_id
@@ -445,6 +504,8 @@ def list_episodes(
 
 @app.get("/episodes/{episode_id}")
 def get_episode(episode_id: str) -> dict:
+    if not is_valid_identifier(episode_id):
+        raise HTTPException(status_code=400, detail="Invalid episode_id")
     episode = repo.get_episode(episode_id=episode_id)
     if episode is None:
         raise HTTPException(status_code=404, detail=f"Episode {episode_id} not found")
@@ -657,6 +718,8 @@ class ReportGenerateRequest(BaseModel):
 
 @app.get("/reports/episode/{episode_id}")
 def download_episode_report(episode_id: str):
+    if not is_valid_identifier(episode_id):
+        raise HTTPException(status_code=400, detail="Invalid episode_id")
     try:
         pdf_bytes = pdf_generator.generate(episode_id)
         from fastapi.responses import Response
