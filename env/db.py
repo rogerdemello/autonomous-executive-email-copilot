@@ -15,7 +15,10 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # SQLAlchemy setup
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# expire_on_commit=False keeps attributes readable on objects returned from a
+# closed session (get_session commits then closes), so repository callers can
+# safely read/serialize ORM instances after the context manager exits.
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 Base = declarative_base()
 
 
@@ -42,6 +45,11 @@ class Episode(Base):
         """Convert model to dictionary."""
         import json
 
+        try:
+            decisions = json.loads(self.decisions_json) if self.decisions_json else []
+        except (TypeError, ValueError):
+            decisions = []
+
         return {
             "id": self.id,
             "episode_id": self.episode_id,
@@ -51,7 +59,7 @@ class Episode(Base):
             "steps": self.steps,
             "score": self.score,
             "total_reward": self.total_reward,
-            "decisions": [],
+            "decisions": decisions,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
