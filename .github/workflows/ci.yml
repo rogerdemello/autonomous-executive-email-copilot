@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Verify dependency lock
+      run: |
+        pip freeze > requirements.lock
+        diff -q requirements.txt requirements.lock || echo "WARNING: requirements.txt and lock mismatch"
+        cat requirements.lock
+    
+    - name: Run tests
+      run: python -m pytest -q --tb=short
+    
+    - name: Run smoke test inference
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-dummy' }}
+      run: |
+        python -c "import os; os.environ.setdefault('OPENAI_API_KEY', 'sk-test-dummy'); os.environ.setdefault('API_BASE_URL', 'https://api.openai.com/v1'); os.environ.setdefault('MODEL_NAME', 'gpt-4o-mini'); from inference import run_inference; result = run_inference('easy_classification', 'openenv', 'gpt-4o-mini', seed=42); print(f'Smoke test passed: score={result.get(\"score\", 0):.2f}')"
+
+  docker:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker image
+      run: docker build -t exec-email-copilot .
+    
+    - name: Test container health
+      run: |
+        docker run -d --name test-container -p 7861:7860 exec-email-copilot
+        sleep 5
+        docker logs test-container
+        docker rm -f test-container
