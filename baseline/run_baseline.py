@@ -8,7 +8,7 @@ from env.environment import ExecutiveEmailEnv
 from env.grader import evaluate_trajectory
 from env.llm_policy import LLMPolicy
 from env.models import Action, AIDecisionTrace
-from env.policy import BaselinePolicy
+from env.policy import BaselinePolicy, HybridPolicy
 
 
 def _next_wrong_label(label: str) -> str:
@@ -45,9 +45,10 @@ def run(
     persona: str,
     mode: str = "baseline",
     stress_rate: float = 0.0,
+    planner_interval: int = 3,
 ) -> dict[str, object]:
-    if mode not in {"baseline", "stress", "llm"}:
-        raise ValueError("mode must be baseline, stress, or llm")
+    if mode not in {"baseline", "stress", "llm", "hybrid"}:
+        raise ValueError("mode must be baseline, stress, llm, or hybrid")
 
     clamped_stress = max(0.0, min(1.0, stress_rate if mode == "stress" else 0.0))
     env = ExecutiveEmailEnv(task_id=task_id, seed=seed, persona=persona)
@@ -55,6 +56,8 @@ def run(
 
     if mode == "llm":
         policy = LLMPolicy()
+    elif mode == "hybrid":
+        policy = HybridPolicy(planner_interval=planner_interval)
     else:
         policy = BaselinePolicy()
     trace = []
@@ -124,8 +127,8 @@ def run(
         "actions": [a.model_dump() for a in trace],
     }
     
-    # Add decision traces for llm mode
-    if mode == "llm":
+    # Add decision traces for llm and hybrid modes
+    if mode in ("llm", "hybrid"):
         output["decision_traces"] = decision_traces
     
     return output
@@ -137,8 +140,9 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-steps", type=int, default=100)
     parser.add_argument("--persona", default="balanced", choices=["strict_ceo", "balanced", "chill_manager"])
-    parser.add_argument("--mode", default="baseline", choices=["baseline", "stress", "llm"])
+    parser.add_argument("--mode", default="baseline", choices=["baseline", "stress", "llm", "hybrid"])
     parser.add_argument("--stress-rate", type=float, default=0.0)
+    parser.add_argument("--planner-interval", type=int, default=3, help="Steps between replanning in hybrid mode")
     args = parser.parse_args()
 
     result = run(
@@ -148,6 +152,7 @@ def main() -> None:
         persona=args.persona,
         mode=args.mode,
         stress_rate=args.stress_rate,
+        planner_interval=args.planner_interval,
     )
     print(json.dumps(result, indent=2))
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 ActionType = Literal["classify", "reply", "defer", "escalate", "prioritize"]
@@ -13,6 +13,7 @@ RiskTag = Literal["none", "legal", "security", "finance", "ops"]
 PersonaType = Literal["strict_ceo", "balanced", "chill_manager"]
 PolicyMode = Literal["baseline", "stress", "llm"]
 AIStatusType = Literal["success", "fallback_timeout", "fallback_parse_error", "fallback_validation_error", "provider_error"]
+ApprovalStatus = Literal["pending", "approved", "rejected", "expired"]
 
 
 class ThreadEntry(BaseModel):
@@ -102,6 +103,20 @@ class ResetRequest(BaseModel):
     persona: PersonaType = "balanced"
 
 
+class TokenUsage(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+
+class DecisionTelemetry(BaseModel):
+    latency_ms: int
+    confidence: float = Field(ge=0.0, le=1.0)
+    fallback_reason: str = ""
+    token_usage: TokenUsage | None = None
+    model_name: str
+
+
 class AIDecisionTrace(BaseModel):
     reason: str
     confidence: float = Field(ge=0.0, le=1.0)
@@ -110,12 +125,21 @@ class AIDecisionTrace(BaseModel):
     latency_ms: int
     model_name: str
     status: AIStatusType
-    token_count: int | None = None
+    token_usage: TokenUsage | None = None
+    cost_usd: float | None = None
+    token_count: int | None = Field(default=None, description="Backward compat: total_tokens from token_usage")
+
+    @model_validator(mode="after")
+    def sync_token_count(self) -> "AIDecisionTrace":
+        if self.token_usage and self.token_count is None:
+            self.token_count = self.token_usage.total_tokens
+        return self
 
 
 class AIResponse(BaseModel):
     action: Action
     trace: AIDecisionTrace
+    cached: bool = False
 
 
 class GraderRequest(BaseModel):
@@ -125,6 +149,22 @@ class GraderRequest(BaseModel):
     actions: list[Action] = Field(default_factory=list)
 
 
+class ScoreDelta(BaseModel):
+    step: int
+    score_before: float
+    score_after: float
+    delta: float
+    reason: str
+
+
+class StepScoreBreakdown(BaseModel):
+    step_number: int
+    action: ActionType | None = None
+    email_id: str | None = None
+    score_delta: float
+    reason: str
+
+
 class GraderResponse(BaseModel):
     task_id: str
     seed: int
@@ -132,6 +172,7 @@ class GraderResponse(BaseModel):
     score: float
     breakdown: dict[str, float]
     total_reward: float
+    step_breakdown: list[StepScoreBreakdown] = Field(default_factory=list)
 
 
 class BaselineRequest(BaseModel):
@@ -205,3 +246,34 @@ class StateSnapshot(BaseModel):
     action_history: list[Action]
     total_reward: float
     remaining_interruptions: int
+
+
+class EpisodeHistory(BaseModel):
+    episode_id: str
+    task_id: str
+    seed: int
+    persona: PersonaType
+    steps: int
+    score: float
+    total_reward: float
+    decisions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ApprovalRequest(BaseModel):
+    id: str
+    action_type: Literal["escalate", "reply"]
+    email_id: str
+    content: str | None = None
+    escalate_to: str | None = None
+    requested_at: float
+    status: ApprovalStatus = "pending"
+    approver_id: str | None = None
+    expires_at: float
+
+
+class ApprovalResponse(BaseModel):
+    request_id: str
+    approved: bool
+    approver_id: str
+    timestamp: float
+    comment: str | None = None

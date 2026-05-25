@@ -5,7 +5,7 @@ import random
 from pathlib import Path
 
 from .models import EmailRecord, InterruptionEvent, PersonaType, Scenario, TaskDefinition
-from .data_loader import load_yaml
+from .data_loader import load_yaml, generate_synthetic_scenario, scale_difficulty
 from .utils import compute_gold_priority_order
 
 
@@ -60,10 +60,26 @@ def _build_interruptions(interruption_items: list[dict], rng: random.Random) -> 
     return events
 
 
-def build_scenario(task_id: str, seed: int, persona: PersonaType = "balanced") -> Scenario:
+def build_scenario(
+    task_id: str,
+    seed: int,
+    persona: PersonaType = "balanced",
+    difficulty: str | None = None,
+) -> Scenario:
     rng = random.Random(seed)
 
-    scenario_manifest = copy.deepcopy(_load_scenario_manifest(task_id))
+    # Determine difficulty from task_id if not specified
+    if difficulty is None:
+        task_defs = list_tasks()
+        for task in task_defs:
+            if task.id == task_id:
+                difficulty = task.difficulty
+                break
+        if difficulty is None:
+            difficulty = "medium"
+
+    # Generate scaled scenario using synthetic combinators
+    scenario_manifest = generate_synthetic_scenario(task_id, seed, difficulty, SCENARIOS_DIR)
 
     raw_emails = scenario_manifest.get("emails", [])
     emails = [EmailRecord.model_validate(item) for item in raw_emails]
@@ -71,6 +87,9 @@ def build_scenario(task_id: str, seed: int, persona: PersonaType = "balanced") -
 
     interruption_items = scenario_manifest.get("interruptions", [])
     interruptions = _build_interruptions(interruption_items, rng)
+
+    # Extract conflicting deadline info if present
+    conflicting_deadlines = scenario_manifest.get("conflicting_deadlines", [])
 
     return Scenario(
         task_id=task_id,

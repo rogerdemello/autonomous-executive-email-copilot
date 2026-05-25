@@ -124,8 +124,8 @@ if check_health:
         st.error(f"API health check failed: {exc}")
 
 
-overview_tab, tasks_tab, baseline_tab, leaderboard_tab, grader_tab, ai_demo_tab = st.tabs(
-    ["Overview", "Tasks", "Baseline", "Leaderboard", "Grader", "AI Demo"]
+overview_tab, tasks_tab, baseline_tab, leaderboard_tab, grader_tab, ai_demo_tab, replay_tab, approval_tab = st.tabs(
+    ["Overview", "Tasks", "Baseline", "Leaderboard", "Grader", "AI Demo", "Replay", "Approval Queue"]
 )
 
 with overview_tab:
@@ -254,11 +254,34 @@ with leaderboard_tab:
             try:
                 data = _post(_api_url(api_base, "/leaderboard"), payload)
                 st.success("Leaderboard generated")
-                st.dataframe(data.get("rows", []), use_container_width=True)
 
                 rows = data.get("rows", [])
                 if rows:
-                    chart_rows = [{"label": f"{row['task']} | {row['persona']}", "avg_score": row["avg_score"]} for row in rows]
+                    display_rows = []
+                    for row in rows:
+                        score_with_ci = f"{row['avg_score']:.3f} ± {row.get('ci_margin_95', 0):.3f}"
+                        display_rows.append({
+                            "Task": row["task"],
+                            "Persona": row["persona"],
+                            "Score (±95% CI)": score_with_ci,
+                            "Failure Rate %": row.get("failure_rate_pct", 0),
+                            "Fairness Score": row.get("fairness_score", 0),
+                            "Avg Reward": row["avg_reward"],
+                            "Avg Steps": row["avg_steps"],
+                        })
+                    st.dataframe(display_rows, use_container_width=True)
+
+                    st.divider()
+                    st.subheader("Score Overview")
+                    chart_rows = [
+                        {
+                            "label": f"{row['task']} | {row['persona']}",
+                            "avg_score": row["avg_score"],
+                            "ci_lower": row["avg_score"] - row.get("ci_margin_95", 0),
+                            "ci_upper": row["avg_score"] + row.get("ci_margin_95", 0),
+                        }
+                        for row in rows
+                    ]
                     st.bar_chart(chart_rows, x="label", y="avg_score")
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Leaderboard request failed: {exc}")
@@ -574,3 +597,156 @@ with ai_demo_tab:
             st.error(f"API returned an error: {exc.response.status_code} - {exc.response.text}")
         except Exception as exc:  # noqa: BLE001
             st.error(f"AI Demo request failed: {exc}")
+
+with replay_tab:
+    st.subheader("Episode Replay Viewer")
+    st.caption("View past episodes with decision timeline")
+
+    r_task = st.selectbox(
+        "Task",
+        ["easy_classification", "medium_prioritization", "hard_full_management"],
+        index=2,
+        key="replay_task",
+    )
+    r_persona = st.selectbox(
+        "Persona",
+        ["strict_ceo", "balanced", "chill_manager"],
+        index=1,
+        key="replay_persona",
+    )
+    r_seed = st.number_input("Seed", min_value=0, max_value=999999, value=42, step=1, key="replay_seed")
+
+    episode_id = f"{r_task}_{r_seed}_{r_persona}"
+
+    if st.button("Load Episode"):
+        try:
+            episode = _get(_api_url(api_base, "/replay") + f"/{episode_id}")
+            st.success(f"Episode {episode_id} loaded")
+
+            e1, e2, e3 = st.columns(3)
+            with e1:
+                st.metric("Score", f"{episode.get('score', 0):.4f}")
+            with e2:
+                st.metric("Total Reward", f"{episode.get('total_reward', 0):.4f}")
+            with e3:
+                st.metric("Steps", int(episode.get("steps", 0)))
+
+            st.subheader("Decision Timeline")
+
+            decisions = episode.get("decisions", [])
+            if decisions:
+                for idx, trace in enumerate(decisions):
+                    status = trace.get("status", "success")
+
+                    status_icons = {
+                        "success": ("✅", "success"),
+                        "fallback": ("⚠️", "warning"),
+                        "error": ("❌", "error"),
+                        "unavailable": ("🚫", "error"),
+                    }
+                    icon, badge_style = status_icons.get(status, ("❓", "info"))
+
+                    with st.expander(f"{icon} Step {trace.get('step', idx + 1)}: {trace.get('action', {}).get('action_type', 'unknown')}"):
+                        action_data = trace.get("action", {})
+                        if action_data:
+                            target_email = action_data.get("email_id", "N/A")
+                            st.caption(f"Target: {target_email}")
+
+                        reason = trace.get("reason", "No reason provided")
+                        st.markdown(f"**Reason:** {reason[:200]}{'...' if len(reason) > 200 else ''}")
+
+                        conf = trace.get("confidence")
+                        if conf is not None:
+                            st.progress(conf, text=f"Confidence: {conf:.2f}")
+
+                        latency = trace.get("latency_ms")
+                        model_name = trace.get("model_name")
+                        fallback_reason = trace.get("fallback_reason", "")
+
+                        if model_name or latency:
+                            model_info = f"Model: {model_name or 'N/A'}"
+                            if latency:
+                                model_info += f" | Latency: {latency:.0f}ms"
+                            st.caption(model_info)
+
+                        if fallback_reason:
+                            st.caption(f"Fallback trigger: {fallback_reason}")
+
+                        token_usage = trace.get("token_usage", {})
+                        if token_usage:
+                            st.caption(f"Tokens: {token_usage.get('total_tokens', 0)}")
+            else:
+                st.info("No decisions recorded in this episode")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                st.warning(f"Episode {episode_id} not found. Run a baseline first.")
+            else:
+                st.error(f"API error: {exc.response.status_code}")
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Failed to load episode: {exc}")
+
+with approval_tab:
+    st.subheader("Approval Queue")
+    st.caption("Review and approve pending actions")
+
+    if st.button("Refresh Approvals"):
+        st.rerun()
+
+    try:
+        pending = _get(_api_url(api_base, "/approval/pending"))
+        
+        if pending:
+            st.write(f"**Pending Approvals ({len(pending)})**")
+            
+            for req in pending:
+                with st.container():
+                    st.markdown(f"**Request ID:** `{req.get('id', 'N/A')}`")
+                    st.markdown(f"**Action:** {req.get('action_type', 'N/A')} | **Email:** {req.get('email_id', 'N/A')}")
+                    if req.get('content'):
+                        st.markdown(f"**Content:** {req.get('content', '')[:100]}...")
+                    if req.get('escalate_to'):
+                        st.markdown(f"**Escalate to:** {req.get('escalate_to')}")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        approve_btn = st.button(f"Approve", key=f"approve_{req.get('id')}")
+                    with c2:
+                        reject_btn = st.button(f"Reject", key=f"reject_{req.get('id')}")
+                    
+                    if approve_btn:
+                        try:
+                            _post(_api_url(api_base, f"/approval/{req.get('id')}/approve"), {"approver_id": "admin", "comment": "Approved via UI"})
+                            st.success(f"Approved request {req.get('id')}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to approve: {e}")
+                    
+                    if reject_btn:
+                        try:
+                            _post(_api_url(api_base, f"/approval/{req.get('id')}/reject"), {"approver_id": "admin", "comment": "Rejected via UI"})
+                            st.success(f"Rejected request {req.get('id')}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to reject: {e}")
+                    
+                    st.divider()
+        else:
+            st.info("No pending approval requests")
+            
+        st.subheader("Approval History")
+        history_limit = st.slider("History Limit", min_value=5, max_value=100, value=20, key="history_limit")
+        
+        try:
+            history = _get(_api_url(api_base, f"/approval/history?limit={history_limit}"))
+            if history:
+                for req in history:
+                    status = req.get('status', 'unknown')
+                    status_icon = "✅" if status == "approved" else "❌" if status in ("rejected", "expired") else "⏳"
+                    st.markdown(f"{status_icon} **{status.upper()}** - {req.get('action_type')} on {req.get('email_id')} (Requested: {req.get('requested_at', 0):.0f})")
+            else:
+                st.info("No approval history")
+        except Exception as e:
+            st.error(f"Failed to load history: {e}")
+            
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Failed to load approvals: {exc}")

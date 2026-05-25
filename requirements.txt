@@ -1,3 +1,4 @@
+fpdf2
 fastapi
 uvicorn
 pydantic
@@ -7,3 +8,4 @@ scipy
 pytest
 streamlit
 openai
+sqlalchemy
