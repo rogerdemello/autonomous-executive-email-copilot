@@ -7,7 +7,7 @@ import random
 from env.environment import ExecutiveEmailEnv
 from env.grader import evaluate_trajectory
 from env.llm_policy import LLMPolicy
-from env.models import Action, AIDecisionTrace
+from env.models import Action
 from env.policy import BaselinePolicy, HybridPolicy
 
 
@@ -70,11 +70,12 @@ def run(
             break
         if mode == "stress":
             action = _apply_stress(action, rng=rng, stress_rate=clamped_stress)
-        
+
         if mode == "llm":
             from env.llm_agent import get_action as llm_get_action
+
             ai_response = llm_get_action(observation)
-            
+
             email_context = None
             if action.email_id and observation.emails:
                 for email in observation.emails:
@@ -90,23 +91,25 @@ def run(
                             "risk_tag": email.risk_tag,
                         }
                         break
-            
+
             action_info = action.model_dump() if action else None
-            
-            decision_traces.append({
-                "step": len(trace) + 1,
-                "email_context": email_context,
-                "action": action_info,
-                "reason": ai_response.trace.reason,
-                "confidence": ai_response.trace.confidence,
-                "alternatives_considered": ai_response.trace.alternatives_considered,
-                "why_not": ai_response.trace.why_not,
-                "latency_ms": ai_response.trace.latency_ms,
-                "model_name": ai_response.trace.model_name,
-                "status": ai_response.trace.status,
-                "token_count": ai_response.trace.token_count,
-            })
-        
+
+            decision_traces.append(
+                {
+                    "step": len(trace) + 1,
+                    "email_context": email_context,
+                    "action": action_info,
+                    "reason": ai_response.trace.reason,
+                    "confidence": ai_response.trace.confidence,
+                    "alternatives_considered": ai_response.trace.alternatives_considered,
+                    "why_not": ai_response.trace.why_not,
+                    "latency_ms": ai_response.trace.latency_ms,
+                    "model_name": ai_response.trace.model_name,
+                    "status": ai_response.trace.status,
+                    "token_count": ai_response.trace.token_count,
+                }
+            )
+
         trace.append(action)
         result = env.step(action)
         observation = result.observation
@@ -126,11 +129,11 @@ def run(
         "breakdown": graded.breakdown,
         "actions": [a.model_dump() for a in trace],
     }
-    
+
     # Add decision traces for llm and hybrid modes
     if mode in ("llm", "hybrid"):
         output["decision_traces"] = decision_traces
-    
+
     return output
 
 
@@ -139,10 +142,16 @@ def main() -> None:
     parser.add_argument("--task", default="hard_full_management")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-steps", type=int, default=100)
-    parser.add_argument("--persona", default="balanced", choices=["strict_ceo", "balanced", "chill_manager"])
-    parser.add_argument("--mode", default="baseline", choices=["baseline", "stress", "llm", "hybrid"])
+    parser.add_argument(
+        "--persona", default="balanced", choices=["strict_ceo", "balanced", "chill_manager"]
+    )
+    parser.add_argument(
+        "--mode", default="baseline", choices=["baseline", "stress", "llm", "hybrid"]
+    )
     parser.add_argument("--stress-rate", type=float, default=0.0)
-    parser.add_argument("--planner-interval", type=int, default=3, help="Steps between replanning in hybrid mode")
+    parser.add_argument(
+        "--planner-interval", type=int, default=3, help="Steps between replanning in hybrid mode"
+    )
     args = parser.parse_args()
 
     result = run(

@@ -175,12 +175,14 @@ class HybridPolicy:
 
         if self._step_count % self._planner_interval == 1:
             from env.llm_policy import get_strategy
+
             strategy, metadata = get_strategy(observation)
             self._current_strategy = strategy
             self._strategy_metadata = metadata
 
         if self._current_strategy is None:
             from env.llm_policy import get_strategy
+
             strategy, metadata = get_strategy(observation)
             self._current_strategy = strategy
             self._strategy_metadata = metadata

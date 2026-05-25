@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import copy
 import random
 from pathlib import Path
 
+from .data_loader import generate_synthetic_scenario, load_yaml
 from .models import EmailRecord, InterruptionEvent, PersonaType, Scenario, TaskDefinition
-from .data_loader import load_yaml, generate_synthetic_scenario, scale_difficulty
 from .utils import compute_gold_priority_order
-
 
 DATA_ROOT = Path(__file__).resolve().parents[1] / "data"
 TASKS_FILE = DATA_ROOT / "tasks.yaml"
@@ -44,7 +42,9 @@ def _resolve_trigger_minute(event_data: dict, rng: random.Random) -> int:
     return rng.randint(low, high)
 
 
-def _build_interruptions(interruption_items: list[dict], rng: random.Random) -> list[InterruptionEvent]:
+def _build_interruptions(
+    interruption_items: list[dict], rng: random.Random
+) -> list[InterruptionEvent]:
     events: list[InterruptionEvent] = []
     for raw_event in interruption_items:
         trigger_minute = _resolve_trigger_minute(raw_event, rng)
@@ -87,9 +87,6 @@ def build_scenario(
 
     interruption_items = scenario_manifest.get("interruptions", [])
     interruptions = _build_interruptions(interruption_items, rng)
-
-    # Extract conflicting deadline info if present
-    conflicting_deadlines = scenario_manifest.get("conflicting_deadlines", [])
 
     return Scenario(
         task_id=task_id,

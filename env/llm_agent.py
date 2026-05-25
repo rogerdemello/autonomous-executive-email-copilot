@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import time
 from typing import Any
 
@@ -13,9 +14,9 @@ from openai import OpenAI
 from .approval import get_approval_store
 from .config import get_settings, normalize_openai_base_url
 from .models import (
-    AIResponse,
-    AIDecisionTrace,
     Action,
+    AIDecisionTrace,
+    AIResponse,
     AIStatusType,
     Observation,
     TokenUsage,
@@ -74,7 +75,6 @@ RISKY_REPLY_PATTERNS = [
     r"(?i)exploit\s+(vulnerability|system|security)",
 ]
 
-import re
 _PROMPT_INJECTION_REGEXES = [re.compile(p, re.IGNORECASE) for p in PROMPT_INJECTION_PATTERNS]
 _RISKY_REPLY_REGEXES = [re.compile(p, re.IGNORECASE) for p in RISKY_REPLY_PATTERNS]
 
@@ -85,7 +85,9 @@ def _compute_observation_hash(observation: Observation) -> str:
     return hashlib.sha256(obs_json.encode()).hexdigest()[:32]
 
 
-def _get_cached_response(observation: Observation, ttl: int = DEFAULT_CACHE_TTL_SECONDS) -> AIResponse | None:
+def _get_cached_response(
+    observation: Observation, ttl: int = DEFAULT_CACHE_TTL_SECONDS
+) -> AIResponse | None:
     obs_hash = _compute_observation_hash(observation)
     if obs_hash in _response_cache:
         cached_resp, timestamp = _response_cache[obs_hash]
@@ -144,11 +146,13 @@ def _is_forbidden_escalation(target: str | None) -> bool:
     if not target:
         return False
     target_lower = target.lower().replace("_", " ")
-    return target_lower in FORBIDDEN_ESCALATION_TARGETS or any(
-        target_lower == forbidden.replace("_", " ").replace("-", " ") 
-        for forbidden in FORBIDDEN_ESCALATION_TARGETS
-    ) or any(
-        forbidden in target_lower for forbidden in FORBIDDEN_ESCALATION_TARGETS
+    return (
+        target_lower in FORBIDDEN_ESCALATION_TARGETS
+        or any(
+            target_lower == forbidden.replace("_", " ").replace("-", " ")
+            for forbidden in FORBIDDEN_ESCALATION_TARGETS
+        )
+        or any(forbidden in target_lower for forbidden in FORBIDDEN_ESCALATION_TARGETS)
     )
 
 
@@ -170,6 +174,7 @@ _response_cache: dict[str, tuple[AIResponse, float]] = {}
 
 def _clear_cache() -> None:
     _response_cache.clear()
+
 
 # System prompt for AI Chief of Staff
 SYSTEM_PROMPT = """You are an AI Chief of Staff helping an executive manage their inbox efficiently.
@@ -222,7 +227,7 @@ def _build_user_prompt(observation: Observation) -> str:
         thread_context = ""
         if email.thread_history:
             thread_context = f" (Thread: {len(email.thread_history)} messages)"
-        
+
         lines.append(
             f"\n- ID: {email.id}\n"
             f"  From: {email.sender} ({email.sender_role})\n"
@@ -248,10 +253,11 @@ def _parse_llm_response(text: str) -> dict[str, Any] | None:
     try:
         # Look for JSON in ```json or ``` blocks
         import re
+
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         if match:
             return json.loads(match.group(1))
-        
+
         # Try to find any {...} block
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
@@ -268,7 +274,7 @@ def _validate_action(action_dict: dict[str, Any]) -> Action | None:
         # Check required field
         if "action_type" not in action_dict:
             return None
-        
+
         action_type = action_dict["action_type"]
         valid_types: list[str] = ["classify", "reply", "defer", "escalate", "prioritize"]
         if action_type not in valid_types:
@@ -340,7 +346,7 @@ def _apply_guardrails(observation: Observation, action: Action, is_first: bool) 
                 if email.id == action.email_id:
                     target_email = email
                     break
-        
+
         if target_email and target_email.risk_tag in {"legal", "security"}:
             target = "legal_team" if target_email.risk_tag == "legal" else "chief_of_staff"
             return Action(
@@ -402,14 +408,14 @@ class LLMAgent:
     def get_action(self, observation: Observation) -> AIResponse:
         """
         Get action from LLM based on current observation.
-        
+
         Applies guardrails:
         - First action always prioritizes (improves Kendall tau scoring)
         - Auto-escalates legal/security risk emails immediately
-        
+
         Returns fallback on any failure:
         - timeout → fallback_timeout
-        - parse error → fallback_parse_error  
+        - parse error → fallback_parse_error
         - validation error → fallback_validation_error
         - provider error → provider_error
         """
@@ -428,7 +434,7 @@ class LLMAgent:
                 reverse=True,
             )
             self._did_prioritize = True
-            
+
             return AIResponse(
                 action=Action(
                     action_type="prioritize",
@@ -524,7 +530,11 @@ class LLMAgent:
 
         # Check confidence and fallback to larger model if needed
         confidence = action_dict.get("confidence", 0.5)
-        if current_model == small_model and confidence < confidence_threshold and not retry_with_larger:
+        if (
+            current_model == small_model
+            and confidence < confidence_threshold
+            and not retry_with_larger
+        ):
             retry_with_larger = True
             current_model = large_model
             try:
@@ -565,7 +575,11 @@ class LLMAgent:
             if action.email_id:
                 store = get_approval_store()
                 pending = store.get_pending_requests()
-                existing = [p for p in pending if p.email_id == action.email_id and p.action_type == action.action_type]
+                existing = [
+                    p
+                    for p in pending
+                    if p.email_id == action.email_id and p.action_type == action.action_type
+                ]
                 if not existing:
                     approval_req = store.submit_request(
                         action_type=action.action_type,
@@ -609,7 +623,9 @@ class LLMAgent:
             trace=AIDecisionTrace(
                 reason=action_dict.get("reason", "LLM decision") if action_dict else "LLM decision",
                 confidence=confidence,
-                alternatives_considered=action_dict.get("alternatives_considered", []) if action_dict else [],
+                alternatives_considered=action_dict.get("alternatives_considered", [])
+                if action_dict
+                else [],
                 why_not=action_dict.get("why_not", "") if action_dict else "",
                 latency_ms=latency_ms,
                 model_name=current_model,
@@ -619,8 +635,12 @@ class LLMAgent:
             ),
         )
 
-        logger.info(f"API call: model={current_model}, tokens={token_usage.total_tokens}, cost=${cost_usd:.4f}")
-        logger.info(f"Savings: small model tokens would have cost ~${_calculate_cost(small_model, token_usage):.4f}")
+        logger.info(
+            f"API call: model={current_model}, tokens={token_usage.total_tokens}, cost=${cost_usd:.4f}"
+        )
+        logger.info(
+            f"Savings: small model tokens would have cost ~${_calculate_cost(small_model, token_usage):.4f}"
+        )
 
         _cache_response(observation, ai_response)
         return ai_response
@@ -628,13 +648,13 @@ class LLMAgent:
     def _fallback_response(self, status: str, start_time: float) -> AIResponse:
         """Create fallback response on error."""
         latency_ms = int((time.time() - start_time) * 1000)
-        
+
         # Return a safe fallback action (defer to first pending email)
         fallback_action = Action(
             action_type="defer",
             email_id=None,
         )
-        
+
         status_map: dict[str, AIStatusType] = {
             "fallback_timeout": "fallback_timeout",
             "fallback_parse_error": "fallback_parse_error",
@@ -645,7 +665,7 @@ class LLMAgent:
             "safety_risky_reply_content": "provider_error",
         }
         status_literal: AIStatusType = status_map.get(status, "provider_error")
-        
+
         return AIResponse(
             action=fallback_action,
             trace=AIDecisionTrace(
@@ -670,41 +690,41 @@ class LLMAgent:
     ) -> tuple[Action | None, str | None]:
         """
         Analyze action for safety concerns.
-        
+
         Checks:
         - Email content for prompt injection patterns
         - Escalation targets against forbidden list
         - Reply content for risky/unsafe patterns
-        
+
         Returns:
         - (None, reason) if dangerous content detected (fallback)
         - (action, None) if safe
         """
         if not action.email_id:
             return action, None
-        
+
         target_email = None
         for email in observation.emails:
             if email.id == action.email_id:
                 target_email = email
                 break
-        
+
         if not target_email:
             return action, None
-        
+
         if _detect_prompt_injection(target_email.body):
             return None, "prompt_injection_detected"
-        
+
         if _detect_prompt_injection(target_email.subject):
             return None, "prompt_injection_detected"
-        
+
         if action.action_type == "escalate" and _is_forbidden_escalation(action.escalate_to):
             return None, "forbidden_escalation_target"
-        
+
         if action.action_type == "reply" and action.content:
             if _detect_risky_content(action.content):
                 return None, "risky_reply_content"
-        
+
         return action, None
 
 

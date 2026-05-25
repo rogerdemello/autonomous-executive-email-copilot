@@ -37,7 +37,9 @@ class SuccessfulTrajectory(TrajectoryBase):
     trajectory_json = Column(Text, nullable=False)
     # Key patterns extracted from trajectory
     patterns_json = Column(Text, nullable=True)
-    created_at = Column(String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -69,7 +71,9 @@ class UserFeedback(TrajectoryBase):
     email_id = Column(String(100), nullable=True)
     feedback = Column(String(10), nullable=False)  # "good" or "bad"
     comment = Column(Text, nullable=True)
-    created_at = Column(String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -149,9 +153,11 @@ class TrajectoryStore:
             return None
 
         with _get_trajectory_session() as session:
-            existing = session.query(SuccessfulTrajectory).filter(
-                SuccessfulTrajectory.episode_id == episode_id
-            ).first()
+            existing = (
+                session.query(SuccessfulTrajectory)
+                .filter(SuccessfulTrajectory.episode_id == episode_id)
+                .first()
+            )
 
             trajectory_json = json.dumps(trajectory_data)
             patterns_json = json.dumps(patterns or [])
@@ -339,12 +345,18 @@ class FeedbackStore:
             from sqlalchemy import func
 
             total = session.query(UserFeedback).count()
-            good_count = session.query(func.count(UserFeedback.id)).filter(
-                UserFeedback.feedback == "good"
-            ).scalar() or 0
-            bad_count = session.query(func.count(UserFeedback.id)).filter(
-                UserFeedback.feedback == "bad"
-            ).scalar() or 0
+            good_count = (
+                session.query(func.count(UserFeedback.id))
+                .filter(UserFeedback.feedback == "good")
+                .scalar()
+                or 0
+            )
+            bad_count = (
+                session.query(func.count(UserFeedback.id))
+                .filter(UserFeedback.feedback == "bad")
+                .scalar()
+                or 0
+            )
 
             return {
                 "total_feedback": total,

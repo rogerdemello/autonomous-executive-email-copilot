@@ -1,6 +1,4 @@
 import json
-from datetime import datetime
-from io import BytesIO
 
 from fpdf import FPDF
 

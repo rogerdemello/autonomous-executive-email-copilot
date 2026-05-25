@@ -10,16 +10,14 @@ from openai import OpenAI
 
 from env.config import get_settings, normalize_openai_base_url
 from env.models import (
-    AIResponse,
-    AIDecisionTrace,
     Action,
-    AIStatusType,
     Observation,
 )
 
 
 class Strategy(Enum):
     """High-level strategies the planner can output."""
+
     PRIORITIZE_URGENT = "prioritize_urgent"
     BATCH_REPLY = "batch_reply"
     ESCALATE_CRITICAL = "escalate_critical"
@@ -72,7 +70,7 @@ def _build_planner_prompt(observation: Observation) -> str:
         thread_context = ""
         if email.thread_history:
             thread_context = f" (Thread: {len(email.thread_history)} messages)"
-        
+
         lines.append(
             f"\n- ID: {email.id}\n"
             f"  From: {email.sender} ({email.sender_role})\n"
@@ -90,7 +88,7 @@ def _parse_strategy_response(text: str) -> dict[str, Any] | None:
     """Parse LLM strategy response."""
     import json
     import re
-    
+
     # Try direct JSON first
     try:
         return json.loads(text)
@@ -102,7 +100,7 @@ def _parse_strategy_response(text: str) -> dict[str, Any] | None:
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         if match:
             return json.loads(match.group(1))
-        
+
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             return json.loads(match.group(0))
@@ -118,11 +116,11 @@ def _validate_strategy(strategy_dict: dict[str, Any]) -> Strategy | None:
         strategy_value = strategy_dict.get("strategy")
         if strategy_value is None:
             return None
-        
+
         valid_strategies = {s.value for s in Strategy}
         if strategy_value not in valid_strategies:
             return None
-        
+
         return Strategy(strategy_value)
     except Exception:
         return None
@@ -169,12 +167,12 @@ class Planner:
     def plan(self, observation: Observation) -> tuple[Strategy, dict[str, Any]]:
         """
         Analyze inbox and output strategic plan.
-        
+
         Returns:
             tuple of (Strategy, metadata including reasoning, confidence, etc.)
         """
         start_time = time.time()
-        
+
         # Check for critical emails that need immediate escalation
         for email in observation.emails:
             if email.risk_tag in {"legal", "security"}:
@@ -183,7 +181,7 @@ class Planner:
                     "confidence": 1.0,
                     "key_emails": [email.id],
                 }
-        
+
         # Check if time is running low and there are urgent emails
         if observation.time_remaining < 30:
             urgent_emails = [e for e in observation.emails if e.priority_hint == "high"]
@@ -221,7 +219,7 @@ class Planner:
 
             self._current_strategy = strategy
             latency_ms = int((time.time() - start_time) * 1000)
-            
+
             return strategy, {
                 "reasoning": strategy_dict.get("reasoning", "LLM strategy decision"),
                 "confidence": strategy_dict.get("confidence", 0.5),
@@ -230,7 +228,7 @@ class Planner:
                 "model_name": self._model,
             }
 
-        except Exception as e:
+        except Exception:
             return self._fallback_strategy()
 
     def _fallback_strategy(self) -> tuple[Strategy, dict[str, Any]]:
@@ -278,21 +276,22 @@ class LLMPolicy:
 
     def next_action(self, observation: Observation) -> Action | None:
         """Get next action from LLM agent."""
-        from env.llm_agent import get_action as llm_get_action, reset_agent
-        
+        from env.llm_agent import get_action as llm_get_action
+
         # Get action from LLM
         ai_response = llm_get_action(observation)
-        
+
         action = ai_response.action
-        
+
         # Track handled IDs to avoid duplicates
         if action.email_id:
             self._handled_ids.add(action.email_id)
-        
+
         return action
 
     def reset(self) -> None:
         """Reset policy state for new episode."""
         from env.llm_agent import reset_agent
+
         self._handled_ids.clear()
         reset_agent()

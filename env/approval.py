@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Any
 
 from .models import ApprovalRequest, ApprovalResponse, ApprovalStatus
-
 
 # Default approval timeout in seconds (5 minutes)
 DEFAULT_APPROVAL_TIMEOUT_SECONDS = 300
@@ -35,7 +33,7 @@ class ApprovalRequestStore:
         """Submit a new approval request."""
         request_id = str(uuid.uuid4())[:8]
         current_time = time.time()
-        
+
         request = ApprovalRequest(
             id=request_id,
             action_type=action_type,  # type: ignore
@@ -47,7 +45,7 @@ class ApprovalRequestStore:
             approver_id=None,
             expires_at=current_time + self._timeout_seconds,
         )
-        
+
         self._requests[request_id] = request
         return request
 
@@ -61,14 +59,14 @@ class ApprovalRequestStore:
         request = self._requests.get(request_id)
         if request is None:
             return None
-        
+
         if request.status != "pending":
             return None
-        
+
         # Update request status
         request.status = "approved"
         request.approver_id = approver_id
-        
+
         # Create response
         response = ApprovalResponse(
             request_id=request_id,
@@ -77,7 +75,7 @@ class ApprovalRequestStore:
             timestamp=time.time(),
             comment=comment,
         )
-        
+
         self._responses[request_id] = response
         return response
 
@@ -91,14 +89,14 @@ class ApprovalRequestStore:
         request = self._requests.get(request_id)
         if request is None:
             return None
-        
+
         if request.status != "pending":
             return None
-        
+
         # Update request status
         request.status = "rejected"
         request.approver_id = approver_id
-        
+
         # Create response
         response = ApprovalResponse(
             request_id=request_id,
@@ -107,7 +105,7 @@ class ApprovalRequestStore:
             timestamp=time.time(),
             comment=comment,
         )
-        
+
         self._responses[request_id] = response
         return response
 
@@ -132,12 +130,12 @@ class ApprovalRequestStore:
         """Reject all expired pending requests. Returns list of rejected request IDs."""
         current_time = time.time()
         rejected_ids = []
-        
+
         for request_id, request in self._requests.items():
             if request.status == "pending" and request.expires_at <= current_time:
                 request.status = "expired"
                 rejected_ids.append(request_id)
-                
+
                 # Create rejection response
                 response = ApprovalResponse(
                     request_id=request_id,
@@ -147,7 +145,7 @@ class ApprovalRequestStore:
                     comment="Auto-rejected: approval timeout expired",
                 )
                 self._responses[request_id] = response
-        
+
         return rejected_ids
 
     def check_approval_required(self, action_type: str, email_id: str) -> bool:
@@ -160,7 +158,7 @@ class ApprovalRequestStore:
         request = self._requests.get(request_id)
         if request is None:
             return None, None
-        
+
         if request.status == "approved":
             return True, request.status
         elif request.status in ("rejected", "expired"):

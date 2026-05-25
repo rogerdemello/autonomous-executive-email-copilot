@@ -1,8 +1,8 @@
 """Responder agent for drafting email responses."""
 
-from .base import BaseAgent
 from env.models import Action, Observation
 
+from .base import BaseAgent
 
 RESPONDABLE_KEYWORDS = ["question", "help", "need", "request", "please", "can you", "when", "how"]
 
@@ -50,5 +50,7 @@ class ResponderAgent(BaseAgent):
         if "question" in subject_lower:
             return "Thanks for reaching out. Let me look into this and respond with more details."
         if "help" in subject_lower or "need" in subject_lower:
-            return "I received your request and am looking into how I can help. I'll follow up soon."
+            return (
+                "I received your request and am looking into how I can help. I'll follow up soon."
+            )
         return "Thank you for your email. I'll review and respond appropriately."

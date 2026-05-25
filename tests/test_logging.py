@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from env.api import app
-from env.logging_config import configure_logging, set_request_id, get_request_id
+from env.logging_config import configure_logging, get_request_id, set_request_id
 
 client = TestClient(app)
 

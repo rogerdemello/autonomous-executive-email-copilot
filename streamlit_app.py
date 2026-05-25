@@ -29,11 +29,7 @@ def _looks_like_llm_provider_url(api_base: str) -> bool:
     parsed = urlparse(api_base)
     host = (parsed.hostname or "").lower()
     path = (parsed.path or "").lower()
-    return (
-        "openai.azure.com" in host
-        or "api.openai.com" in host
-        or "/openai/deployments/" in path
-    )
+    return "openai.azure.com" in host or "api.openai.com" in host or "/openai/deployments/" in path
 
 
 def _api_url(api_base: str, path: str) -> str:
@@ -99,7 +95,9 @@ def _post(url: str, payload: dict) -> dict:
 st.set_page_config(page_title="Executive Email Copilot", page_icon="inbox_tray", layout="wide")
 
 st.title("Autonomous Executive Email Copilot")
-st.caption("Interactive control center for tasks, grading, baseline runs, and leaderboard benchmarks")
+st.caption(
+    "Interactive control center for tasks, grading, baseline runs, and leaderboard benchmarks"
+)
 
 with st.sidebar:
     st.header("Connection")
@@ -124,8 +122,26 @@ if check_health:
         st.error(f"API health check failed: {exc}")
 
 
-overview_tab, tasks_tab, baseline_tab, leaderboard_tab, grader_tab, ai_demo_tab, replay_tab, approval_tab = st.tabs(
-    ["Overview", "Tasks", "Baseline", "Leaderboard", "Grader", "AI Demo", "Replay", "Approval Queue"]
+(
+    overview_tab,
+    tasks_tab,
+    baseline_tab,
+    leaderboard_tab,
+    grader_tab,
+    ai_demo_tab,
+    replay_tab,
+    approval_tab,
+) = st.tabs(
+    [
+        "Overview",
+        "Tasks",
+        "Baseline",
+        "Leaderboard",
+        "Grader",
+        "AI Demo",
+        "Replay",
+        "Approval Queue",
+    ]
 )
 
 with overview_tab:
@@ -260,15 +276,17 @@ with leaderboard_tab:
                     display_rows = []
                     for row in rows:
                         score_with_ci = f"{row['avg_score']:.3f} ± {row.get('ci_margin_95', 0):.3f}"
-                        display_rows.append({
-                            "Task": row["task"],
-                            "Persona": row["persona"],
-                            "Score (±95% CI)": score_with_ci,
-                            "Failure Rate %": row.get("failure_rate_pct", 0),
-                            "Fairness Score": row.get("fairness_score", 0),
-                            "Avg Reward": row["avg_reward"],
-                            "Avg Steps": row["avg_steps"],
-                        })
+                        display_rows.append(
+                            {
+                                "Task": row["task"],
+                                "Persona": row["persona"],
+                                "Score (±95% CI)": score_with_ci,
+                                "Failure Rate %": row.get("failure_rate_pct", 0),
+                                "Fairness Score": row.get("fairness_score", 0),
+                                "Avg Reward": row["avg_reward"],
+                                "Avg Steps": row["avg_steps"],
+                            }
+                        )
                     st.dataframe(display_rows, use_container_width=True)
 
                     st.divider()
@@ -294,13 +312,17 @@ with grader_tab:
         index=2,
         key="grader_task",
     )
-    g_persona = st.selectbox("Persona", ["strict_ceo", "balanced", "chill_manager"], index=1, key="grader_persona")
-    g_seed = st.number_input("Seed", min_value=0, max_value=999999, value=42, step=1, key="grader_seed")
+    g_persona = st.selectbox(
+        "Persona", ["strict_ceo", "balanced", "chill_manager"], index=1, key="grader_persona"
+    )
+    g_seed = st.number_input(
+        "Seed", min_value=0, max_value=999999, value=42, step=1, key="grader_seed"
+    )
 
-    default_actions = [
-        {"action_type": "prioritize", "priority_order": []}
-    ]
-    action_json = st.text_area("Actions JSON", value=json.dumps(default_actions, indent=2), height=200)
+    default_actions = [{"action_type": "prioritize", "priority_order": []}]
+    action_json = st.text_area(
+        "Actions JSON", value=json.dumps(default_actions, indent=2), height=200
+    )
 
     if st.button("Score Trajectory"):
         try:
@@ -387,8 +409,8 @@ with ai_demo_tab:
         - Seed: `{DEMO_SEED}` (deterministic, reproducible)
         - Max Steps: `{DEMO_MAX_STEPS}` (complete episode)
         - Mode: `compare` (baseline vs AI side-by-side)
-        
-        This tuple is optimized to demonstrate the baseline-vs-AI difference 
+
+        This tuple is optimized to demonstrate the baseline-vs-AI difference
         with a clear narrative: inbox chaos → baseline → AI → comparison.
         """)
         if st.button("Apply Demo Preset", key="apply_demo_preset"):
@@ -415,18 +437,18 @@ with ai_demo_tab:
                 baseline_payload = payload.copy()
                 baseline_payload["mode"] = "baseline"
                 baseline_result = _post(_api_url(api_base, "/baseline"), baseline_payload)
-                
+
                 # Run LLM
                 llm_payload = payload.copy()
                 llm_payload["mode"] = "llm"
                 llm_result = _post(_api_url(api_base, "/baseline"), llm_payload)
-                
+
                 # Display comparison
                 st.success("Comparison run complete")
-                
+
                 st.subheader("Baseline vs AI Comparison")
                 st.caption(f"Same tuple: {ai_task_id} | {ai_persona} | seed={ai_seed}")
-                
+
                 comp_col1, comp_col2, comp_col3 = st.columns(3)
                 with comp_col1:
                     st.markdown("### Baseline")
@@ -440,65 +462,71 @@ with ai_demo_tab:
                     st.metric("Steps", int(llm_result.get("steps", 0)))
                 with comp_col3:
                     st.markdown("### Delta (AI - Baseline)")
-                    score_delta = llm_result.get('score', 0) - baseline_result.get('score', 0)
-                    reward_delta = llm_result.get('total_reward', 0) - baseline_result.get('total_reward', 0)
-                    steps_delta = llm_result.get('steps', 0) - baseline_result.get('steps', 0)
+                    score_delta = llm_result.get("score", 0) - baseline_result.get("score", 0)
+                    reward_delta = llm_result.get("total_reward", 0) - baseline_result.get(
+                        "total_reward", 0
+                    )
+                    steps_delta = llm_result.get("steps", 0) - baseline_result.get("steps", 0)
                     delta_color = "normal" if score_delta >= 0 else "inverse"
                     st.metric("Score Δ", f"{score_delta:+.4f}", delta=delta_color)
                     st.metric("Reward Δ", f"{reward_delta:+.4f}")
                     st.metric("Steps Δ", f"{steps_delta:+d}")
-                
+
                 decision_traces = llm_result.get("decision_traces", [])
                 if decision_traces:
                     statuses = [t.get("status", "success") for t in decision_traces]
                     error_count = sum(1 for s in statuses if s in ("error", "unavailable"))
                     fallback_count = sum(1 for s in statuses if s == "fallback")
-                    
+
                     st.divider()
                     if error_count > 0:
                         st.error(f"⚠️ **Degraded Mode:** {error_count} decisions failed")
                     elif fallback_count > 0:
-                        st.warning(f"⚠️ **Fallback Mode:** {fallback_count}/{len(decision_traces)} decisions used fallback")
+                        st.warning(
+                            f"⚠️ **Fallback Mode:** {fallback_count}/{len(decision_traces)} decisions used fallback"
+                        )
                     else:
                         st.success("🤖 **Full AI Mode**")
-                    
+
                     st.subheader("AI Decision Timeline")
                     st.caption("Decisions in execution order")
-                    
+
                     timeline_container = st.container()
                     for idx, trace in enumerate(decision_traces):
                         status = trace.get("status", "success")
-                        
-                        step_num = trace.get('step', idx + 1)
+
+                        step_num = trace.get("step", idx + 1)
                         action_type = trace.get("action", {}).get("action_type", "unknown")
-                        
+
                         icon = "🤖" if status == "success" else "⚠️"
                         st.markdown(f"**{icon} Step {step_num}: {action_type}**")
-                        
+
                         action_data = trace.get("action", {})
                         if action_data:
                             target_email = action_data.get("email_id", "N/A")
                             st.caption(f"  → Target: {target_email}")
-                        
+
                         reason = trace.get("reason", "No reason provided")
-                        st.caption(f"  → Reason: {reason[:200]}{'...' if len(reason) > 200 else ''}")
-                        
+                        st.caption(
+                            f"  → Reason: {reason[:200]}{'...' if len(reason) > 200 else ''}"
+                        )
+
                         conf = trace.get("confidence")
                         if conf is not None:
                             st.caption(f"  → Confidence: {conf:.2f}")
-                        
+
                         st.divider()
                 else:
                     st.info("No AI decision traces available")
-                
+
                 # Show baseline breakdown
                 st.subheader("Baseline Breakdown")
                 st.json(baseline_result.get("breakdown", {}))
-                
+
                 # Show AI breakdown
                 st.subheader("AI Breakdown")
                 st.json(llm_result.get("breakdown", {}))
-                
+
             else:
                 # Original single-mode behavior
                 result = _post(_api_url(api_base, "/baseline"), payload)
@@ -521,19 +549,29 @@ with ai_demo_tab:
 
                     st.subheader("AI Decision Trace")
                     if error_count > 0:
-                        st.error(f"⚠️ **Degraded Mode:** {error_count} decision(s) failed (LLM unavailable)")
-                        st.caption(f"Showing {len(decision_traces)} total decisions. Some actions may be fallback responses.")
+                        st.error(
+                            f"⚠️ **Degraded Mode:** {error_count} decision(s) failed (LLM unavailable)"
+                        )
+                        st.caption(
+                            f"Showing {len(decision_traces)} total decisions. Some actions may be fallback responses."
+                        )
                     elif fallback_count > 0:
-                        st.warning(f"⚠️ **Fallback Mode Active:** {fallback_count}/{len(decision_traces)} decisions used fallback reasoning")
-                        st.caption("AI ran in fallback mode for some decisions. The story is coherent but may be less optimal.")
+                        st.warning(
+                            f"⚠️ **Fallback Mode Active:** {fallback_count}/{len(decision_traces)} decisions used fallback reasoning"
+                        )
+                        st.caption(
+                            "AI ran in fallback mode for some decisions. The story is coherent but may be less optimal."
+                        )
                     else:
-                        st.success(f"🤖 **Full AI Mode:** {success_count}/{len(decision_traces)} decisions with LLM reasoning")
+                        st.success(
+                            f"🤖 **Full AI Mode:** {success_count}/{len(decision_traces)} decisions with LLM reasoning"
+                        )
 
                     st.caption("Watch the AI think through each decision")
 
                     for idx, trace in enumerate(decision_traces):
                         status = trace.get("status", "success")
-                        
+
                         status_icons = {
                             "success": ("✅", "success"),
                             "fallback": ("⚠️", "warning"),
@@ -541,15 +579,17 @@ with ai_demo_tab:
                             "unavailable": ("🚫", "error"),
                         }
                         icon, badge_style = status_icons.get(status, ("❓", "info"))
-                        
-                        with st.expander(f"{icon} Step {trace.get('step', idx + 1)}: {trace.get('action', {}).get('action_type', 'unknown')}"):
+
+                        with st.expander(
+                            f"{icon} Step {trace.get('step', idx + 1)}: {trace.get('action', {}).get('action_type', 'unknown')}"
+                        ):
                             if badge_style == "error":
                                 st.error(f"Status: {status.title()}")
                             elif badge_style == "warning":
                                 st.warning(f"Status: {status.title()} (fallback used)")
                             else:
                                 st.caption(f"Status: {status.title()}")
-                            
+
                             email_ctx = trace.get("email_context", {})
                             st.markdown("**📧 Target Email**")
                             st.markdown(f"- **From:** {email_ctx.get('sender', 'N/A')}")
@@ -576,13 +616,13 @@ with ai_demo_tab:
                             model_name = trace.get("model_name")
                             latency = trace.get("latency_ms")
                             fallback_reason = trace.get("fallback_reason", "")
-                            
+
                             if model_name or latency:
                                 model_info = f"Model: {model_name or 'N/A'}"
                                 if latency:
                                     model_info += f" | Latency: {latency:.0f}ms"
                                 st.caption(model_info)
-                            
+
                             if fallback_reason:
                                 st.caption(f"⬇️ Fallback trigger: {fallback_reason}")
 
@@ -592,7 +632,9 @@ with ai_demo_tab:
                     st.info("No decision traces available")
 
         except httpx.ConnectError:
-            st.error("Unable to connect to API server. Please ensure the backend is running at the specified URL.")
+            st.error(
+                "Unable to connect to API server. Please ensure the backend is running at the specified URL."
+            )
         except httpx.HTTPStatusError as exc:
             st.error(f"API returned an error: {exc.response.status_code} - {exc.response.text}")
         except Exception as exc:  # noqa: BLE001
@@ -614,7 +656,9 @@ with replay_tab:
         index=1,
         key="replay_persona",
     )
-    r_seed = st.number_input("Seed", min_value=0, max_value=999999, value=42, step=1, key="replay_seed")
+    r_seed = st.number_input(
+        "Seed", min_value=0, max_value=999999, value=42, step=1, key="replay_seed"
+    )
 
     episode_id = f"{r_task}_{r_seed}_{r_persona}"
 
@@ -646,14 +690,18 @@ with replay_tab:
                     }
                     icon, badge_style = status_icons.get(status, ("❓", "info"))
 
-                    with st.expander(f"{icon} Step {trace.get('step', idx + 1)}: {trace.get('action', {}).get('action_type', 'unknown')}"):
+                    with st.expander(
+                        f"{icon} Step {trace.get('step', idx + 1)}: {trace.get('action', {}).get('action_type', 'unknown')}"
+                    ):
                         action_data = trace.get("action", {})
                         if action_data:
                             target_email = action_data.get("email_id", "N/A")
                             st.caption(f"Target: {target_email}")
 
                         reason = trace.get("reason", "No reason provided")
-                        st.markdown(f"**Reason:** {reason[:200]}{'...' if len(reason) > 200 else ''}")
+                        st.markdown(
+                            f"**Reason:** {reason[:200]}{'...' if len(reason) > 200 else ''}"
+                        )
 
                         conf = trace.get("confidence")
                         if conf is not None:
@@ -694,59 +742,77 @@ with approval_tab:
 
     try:
         pending = _get(_api_url(api_base, "/approval/pending"))
-        
+
         if pending:
             st.write(f"**Pending Approvals ({len(pending)})**")
-            
+
             for req in pending:
                 with st.container():
                     st.markdown(f"**Request ID:** `{req.get('id', 'N/A')}`")
-                    st.markdown(f"**Action:** {req.get('action_type', 'N/A')} | **Email:** {req.get('email_id', 'N/A')}")
-                    if req.get('content'):
+                    st.markdown(
+                        f"**Action:** {req.get('action_type', 'N/A')} | **Email:** {req.get('email_id', 'N/A')}"
+                    )
+                    if req.get("content"):
                         st.markdown(f"**Content:** {req.get('content', '')[:100]}...")
-                    if req.get('escalate_to'):
+                    if req.get("escalate_to"):
                         st.markdown(f"**Escalate to:** {req.get('escalate_to')}")
-                    
+
                     c1, c2 = st.columns(2)
                     with c1:
-                        approve_btn = st.button(f"Approve", key=f"approve_{req.get('id')}")
+                        approve_btn = st.button("Approve", key=f"approve_{req.get('id')}")
                     with c2:
-                        reject_btn = st.button(f"Reject", key=f"reject_{req.get('id')}")
-                    
+                        reject_btn = st.button("Reject", key=f"reject_{req.get('id')}")
+
                     if approve_btn:
                         try:
-                            _post(_api_url(api_base, f"/approval/{req.get('id')}/approve"), {"approver_id": "admin", "comment": "Approved via UI"})
+                            _post(
+                                _api_url(api_base, f"/approval/{req.get('id')}/approve"),
+                                {"approver_id": "admin", "comment": "Approved via UI"},
+                            )
                             st.success(f"Approved request {req.get('id')}")
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed to approve: {e}")
-                    
+
                     if reject_btn:
                         try:
-                            _post(_api_url(api_base, f"/approval/{req.get('id')}/reject"), {"approver_id": "admin", "comment": "Rejected via UI"})
+                            _post(
+                                _api_url(api_base, f"/approval/{req.get('id')}/reject"),
+                                {"approver_id": "admin", "comment": "Rejected via UI"},
+                            )
                             st.success(f"Rejected request {req.get('id')}")
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed to reject: {e}")
-                    
+
                     st.divider()
         else:
             st.info("No pending approval requests")
-            
+
         st.subheader("Approval History")
-        history_limit = st.slider("History Limit", min_value=5, max_value=100, value=20, key="history_limit")
-        
+        history_limit = st.slider(
+            "History Limit", min_value=5, max_value=100, value=20, key="history_limit"
+        )
+
         try:
             history = _get(_api_url(api_base, f"/approval/history?limit={history_limit}"))
             if history:
                 for req in history:
-                    status = req.get('status', 'unknown')
-                    status_icon = "✅" if status == "approved" else "❌" if status in ("rejected", "expired") else "⏳"
-                    st.markdown(f"{status_icon} **{status.upper()}** - {req.get('action_type')} on {req.get('email_id')} (Requested: {req.get('requested_at', 0):.0f})")
+                    status = req.get("status", "unknown")
+                    status_icon = (
+                        "✅"
+                        if status == "approved"
+                        else "❌"
+                        if status in ("rejected", "expired")
+                        else "⏳"
+                    )
+                    st.markdown(
+                        f"{status_icon} **{status.upper()}** - {req.get('action_type')} on {req.get('email_id')} (Requested: {req.get('requested_at', 0):.0f})"
+                    )
             else:
                 st.info("No approval history")
         except Exception as e:
             st.error(f"Failed to load history: {e}")
-            
+
     except Exception as exc:  # noqa: BLE001
         st.error(f"Failed to load approvals: {exc}")

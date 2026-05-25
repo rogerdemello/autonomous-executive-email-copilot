@@ -4,7 +4,7 @@ import json
 
 from benchmark.agents import BaselineAgent, BenchmarkMetrics, LLMAgent, MultiAgent
 from benchmark.reporter import Reporter
-from benchmark.runner import BenchmarkRunner, DEFAULT_PERSONAS, DEFAULT_SEEDS, DEFAULT_TASKS
+from benchmark.runner import DEFAULT_PERSONAS, DEFAULT_SEEDS, DEFAULT_TASKS, BenchmarkRunner
 
 
 def test_default_tasks():

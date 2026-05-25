@@ -8,7 +8,6 @@ from statistics import mean, stdev
 
 from baseline.run_baseline import run
 
-
 # t-distribution critical values for 95% CI (approximate)
 _T_CRITICAL = {
     2: 12.706,
@@ -57,21 +56,21 @@ def _calc_failure_rate(scores: list[float], threshold: float = 0.3) -> float:
 
 def _calc_fairness_score(task_rows: list[dict], task: str) -> float:
     """Calculate fairness score for a task: lower variance = higher fairness.
-    
+
     Returns 100 - (coefficient of variation * 100), clamped to 0-100.
     Higher is better (more fair across personas).
     """
     if not task_rows:
         return 0.0
-    
+
     scores_for_task = [r["avg_score"] for r in task_rows if r.get("task") == task]
     if len(scores_for_task) < 2:
         return 100.0  # Single persona = perfectly fair by default
-    
+
     mean_score = mean(scores_for_task)
     if mean_score == 0:
         return 0.0
-    
+
     cv = stdev(scores_for_task) / mean_score
     fairness = 100 - (cv * 100)
     return round(max(0.0, min(100.0, fairness)), 2)
@@ -188,7 +187,9 @@ def _write_csv(path_str: str, rows: list[dict[str, object]]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate baseline leaderboard")
     parser.add_argument("--tasks", default=",".join(DEFAULT_TASKS), help="Comma-separated task ids")
-    parser.add_argument("--personas", default=",".join(DEFAULT_PERSONAS), help="Comma-separated persona ids")
+    parser.add_argument(
+        "--personas", default=",".join(DEFAULT_PERSONAS), help="Comma-separated persona ids"
+    )
     parser.add_argument("--seeds", default="42,43,44", help="Comma-separated integer seeds")
     parser.add_argument("--max-steps", type=int, default=120)
     parser.add_argument("--mode", default="baseline", choices=["baseline", "stress"])

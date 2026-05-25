@@ -51,6 +51,7 @@ def test_normalize_azure_requires_deployment():
 
 def test_normalize_azure_adds_api_version():
     url = normalize_openai_base_url(
-        "https://res.openai.azure.com/openai/deployments/gpt4", azure_api_version="2024-02-15-preview"
+        "https://res.openai.azure.com/openai/deployments/gpt4",
+        azure_api_version="2024-02-15-preview",
     )
     assert "api-version=2024-02-15-preview" in url

@@ -1,7 +1,7 @@
 """Advanced Telemetry module with Prometheus metrics and alerting."""
 
+from telemetry.alerts import AlertManager, AlertRule
 from telemetry.metrics import PrometheusMetrics
-from telemetry.alerts import AlertRule, AlertManager
 
 __all__ = [
     "PrometheusMetrics",

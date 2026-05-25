@@ -1,23 +1,20 @@
-import pytest
-
+from telemetry.alerts import (
+    AlertManager,
+    AlertRule,
+    alert_manager,
+    cost_spike_rule,
+    high_error_rate_rule,
+    high_failure_rate_rule,
+)
 from telemetry.metrics import (
     PrometheusMetrics,
-    metrics,
-    record_request,
-    record_episode_start,
-    record_episode_end,
-    record_api_error,
-    record_tokens_used,
-    record_cost_usd,
     get_metrics_output,
-)
-from telemetry.alerts import (
-    AlertRule,
-    AlertManager,
-    alert_manager,
-    high_failure_rate_rule,
-    high_error_rate_rule,
-    cost_spike_rule,
+    record_api_error,
+    record_cost_usd,
+    record_episode_end,
+    record_episode_start,
+    record_request,
+    record_tokens_used,
 )
 
 
@@ -27,13 +24,13 @@ class TestPrometheusMetrics:
         m.counter("test_counter", {"label": "value"})
         m.counter("test_counter", {"label": "value"})
         output = m.get_metrics()
-        assert "test_counter{label=\"value\"} 2" in output
+        assert 'test_counter{label="value"} 2' in output
 
     def test_gauge_sets_value(self):
         m = PrometheusMetrics()
         m.gauge("test_gauge", 42.0, {"env": "test"})
         output = m.get_metrics()
-        assert "test_gauge{env=\"test\"} 42.0" in output
+        assert 'test_gauge{env="test"} 42.0' in output
 
     def test_histogram_records_values(self):
         m = PrometheusMetrics()
@@ -73,6 +70,7 @@ class TestAlertManager:
     def test_alert_rule_condition(self):
         def always_true(metrics):
             return True
+
         rule = AlertRule(
             name="test_rule",
             condition=always_true,
@@ -88,6 +86,7 @@ class TestAlertManager:
     def test_alert_no_trigger(self):
         def always_false(metrics):
             return False
+
         rule = AlertRule(
             name="never_trigger",
             condition=always_false,
@@ -126,8 +125,10 @@ class TestAlertManager:
 
     def test_alert_manager_get_alerts(self):
         manager = AlertManager()
+
         def trigger(metrics):
             return True
+
         rule = AlertRule(name="test", condition=trigger, threshold=1)
         manager.add_rule(rule)
         manager.set_metrics({"val": 1})
@@ -137,8 +138,10 @@ class TestAlertManager:
 
     def test_alert_manager_clear_alerts(self):
         manager = AlertManager()
+
         def trigger(metrics):
             return True
+
         rule = AlertRule(name="test", condition=trigger, threshold=1)
         manager.add_rule(rule)
         manager.set_metrics({"val": 1})
@@ -150,8 +153,10 @@ class TestAlertManager:
 class TestAlertWebhook:
     def test_webhook_url_can_be_set(self):
         manager = AlertManager()
+
         def always_true(metrics):
             return True
+
         rule = AlertRule(
             name="webhook_test",
             condition=always_true,

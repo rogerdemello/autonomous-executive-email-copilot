@@ -4,9 +4,9 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, desc, func, or_
+from sqlalchemy import desc, func
 
-from .db import DecisionRecord, Episode, SessionLocal, TeamSettings, UserPreference, get_session
+from .db import Episode, TeamSettings, UserPreference, get_session
 
 
 class EpisodeRepository:
@@ -15,7 +15,11 @@ class EpisodeRepository:
 
     def save_episode(self, episode_data: dict[str, Any]) -> Episode:
         with get_session() as session:
-            existing = session.query(Episode).filter(Episode.episode_id == episode_data["episode_id"]).first()
+            existing = (
+                session.query(Episode)
+                .filter(Episode.episode_id == episode_data["episode_id"])
+                .first()
+            )
             if existing:
                 existing.task_id = episode_data.get("task_id", existing.task_id)
                 existing.seed = episode_data.get("seed", existing.seed)
@@ -86,7 +90,9 @@ class EpisodeRepository:
     def get_episodes_by_task(self, task_id: str, page: int = 1, limit: int = 20) -> dict[str, Any]:
         return self.list_episodes(filters={"task_id": task_id}, page=page, limit=limit)
 
-    def get_episodes_by_persona(self, persona: str, page: int = 1, limit: int = 20) -> dict[str, Any]:
+    def get_episodes_by_persona(
+        self, persona: str, page: int = 1, limit: int = 20
+    ) -> dict[str, Any]:
         return self.list_episodes(filters={"persona": persona}, page=page, limit=limit)
 
     def get_episodes_by_score_range(
@@ -143,13 +149,20 @@ class UserPreferenceRepository:
 
     def save_user_preference(self, preference_data: dict[str, Any]) -> UserPreference:
         """Save or update user preference."""
-        import json
 
         with get_session() as session:
-            existing = session.query(UserPreference).filter(UserPreference.user_id == preference_data["user_id"]).first()
+            existing = (
+                session.query(UserPreference)
+                .filter(UserPreference.user_id == preference_data["user_id"])
+                .first()
+            )
             if existing:
-                existing.default_persona = preference_data.get("default_persona", existing.default_persona)
-                existing.notification_email = preference_data.get("notification_email", existing.notification_email)
+                existing.default_persona = preference_data.get(
+                    "default_persona", existing.default_persona
+                )
+                existing.notification_email = preference_data.get(
+                    "notification_email", existing.notification_email
+                )
                 existing.updated_at = datetime.now(timezone.utc).isoformat()
                 session.commit()
                 session.refresh(existing)
@@ -174,7 +187,13 @@ class UserPreferenceRepository:
         with get_session() as session:
             total = session.query(UserPreference).count()
             offset = (page - 1) * limit
-            preferences = session.query(UserPreference).order_by(desc(UserPreference.created_at)).offset(offset).limit(limit).all()
+            preferences = (
+                session.query(UserPreference)
+                .order_by(desc(UserPreference.created_at))
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
             return {
                 "preferences": [p.to_dict() for p in preferences],
                 "total": total,
@@ -195,10 +214,16 @@ class TeamSettingsRepository:
         import json
 
         with get_session() as session:
-            existing = session.query(TeamSettings).filter(TeamSettings.team_id == settings_data["team_id"]).first()
+            existing = (
+                session.query(TeamSettings)
+                .filter(TeamSettings.team_id == settings_data["team_id"])
+                .first()
+            )
             if existing:
                 existing.approval_rules = json.dumps(settings_data.get("approval_rules", []))
-                existing.escalation_targets = json.dumps(settings_data.get("escalation_targets", []))
+                existing.escalation_targets = json.dumps(
+                    settings_data.get("escalation_targets", [])
+                )
                 existing.updated_at = datetime.now(timezone.utc).isoformat()
                 session.commit()
                 session.refresh(existing)
@@ -223,7 +248,13 @@ class TeamSettingsRepository:
         with get_session() as session:
             total = session.query(TeamSettings).count()
             offset = (page - 1) * limit
-            settings = session.query(TeamSettings).order_by(desc(TeamSettings.created_at)).offset(offset).limit(limit).all()
+            settings = (
+                session.query(TeamSettings)
+                .order_by(desc(TeamSettings.created_at))
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
             return {
                 "settings": [s.to_dict() for s in settings],
                 "total": total,

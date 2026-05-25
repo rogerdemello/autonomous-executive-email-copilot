@@ -6,9 +6,9 @@ from pathlib import Path
 
 import yaml
 
+from env import tasks, utils
 from env.data_loader import clear_yaml_cache
 from env.tasks import build_scenario, list_tasks
-from env import tasks, utils
 
 
 def _write_yaml(path: Path, payload: dict) -> None:

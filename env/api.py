@@ -1,32 +1,52 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from pathlib import Path
+from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from typing import Any
-
 from pydantic import BaseModel
 
 from baseline.leaderboard import build_leaderboard
 from baseline.run_baseline import run as run_baseline
 from benchmark.reporter import Reporter
 from benchmark.runner import BenchmarkRunner
+from reports.generator import PDFGenerator
+from telemetry.alerts import alert_manager
+from telemetry.metrics import (
+    get_metrics_output,
+    record_api_error,
+    record_episode_end,
+    record_episode_start,
+    record_request,
+)
+
 from .approval import (
     approve_request as _approve_request,
+)
+from .approval import (
     get_pending_requests as _get_pending_requests,
+)
+from .approval import (
     get_request_history,
-    get_request_status as _get_request_status,
-    reject_request as _reject_request,
     submit_approval_request,
 )
+from .approval import (
+    get_request_status as _get_request_status,
+)
+from .approval import (
+    reject_request as _reject_request,
+)
+from .dashboard_api import dashboard_router
+from .db import migrate_db
 from .environment import ExecutiveEmailEnv
 from .grader import evaluate_trajectory
+from .learning.example_extractor import example_extractor
+from .learning.trajectory_store import feedback_store, trajectory_store
+from .logging_config import configure_logging, set_request_id
 from .models import (
     Action,
     ActionResult,
@@ -34,7 +54,6 @@ from .models import (
     ApprovalResponse,
     BaselineRequest,
     BaselineResponse,
-    DecisionTelemetry,
     EpisodeHistory,
     GraderRequest,
     GraderResponse,
@@ -45,25 +64,8 @@ from .models import (
     StateSnapshot,
     TasksResponse,
 )
-from .tasks import list_tasks
 from .repositories import EpisodeRepository, TeamSettingsRepository, UserPreferenceRepository
-from .db import migrate_db
-from .learning.trajectory_store import trajectory_store, feedback_store
-from .learning.example_extractor import example_extractor
-from .learning.prompt_enhancer import prompt_enhancer
-from .dashboard_api import dashboard_router
-from .logging_config import configure_logging, set_request_id
-
-from reports.generator import PDFGenerator
-from telemetry.metrics import (
-    get_metrics_output,
-    metrics,
-    record_api_error,
-    record_episode_end,
-    record_episode_start,
-    record_request,
-)
-from telemetry.alerts import alert_manager, AlertRule, Alert
+from .tasks import list_tasks
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -114,6 +116,7 @@ def _metric_path(request) -> str:
     route = request.scope.get("route")
     return getattr(route, "path", None) or request.url.path
 
+
 # Dashboard static files setup
 dashboard_dist = Path(__file__).parent.parent / "dashboard" / "dist"
 if dashboard_dist.exists():
@@ -122,7 +125,7 @@ if dashboard_dist.exists():
 
 @app.get("/", response_class=HTMLResponse)
 def root() -> str:
-        return """
+    return """
 <!doctype html>
 <html lang=\"en\">
     <head>
@@ -156,7 +159,7 @@ def root() -> str:
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon() -> Response:
-        return Response(status_code=204)
+    return Response(status_code=204)
 
 
 @app.get("/health")
@@ -365,7 +368,9 @@ def approval_approve(request_id: str, payload: ApprovalResponseInput) -> Approva
         comment=payload.comment,
     )
     if response is None:
-        raise HTTPException(status_code=404, detail=f"Approval request {request_id} not found or already processed")
+        raise HTTPException(
+            status_code=404, detail=f"Approval request {request_id} not found or already processed"
+        )
     return response
 
 
@@ -377,7 +382,9 @@ def approval_reject(request_id: str, payload: ApprovalResponseInput) -> Approval
         comment=payload.comment,
     )
     if response is None:
-        raise HTTPException(status_code=404, detail=f"Approval request {request_id} not found or already processed")
+        raise HTTPException(
+            status_code=404, detail=f"Approval request {request_id} not found or already processed"
+        )
     return response
 
 
@@ -622,6 +629,7 @@ def run_benchmark(request: BenchmarkRequest) -> BenchmarkResponse:
     reporter = Reporter(runner)
     json_data = reporter.generate_json(results)
     import json
+
     data = json.loads(json_data)
     return BenchmarkResponse(summary=data["summary"], results=data["results"])
 
@@ -652,6 +660,7 @@ def download_episode_report(episode_id: str):
     try:
         pdf_bytes = pdf_generator.generate(episode_id)
         from fastapi.responses import Response
+
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -665,6 +674,7 @@ def download_episode_report(episode_id: str):
 def generate_report_from_data(payload: ReportGenerateRequest):
     pdf_bytes = pdf_generator.generate_summary(payload.episode_data)
     from fastapi.responses import Response
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

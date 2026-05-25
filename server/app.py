@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import uvicorn
 
-from env.api import app
-
 
 def main() -> None:
     """CLI entrypoint used by OpenEnv multi-mode validation."""

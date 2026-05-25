@@ -1,8 +1,8 @@
 """Escalator agent for handling email escalation."""
 
-from .base import BaseAgent
 from env.models import Action, Observation, RiskTag
 
+from .base import BaseAgent
 
 ESCALATION_TARGETS = {
     "legal": "legal_team",
@@ -11,7 +11,15 @@ ESCALATION_TARGETS = {
     "ops": "ops_team",
 }
 
-HIGH_RISK_KEYWORDS = ["legal", "security", "breach", "confidential", "compliance", "contract", "lawsuit"]
+HIGH_RISK_KEYWORDS = [
+    "legal",
+    "security",
+    "breach",
+    "confidential",
+    "compliance",
+    "contract",
+    "lawsuit",
+]
 
 
 class EscalatorAgent(BaseAgent):

@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from .environment import ExecutiveEmailEnv
 
 dashboard_router = APIRouter()
@@ -44,12 +45,16 @@ async def websocket_endpoint(websocket: WebSocket):
                         seed=payload.get("seed", 42),
                         persona=payload.get("persona", "balanced"),
                     )
-                    await websocket.send_text(json.dumps({"type": "reset_complete", "data": obs.model_dump()}))
+                    await websocket.send_text(
+                        json.dumps({"type": "reset_complete", "data": obs.model_dump()})
+                    )
                     await broadcast_state(runtime_env.state().model_dump())
                 elif msg_type == "action":
                     action = payload.get("action")
                     result = runtime_env.step(action)
-                    await websocket.send_text(json.dumps({"type": "action_result", "data": result.model_dump()}))
+                    await websocket.send_text(
+                        json.dumps({"type": "action_result", "data": result.model_dump()})
+                    )
                     await broadcast_state(runtime_env.state().model_dump())
                 elif msg_type == "get_state":
                     state = runtime_env.state().model_dump()

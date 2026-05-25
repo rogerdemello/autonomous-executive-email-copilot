@@ -24,7 +24,12 @@ from .utils import (
 
 
 class ExecutiveEmailEnv:
-    def __init__(self, task_id: str = "hard_full_management", seed: int = 42, persona: PersonaType = "balanced"):
+    def __init__(
+        self,
+        task_id: str = "hard_full_management",
+        seed: int = 42,
+        persona: PersonaType = "balanced",
+    ):
         self._task_id = task_id
         self._seed = seed
         self._persona = persona
@@ -56,9 +61,13 @@ class ExecutiveEmailEnv:
             self._persona = persona
         self._persona_profile = get_persona_profile(self._persona)
 
-        self._scenario = build_scenario(task_id=self._task_id, seed=self._seed, persona=self._persona)
+        self._scenario = build_scenario(
+            task_id=self._task_id, seed=self._seed, persona=self._persona
+        )
         self._emails = [email.model_copy(deep=True) for email in self._scenario.emails]
-        self._pending_interruptions = [event.model_copy(deep=True) for event in self._scenario.interruptions]
+        self._pending_interruptions = [
+            event.model_copy(deep=True) for event in self._scenario.interruptions
+        ]
         self._time_remaining = self._scenario.time_budget
         self._current_minute = 0
         self._risk_level = self._scenario.risk_level
@@ -157,7 +166,9 @@ class ExecutiveEmailEnv:
                 if email.handled_action != "reply":
                     values.append(0.0)
                 else:
-                    values.append(reply_keyword_score(email.last_reply, email.expected_reply_keywords))
+                    values.append(
+                        reply_keyword_score(email.last_reply, email.expected_reply_keywords)
+                    )
             reply_quality = sum(values) / len(values)
 
         prioritization = self._best_priority_similarity
@@ -319,19 +330,27 @@ class ExecutiveEmailEnv:
         for email in self._emails:
             if email.id in self._deadline_penalized_ids:
                 continue
-            if email.expected_label == "urgent" and not email.resolved and email.deadline_minutes <= 0:
+            if (
+                email.expected_label == "urgent"
+                and not email.resolved
+                and email.deadline_minutes <= 0
+            ):
                 penalty -= 0.7 * self._persona_profile.deadline_penalty_multiplier
                 self._deadline_penalized_ids.add(email.id)
         return penalty
 
     def _terminal_penalty(self) -> float:
         penalty = 0.0
-        unresolved_urgent = [e for e in self._emails if e.expected_label == "urgent" and not e.resolved]
+        unresolved_urgent = [
+            e for e in self._emails if e.expected_label == "urgent" and not e.resolved
+        ]
         unresolved_critical = [e for e in self._emails if e.critical and not e.resolved]
 
         penalty -= 0.5 * len(unresolved_urgent)
 
-        high_risk_unresolved = [e for e in unresolved_critical if e.risk_tag in {"legal", "security"}]
+        high_risk_unresolved = [
+            e for e in unresolved_critical if e.risk_tag in {"legal", "security"}
+        ]
         penalty -= 0.4 * len(high_risk_unresolved)
         return penalty * self._persona_profile.terminal_penalty_multiplier
 

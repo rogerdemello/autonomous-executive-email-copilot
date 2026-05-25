@@ -1,8 +1,8 @@
-from dataclasses import dataclass
-from typing import Any, Callable
-import urllib.request
-import urllib.error
 import json
+import urllib.error
+import urllib.request
+from collections.abc import Callable
+from dataclasses import dataclass
 
 
 @dataclass
@@ -44,7 +44,8 @@ class AlertManager:
                     alert = Alert(
                         rule_name=rule.name,
                         triggered=True,
-                        message=rule.message or f"Alert: {rule.name} threshold ({rule.threshold}) exceeded",
+                        message=rule.message
+                        or f"Alert: {rule.name} threshold ({rule.threshold}) exceeded",
                         timestamp=_get_timestamp(),
                     )
                     triggered.append(alert)
@@ -57,11 +58,13 @@ class AlertManager:
 
     def _send_webhook(self, webhook: str, alert: Alert) -> None:
         try:
-            payload = json.dumps({
-                "alert": alert.rule_name,
-                "message": alert.message,
-                "timestamp": alert.timestamp,
-            }).encode("utf-8")
+            payload = json.dumps(
+                {
+                    "alert": alert.rule_name,
+                    "message": alert.message,
+                    "timestamp": alert.timestamp,
+                }
+            ).encode("utf-8")
             req = urllib.request.Request(
                 webhook,
                 data=payload,
@@ -80,6 +83,7 @@ class AlertManager:
 
 def _get_timestamp() -> str:
     from datetime import datetime, timezone
+
     return datetime.now(timezone.utc).isoformat()
 
 

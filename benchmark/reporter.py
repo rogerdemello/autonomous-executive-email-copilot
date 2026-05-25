@@ -106,13 +106,15 @@ class Reporter:
             avg_tokens = mean(r.metrics.tokens for r in agent_results_list)
             avg_cost = mean(r.metrics.cost_usd for r in agent_results_list)
 
-            summary.append({
-                "agent": agent_name,
-                "avg_score": round(avg_score, 4),
-                "avg_time_ms": int(avg_time),
-                "avg_tokens": int(avg_tokens),
-                "avg_cost_usd": round(avg_cost, 4),
-            })
+            summary.append(
+                {
+                    "agent": agent_name,
+                    "avg_score": round(avg_score, 4),
+                    "avg_time_ms": int(avg_time),
+                    "avg_tokens": int(avg_tokens),
+                    "avg_cost_usd": round(avg_cost, 4),
+                }
+            )
 
         summary.sort(key=lambda x: x["avg_score"], reverse=True)
 

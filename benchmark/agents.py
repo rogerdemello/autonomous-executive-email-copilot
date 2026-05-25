@@ -4,7 +4,6 @@ import time
 
 from env.environment import ExecutiveEmailEnv
 from env.grader import evaluate_trajectory
-from env.models import Action, Observation
 from env.policy import BaselinePolicy
 
 
@@ -91,6 +90,7 @@ class LLMAgent(BaseBenchmarkAgent):
     def _get_agent(self):
         if self._agent is None:
             from env.llm_agent import LLMAgent as _LLM
+
             self._agent = _LLM(model=self.model)
         return self._agent
 
@@ -112,6 +112,7 @@ class LLMAgent(BaseBenchmarkAgent):
 
         for _ in range(max(1, max_steps)):
             from env.llm_agent import get_action as llm_get_action
+
             ai_response = llm_get_action(observation)
             action = ai_response.action
             if action is None:
@@ -132,6 +133,7 @@ class LLMAgent(BaseBenchmarkAgent):
         cost_usd = 0.0
         if total_tokens > 0:
             from env.llm_agent import MODEL_PRICING
+
             pricing = MODEL_PRICING.get(self.model, {"prompt": 0.15, "completion": 0.60})
             cost_usd = (total_tokens / 1_000_000) * pricing["completion"]
 

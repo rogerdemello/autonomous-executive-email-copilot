@@ -12,7 +12,6 @@ from env.grader import evaluate_trajectory
 from env.models import Action
 from env.policy import BaselinePolicy
 
-
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
 DEFAULT_TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 
@@ -106,7 +105,9 @@ def _run_single_task(task: str, max_steps: int, client: OpenAI | None, model_nam
             action_str += f":{action.email_id}"
         error_str = result.info.get("error", "none")
 
-        print(f"[STEP] step={step_count} action={action_str} reward={result.reward} done={result.done} error={error_str}")
+        print(
+            f"[STEP] step={step_count} action={action_str} reward={result.reward} done={result.done} error={error_str}"
+        )
 
         step_count += 1
         total_reward += result.reward
@@ -117,13 +118,15 @@ def _run_single_task(task: str, max_steps: int, client: OpenAI | None, model_nam
     graded = evaluate_trajectory(task_id=task, seed=42, actions=action_trace, persona="balanced")
     score = float(graded.score)
     success = score >= 0.5
-    print(f"[END] success={success} steps={step_count} score={score:.6f} rewards={total_reward:.4f}")
+    print(
+        f"[END] success={success} steps={step_count} score={score:.6f} rewards={total_reward:.4f}"
+    )
     return score
 
 
 def main(task: str | None = None, max_steps: int = 100):
     """Run inference on the Executive Email environment.
-    
+
     Args:
         task: Task ID (easy_classification, medium_prioritization, hard_full_management)
         max_steps: Maximum number of steps to run
@@ -134,7 +137,7 @@ def main(task: str | None = None, max_steps: int = 100):
     )
     model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
     hf_token = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
-    
+
     # Initialize OpenAI client
     client: OpenAI | None = None
     if not hf_token:
@@ -166,11 +169,11 @@ def _build_prompt(observation) -> str:
     emails = observation.emails
     time_remaining = observation.time_remaining
     pending = observation.pending_actions
-    
+
     prompt = f"Time remaining: {time_remaining} minutes\n\n"
     prompt += f"Pending actions: {', '.join(pending) if pending else 'none'}\n\n"
     prompt += "Emails:\n"
-    
+
     for email in emails:
         prompt += f"- ID: {email.id}\n"
         prompt += f"  From: {email.sender} ({email.sender_role})\n"
@@ -182,24 +185,24 @@ def _build_prompt(observation) -> str:
         if email.thread_history:
             prompt += f"  Thread: {len(email.thread_history)} messages\n"
         prompt += "\n"
-    
+
     prompt += "Available actions:\n"
     prompt += "- classify: Classify an email as spam, normal, or urgent\n"
     prompt += "- prioritize: Set priority order for emails\n"
     prompt += "- reply: Send a reply to an email\n"
     prompt += "- escalate: Escalate an email to a team\n"
     prompt += "- defer: Defer an email for later\n"
-    
+
     prompt += "\nRespond with your action in JSON format:\n"
     prompt += '{"action_type": "classify|reply|defer|escalate|prioritize", "email_id": "...", ...}'
-    
+
     return prompt
 
 
 def _parse_action(action_text: str, observation) -> Action:
     """Parse action from LLM response."""
     import json
-    
+
     try:
         # Try to parse as JSON
         data = json.loads(action_text)
@@ -209,7 +212,7 @@ def _parse_action(action_text: str, observation) -> Action:
         content = data.get("content")
         priority_order = data.get("priority_order", [])
         escalate_to = data.get("escalate_to")
-        
+
         return Action(
             action_type=action_type,
             email_id=email_id,
@@ -222,7 +225,7 @@ def _parse_action(action_text: str, observation) -> Action:
         # Default action if parsing fails
         obs_emails = observation.emails
         email_id = obs_emails[0].id if obs_emails else None
-        
+
         return Action(
             action_type="classify",
             email_id=email_id,
@@ -232,7 +235,7 @@ def _parse_action(action_text: str, observation) -> Action:
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Run inference on Executive Email Copilot")
     parser.add_argument(
         "--task",
@@ -240,9 +243,8 @@ if __name__ == "__main__":
         choices=DEFAULT_TASKS,
         help="Single task to run. Omit to run all tasks.",
     )
-    parser.add_argument("--max-steps", type=int, default=100,
-                        help="Maximum number of steps")
-    
+    parser.add_argument("--max-steps", type=int, default=100, help="Maximum number of steps")
+
     args = parser.parse_args()
-    
+
     main(task=args.task, max_steps=args.max_steps)

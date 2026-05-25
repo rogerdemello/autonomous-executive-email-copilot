@@ -22,11 +22,13 @@ class ExampleExtractor:
             for step in traj.get("trajectory", []):
                 action = step.get("action", {})
                 if action.get("action_type") == "classify":
-                    examples.append({
-                        "email_id": action.get("email_id"),
-                        "label": action.get("label"),
-                        "reason": step.get("reason", ""),
-                    })
+                    examples.append(
+                        {
+                            "email_id": action.get("email_id"),
+                            "label": action.get("label"),
+                            "reason": step.get("reason", ""),
+                        }
+                    )
                     if len(examples) >= limit:
                         return examples
 
@@ -46,11 +48,13 @@ class ExampleExtractor:
             for step in traj.get("trajectory", []):
                 action = step.get("action", {})
                 if action.get("action_type") == "reply":
-                    examples.append({
-                        "email_id": action.get("email_id"),
-                        "content": action.get("content", "")[:200],
-                        "sender_role": step.get("sender_role", "unknown"),
-                    })
+                    examples.append(
+                        {
+                            "email_id": action.get("email_id"),
+                            "content": action.get("content", "")[:200],
+                            "sender_role": step.get("sender_role", "unknown"),
+                        }
+                    )
                     if len(examples) >= limit:
                         return examples
 
@@ -70,11 +74,13 @@ class ExampleExtractor:
             for step in traj.get("trajectory", []):
                 action = step.get("action", {})
                 if action.get("action_type") == "escalate":
-                    examples.append({
-                        "email_id": action.get("email_id"),
-                        "escalate_to": action.get("escalate_to"),
-                        "reason": step.get("reason", ""),
-                    })
+                    examples.append(
+                        {
+                            "email_id": action.get("email_id"),
+                            "escalate_to": action.get("escalate_to"),
+                            "reason": step.get("reason", ""),
+                        }
+                    )
                     if len(examples) >= limit:
                         return examples
 
@@ -94,10 +100,12 @@ class ExampleExtractor:
             for step in traj.get("trajectory", []):
                 action = step.get("action", {})
                 if action.get("action_type") == "prioritize":
-                    examples.append({
-                        "priority_order": action.get("priority_order", []),
-                        "reason": step.get("reason", ""),
-                    })
+                    examples.append(
+                        {
+                            "priority_order": action.get("priority_order", []),
+                            "reason": step.get("reason", ""),
+                        }
+                    )
                     if len(examples) >= limit:
                         return examples
 

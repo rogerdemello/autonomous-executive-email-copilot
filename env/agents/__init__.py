@@ -2,7 +2,7 @@
 
 from .base import BaseAgent
 from .classifier import ClassifierAgent
-from .coordinator import CoordinatorAgent, MultiAgentSystem, AgentMessage
+from .coordinator import AgentMessage, CoordinatorAgent, MultiAgentSystem
 from .escalator import EscalatorAgent
 from .responder import ResponderAgent
 

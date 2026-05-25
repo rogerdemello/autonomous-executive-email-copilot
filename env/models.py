@@ -4,7 +4,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-
 ActionType = Literal["classify", "reply", "defer", "escalate", "prioritize"]
 LabelType = Literal["spam", "normal", "urgent"]
 RiskType = Literal["low", "medium", "high"]
@@ -12,7 +11,13 @@ SenderRole = Literal["client", "internal", "vendor", "unknown"]
 RiskTag = Literal["none", "legal", "security", "finance", "ops"]
 PersonaType = Literal["strict_ceo", "balanced", "chill_manager"]
 PolicyMode = Literal["baseline", "stress", "llm"]
-AIStatusType = Literal["success", "fallback_timeout", "fallback_parse_error", "fallback_validation_error", "provider_error"]
+AIStatusType = Literal[
+    "success",
+    "fallback_timeout",
+    "fallback_parse_error",
+    "fallback_validation_error",
+    "provider_error",
+]
 ApprovalStatus = Literal["pending", "approved", "rejected", "expired"]
 
 
@@ -127,10 +132,12 @@ class AIDecisionTrace(BaseModel):
     status: AIStatusType
     token_usage: TokenUsage | None = None
     cost_usd: float | None = None
-    token_count: int | None = Field(default=None, description="Backward compat: total_tokens from token_usage")
+    token_count: int | None = Field(
+        default=None, description="Backward compat: total_tokens from token_usage"
+    )
 
     @model_validator(mode="after")
-    def sync_token_count(self) -> "AIDecisionTrace":
+    def sync_token_count(self) -> AIDecisionTrace:
         if self.token_usage and self.token_count is None:
             self.token_count = self.token_usage.total_tokens
         return self
@@ -200,9 +207,15 @@ class BaselineResponse(BaseModel):
 
 class LeaderboardRequest(BaseModel):
     tasks: list[str] = Field(
-        default_factory=lambda: ["easy_classification", "medium_prioritization", "hard_full_management"]
+        default_factory=lambda: [
+            "easy_classification",
+            "medium_prioritization",
+            "hard_full_management",
+        ]
     )
-    personas: list[PersonaType] = Field(default_factory=lambda: ["strict_ceo", "balanced", "chill_manager"])
+    personas: list[PersonaType] = Field(
+        default_factory=lambda: ["strict_ceo", "balanced", "chill_manager"]
+    )
     seeds: list[int] = Field(default_factory=lambda: [42, 43, 44])
     max_steps: int = 120
     mode: PolicyMode = "baseline"

@@ -184,9 +184,7 @@ class TestLLMAgentMalformedJSON(unittest.TestCase):
     @patch("env.llm_agent.OpenAI")
     def test_malformed_json_returns_fallback_parse_error(self, mock_openai_class):
         mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(message=MagicMock(content="not valid json {broken"))
-        ]
+        mock_response.choices = [MagicMock(message=MagicMock(content="not valid json {broken"))]
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -206,11 +204,7 @@ class TestLLMAgentUnsupportedAction(unittest.TestCase):
     def test_unsupported_action_returns_fallback_validation_error(self, mock_openai_class):
         mock_response = MagicMock()
         mock_response.choices = [
-            MagicMock(
-                message=MagicMock(
-                    content='{"action_type": "delete", "email_id": "e1"}'
-                )
-            )
+            MagicMock(message=MagicMock(content='{"action_type": "delete", "email_id": "e1"}'))
         ]
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response

@@ -1,9 +1,7 @@
-import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-from env.api import app
-from env.dashboard_api import dashboard_router, active_connections
 
+from env.api import app
+from env.dashboard_api import dashboard_router
 
 client = TestClient(app)
 

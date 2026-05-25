@@ -2,11 +2,12 @@
 
 from typing import Any
 
+from env.models import Action, Observation
+
 from .base import BaseAgent
 from .classifier import ClassifierAgent
 from .escalator import EscalatorAgent
 from .responder import ResponderAgent
-from env.models import Action, Observation
 
 
 class AgentMessage:
@@ -79,9 +80,13 @@ class CoordinatorAgent(BaseAgent):
 
     def _resolve_conflict(self, observation: Observation, agents: list[BaseAgent]) -> Action | None:
         priority = self._get_priority_order()
-        sorted_agents = sorted(agents, key=lambda a: priority.index(a.name) if a.name in priority else len(priority))
+        sorted_agents = sorted(
+            agents, key=lambda a: priority.index(a.name) if a.name in priority else len(priority)
+        )
         self._broadcast_message(
-            AgentMessage(self.name, None, {"candidates": [a.name for a in agents]}, "conflict_detection")
+            AgentMessage(
+                self.name, None, {"candidates": [a.name for a in agents]}, "conflict_detection"
+            )
         )
         return self._delegate(observation, sorted_agents[0])
 

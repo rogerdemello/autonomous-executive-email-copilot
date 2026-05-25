@@ -1,7 +1,6 @@
+import threading
 from collections import defaultdict
 from dataclasses import dataclass, field
-import time
-import threading
 
 
 @dataclass
@@ -36,12 +35,16 @@ class PrometheusMetrics:
                 self._counters[name][key] = Counter(labels=labels or {})
             self._counters[name][key].value += 1
 
-    def gauge(self, name: str, value: float, labels: dict | None = None, description: str = "") -> None:
+    def gauge(
+        self, name: str, value: float, labels: dict | None = None, description: str = ""
+    ) -> None:
         key = tuple(sorted((labels or {}).items()))
         with self._lock:
             self._gauges[name][key] = Gauge(value=value, labels=labels or {})
 
-    def histogram(self, name: str, value: float, labels: dict | None = None, description: str = "") -> None:
+    def histogram(
+        self, name: str, value: float, labels: dict | None = None, description: str = ""
+    ) -> None:
         key = tuple(sorted((labels or {}).items()))
         with self._lock:
             if key not in self._histograms[name]:
@@ -52,20 +55,20 @@ class PrometheusMetrics:
         lines = []
         with self._lock:
             for name, counters in self._counters.items():
-                for key, counter in counters.items():
+                for counter in counters.values():
                     labels_str = self._format_labels(counter.labels)
                     lines.append(f"{name}{labels_str} {counter.value}")
             for name, gauges in self._gauges.items():
-                for key, gauge in gauges.items():
+                for gauge in gauges.values():
                     labels_str = self._format_labels(gauge.labels)
                     lines.append(f"{name}{labels_str} {gauge.value}")
             for name, histograms in self._histograms.items():
-                for key, hist in histograms.items():
+                for hist in histograms.values():
                     labels_str = self._format_labels(hist.labels)
                     if hist.values:
                         lines.append(f"{name}_count{labels_str} {len(hist.values)}")
                         lines.append(f"{name}_sum{labels_str} {sum(hist.values)}")
-                        lines.append(f"{name}_bucket{{le=\"+Inf\"}}{labels_str} {len(hist.values)}")
+                        lines.append(f'{name}_bucket{{le="+Inf"}}{labels_str} {len(hist.values)}')
         return "\n".join(lines) + "\n"
 
     def _format_labels(self, labels: dict) -> str:

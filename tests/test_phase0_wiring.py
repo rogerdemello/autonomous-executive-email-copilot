@@ -11,13 +11,15 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from env.api import app, episode_history_store
-from env.repositories import EpisodeRepository
 from env.learning.trajectory_store import trajectory_store
+from env.repositories import EpisodeRepository
 
 client = TestClient(app)
 
 
-def _run_baseline(task_id: str = "easy_classification", seed: int = 42, persona: str = "balanced") -> dict:
+def _run_baseline(
+    task_id: str = "easy_classification", seed: int = 42, persona: str = "balanced"
+) -> dict:
     response = client.post(
         "/baseline",
         json={

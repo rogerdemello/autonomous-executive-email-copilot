@@ -32,11 +32,9 @@ class PromptEnhancer:
             if not exs:
                 continue
             enhancement_lines.append(f"\n### {action_type.capitalize()} examples:")
-            for i, ex in enumerate(exs[:self.max_examples_per_action], 1):
+            for i, ex in enumerate(exs[: self.max_examples_per_action], 1):
                 if action_type == "classify":
-                    enhancement_lines.append(
-                        f"  {i}. Email {ex['email_id']} -> {ex['label']}"
-                    )
+                    enhancement_lines.append(f"  {i}. Email {ex['email_id']} -> {ex['label']}")
                 elif action_type == "reply":
                     enhancement_lines.append(
                         f"  {i}. Email {ex['email_id']}: {ex['content'][:80]}..."
@@ -46,9 +44,7 @@ class PromptEnhancer:
                         f"  {i}. Email {ex['email_id']} -> {ex['escalate_to']}"
                     )
                 elif action_type == "prioritize":
-                    enhancement_lines.append(
-                        f"  {i}. Order: {', '.join(ex['priority_order'][:3])}"
-                    )
+                    enhancement_lines.append(f"  {i}. Order: {', '.join(ex['priority_order'][:3])}")
 
         return base_prompt + "\n".join(enhancement_lines)
 
@@ -60,7 +56,7 @@ class PromptEnhancer:
     ) -> list[dict[str, Any]]:
         """Get examples for a specific action type."""
         examples = example_extractor.extract_all_examples(task_id, persona)
-        return examples.get(action_type, [])[:self.max_examples_per_action]
+        return examples.get(action_type, [])[: self.max_examples_per_action]
 
     def has_examples(self, task_id: str, persona: str) -> bool:
         """Check if there are any examples available for task/persona."""

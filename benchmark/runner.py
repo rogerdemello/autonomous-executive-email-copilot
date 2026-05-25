@@ -8,7 +8,6 @@ from .agents import (
     MultiAgent,
 )
 
-
 DEFAULT_TASKS = [
     "easy_classification",
     "medium_prioritization",

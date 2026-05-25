@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,9 +35,14 @@ class Episode(Base):
     score = Column(Float, nullable=False)
     total_reward = Column(Float, nullable=False)
     decisions_json = Column(Text, nullable=True)  # JSON serialized decisions
-    created_at = Column(String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
     updated_at = Column(
-        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), onupdate=lambda: datetime.now(timezone.utc).isoformat()
+        String(50),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc).isoformat(),
+        onupdate=lambda: datetime.now(timezone.utc).isoformat(),
     )
 
     def to_dict(self) -> dict:
@@ -79,7 +83,9 @@ class DecisionRecord(Base):
     content = Column(Text, nullable=True)
     reward = Column(Float, nullable=True)
     reason = Column(Text, nullable=True)
-    created_at = Column(String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
 
 class UserPreference(Base):
@@ -91,9 +97,14 @@ class UserPreference(Base):
     user_id = Column(String(255), unique=True, nullable=False, index=True)
     default_persona = Column(String(50), nullable=False, default="balanced")
     notification_email = Column(String(255), nullable=True)
-    created_at = Column(String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
     updated_at = Column(
-        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), onupdate=lambda: datetime.now(timezone.utc).isoformat()
+        String(50),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc).isoformat(),
+        onupdate=lambda: datetime.now(timezone.utc).isoformat(),
     )
 
     def to_dict(self) -> dict:
@@ -117,9 +128,14 @@ class TeamSettings(Base):
     team_id = Column(String(255), unique=True, nullable=False, index=True)
     approval_rules = Column(Text, nullable=True)  # JSON serialized approval rules
     escalation_targets = Column(Text, nullable=True)  # JSON serialized escalation targets
-    created_at = Column(String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
     updated_at = Column(
-        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), onupdate=lambda: datetime.now(timezone.utc).isoformat()
+        String(50),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc).isoformat(),
+        onupdate=lambda: datetime.now(timezone.utc).isoformat(),
     )
 
     def to_dict(self) -> dict:
@@ -133,7 +149,9 @@ class TeamSettings(Base):
             "id": self.id,
             "team_id": self.team_id,
             "approval_rules": json.loads(approval_rules_str) if approval_rules_str else [],
-            "escalation_targets": json.loads(escalation_targets_str) if escalation_targets_str else [],
+            "escalation_targets": json.loads(escalation_targets_str)
+            if escalation_targets_str
+            else [],
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
