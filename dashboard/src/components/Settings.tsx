@@ -11,7 +11,7 @@ interface Props {
 }
 
 function Settings({ apiBase }: Props) {
-  const [preference, setPreference] = useState<UserPreference | null>(null)
+  const [, setPreference] = useState<UserPreference | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

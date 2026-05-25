@@ -1,0 +1,28 @@
+# Local one-command bring-up:  docker compose up --build
+# The API (with the built React dashboard at /dashboard) listens on :7860.
+services:
+  api:
+    build: .
+    image: exec-email-copilot
+    ports:
+      - "7860:7860"
+    environment:
+      LOG_LEVEL: INFO
+      # Opt-in security / LLM (see .env.example):
+      # API_AUTH_TOKEN: change-me
+      # RATE_LIMIT_PER_MINUTE: "120"
+      # OPENAI_API_KEY: sk-...
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import httpx; httpx.get('http://localhost:7860/health', timeout=5).raise_for_status()"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

@@ -1,19 +1,40 @@
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1
+
+# --- Stage 1: build the React dashboard -> /dashboard/dist ---
+FROM node:20-slim AS dashboard-builder
+WORKDIR /dashboard
+# Install deps first for layer caching (package-lock.json optional).
+COPY dashboard/package.json dashboard/package-lock.json* ./
+RUN npm ci || npm install
+COPY dashboard/ ./
+RUN npm run build
+
+# --- Stage 2: Python runtime ---
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
+# Install Python deps first so source changes don't bust the dependency layer.
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Application source, then the pre-built dashboard from stage 1.
 COPY . .
+COPY --from=dashboard-builder /dashboard/dist ./dashboard/dist
+
+# Run as a non-root user; ensure the app dir (incl. runtime SQLite dirs) is writable.
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/data /app/env/data \
+    && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 7860
 
-# Health check for container orchestration
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:7860/health', timeout=5).raise_for_status()"
 
-# Startup wait for services that need time to initialize
-ENV PYTHONUNBUFFERED=1
-
-CMD ["sh", "-c", "sleep 2 && uvicorn env.api:app --host 0.0.0.0 --port 7860"]
+CMD ["uvicorn", "env.api:app", "--host", "0.0.0.0", "--port", "7860"]

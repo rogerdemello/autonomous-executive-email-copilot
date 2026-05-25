@@ -16,21 +16,24 @@
 ## 🔧 Deployment Specs
 
 ### Docker Configuration
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE 8000
-CMD ["uvicorn", "env.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+The container is built from the repository [`Dockerfile`](Dockerfile): a
+multi-stage build that compiles the React dashboard, installs Python deps, runs
+as a non-root user, and serves on **port 7860** (with a `/health` healthcheck).
+
+```bash
+docker build -t exec-email-copilot .
+docker run -p 7860:7860 exec-email-copilot
+# or: docker compose up --build
 ```
+
+The bundled dashboard is then available at `http://localhost:7860/dashboard/`.
 
 ### Resource Requirements
 - **Memory**: 8GB RAM (minimum)
 - **CPU**: 2 vCPU
 - **Timeout**: Inference must complete in <20 minutes
-- **Port**: 8000 (exposed)
+- **Port**: 7860 (container) — local `uvicorn` dev runs on 8000 by convention
 
 ### Environment Variables (Required for HF Space)
 | Variable | Description | Example |
