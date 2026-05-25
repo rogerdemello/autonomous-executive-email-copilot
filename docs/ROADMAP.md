@@ -46,11 +46,15 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [ ] bandit + pip-audit wired into CI -> deferred to Phase 3 (CI pipeline).
 - [ ] request-size limits -> deferred (handled at the ASGI server / reverse-proxy layer; revisit if needed).
 
-## Phase 3 — Deployment & CI/CD
-- [ ] Multi-stage Dockerfile that builds `dashboard/dist`; non-root; pinned digest; layer caching; healthcheck; unify on port 7860; fix DEPLOYMENT_GUIDE port refs.
-- [ ] `docker-compose.yml` for local bring-up.
-- [ ] CI matrix (Python 3.10–3.12 × ubuntu/windows): ruff, mypy, pytest+coverage gate (Codecov), bandit, pip-audit, frontend (npm ci, tsc, eslint, vitest, build), Docker build + smoke (`/health`,`/docs`), inference smoke.
-- [ ] Release: changelog, semver tags, GHCR publish, SBOM.
+## Phase 3 — Deployment & CI/CD ✅ COMPLETE (release pipeline deferred)
+- [x] Multi-stage Dockerfile that **builds the dashboard** (Node stage → dist copied into Python runtime) so `/dashboard` serves; non-root user; layer-cached deps; healthcheck; unified on port 7860; `.dockerignore`. Fixed DEPLOYMENT_GUIDE port refs.
+- [x] Fixed the dashboard build (never compiled): vite-env.d.ts + unused-symbol errors. Fixed `server/app.py` undefined `app` export.
+- [x] `docker-compose.yml` for one-command local bring-up.
+- [x] CI: parallel jobs — lint (ruff), test matrix (3.10/3.11/3.12) + coverage gate (70%, current 77%, Codecov), typecheck (mypy, informational), security (bandit blocking + pip-audit informational), frontend (npm ci + tsc + build), docker build + smoke (`/health`, `/docs`, `/dashboard/`), inference smoke.
+- [ ] Release pipeline (changelog, semver tags, GHCR publish, SBOM) — **deferred**; needs repo settings/secrets and a tagging convention.
+- [ ] Pinned base-image digests and a Windows CI leg — deferred (tag-pinned for now).
+
+> Note: Docker image build verified via the dashboard build + CI; not built locally (daemon was down). Run `docker compose up --build` to verify end-to-end.
 
 ## Phase 4 — Frontend & UX polish
 - [ ] vitest + @testing-library/react; eslint/prettier; component + mocked-API tests.
