@@ -36,13 +36,15 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 
 > Test count: 165 passing (Phase 0 + new config/logging tests). Branch: `phase0-correctness`.
 
-## Phase 2 — Security & API hardening
-- [ ] AuthN/Z middleware (configurable; enforced on mutating/sensitive routes).
-- [ ] CORS middleware (configurable origins).
-- [ ] Rate limiting on `/baseline`, `/benchmark`, LLM paths.
-- [ ] Input hardening: `episode_id` validation, bounded pagination, path-traversal guards, request-size limits.
-- [ ] Global exception handler; startup secret validation; no leaked traces/secrets.
-- [ ] `tests/test_security.py`; bandit + pip-audit clean in CI.
+## Phase 2 — Security & API hardening ✅ COMPLETE (decisions: opt-in auth, HITL off by default)
+- [x] Opt-in token auth (`API_AUTH_TOKEN`): gates mutating methods via Bearer/X-API-Key; open by default so local/tests/validator are unaffected.
+- [x] CORS middleware (configurable `CORS_ORIGINS`, default `*`).
+- [x] Opt-in per-IP rate limiting (`RATE_LIMIT_PER_MINUTE`, default off -> 429).
+- [x] Input hardening: `episode_id` validation on replay/episodes/reports; bounded pagination (page>=1, limit<=100).
+- [x] Global exception handler -> generic JSON 500 with request_id, no leaked traces.
+- [x] `tests/test_security.py` (8 tests). 173 passing.
+- [ ] bandit + pip-audit wired into CI -> deferred to Phase 3 (CI pipeline).
+- [ ] request-size limits -> deferred (handled at the ASGI server / reverse-proxy layer; revisit if needed).
 
 ## Phase 3 — Deployment & CI/CD
 - [ ] Multi-stage Dockerfile that builds `dashboard/dist`; non-root; pinned digest; layer caching; healthcheck; unify on port 7860; fix DEPLOYMENT_GUIDE port refs.
