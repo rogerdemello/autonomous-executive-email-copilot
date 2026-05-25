@@ -24,6 +24,7 @@ dist/
 *.log
 .env
 .env.*
+!.env.example
 
 # IDE/editor and OS files
 .idea/
