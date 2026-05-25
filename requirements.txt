@@ -2,6 +2,7 @@ fpdf2
 fastapi
 uvicorn
 pydantic
+pydantic-settings
 pyyaml
 httpx
 scipy

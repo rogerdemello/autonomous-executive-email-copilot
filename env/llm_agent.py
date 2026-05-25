@@ -5,13 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import time
 from typing import Any
 
 from openai import OpenAI
 
 from .approval import get_approval_store
+from .config import get_settings, normalize_openai_base_url
 from .models import (
     AIResponse,
     AIDecisionTrace,
@@ -20,7 +20,6 @@ from .models import (
     Observation,
     TokenUsage,
 )
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
@@ -206,39 +205,6 @@ Output your decision as JSON with these fields:
 """
 
 
-def _normalize_openai_base_url(api_base_url: str) -> str:
-    """Normalize API base URL for OpenAI and Azure OpenAI compatibility."""
-    cleaned = api_base_url.strip()
-    if not cleaned:
-        return "https://api.openai.com/v1"
-
-    parsed = urlsplit(cleaned)
-    host = (parsed.netloc or "").lower()
-
-    if "openai.azure.com" not in host:
-        return cleaned
-
-    if "/openai/deployments/" not in parsed.path:
-        raise ValueError(
-            "Azure API_BASE_URL must include /openai/deployments/<deployment>. "
-            "Example: https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
-        )
-
-    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    if "api-version" not in query:
-        query["api-version"] = os.environ.get("AZURE_API_VERSION", DEFAULT_AZURE_API_VERSION)
-
-    return urlunsplit(
-        (
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            urlencode(query),
-            parsed.fragment,
-        )
-    )
-
-
 def _build_user_prompt(observation: Observation) -> str:
     """Build user prompt from observation, hiding grader fields."""
     lines = [
@@ -405,29 +371,24 @@ class LLMAgent:
         # Off by default so the raw agent returns the action it decided on; the
         # API/product path can enable it (constructor arg or REQUIRE_APPROVAL env).
         if require_approval is None:
-            require_approval = os.environ.get("REQUIRE_APPROVAL", "").strip().lower() in {
-                "1",
-                "true",
-                "yes",
-                "on",
-            }
+            require_approval = get_settings().require_approval
         self._require_approval = require_approval
 
     def _get_client(self) -> OpenAI:
         """Lazy initialization of OpenAI client."""
         if self._client is None:
-            # Get API configuration from environment variables
-            api_base_url = _normalize_openai_base_url(
-                os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+            settings = get_settings()
+            api_base_url = normalize_openai_base_url(
+                settings.api_base_url, settings.azure_api_version
             )
-            api_key = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
-            
+            api_key = settings.resolved_api_key
+
             if not api_key:
                 raise ValueError("HF_TOKEN or OPENAI_API_KEY environment variable not set")
-            
-            # Update model from env if available
-            model = os.environ.get("MODEL_NAME", self._model)
-            
+
+            # Prefer the configured model name over the constructor default.
+            model = settings.model_name or self._model
+
             self._client = OpenAI(
                 base_url=api_base_url,
                 api_key=api_key,
@@ -514,9 +475,10 @@ class LLMAgent:
                 return cached
 
         # Dynamic model selection: small model first, larger fallback
-        small_model = os.environ.get("MODEL_NAME", DEFAULT_MODEL)
-        large_model = os.environ.get("LARGER_MODEL", DEFAULT_LARGER_MODEL)
-        confidence_threshold = float(os.environ.get("CONFIDENCE_THRESHOLD", str(DEFAULT_CONFIDENCE_THRESHOLD)))
+        settings = get_settings()
+        small_model = settings.model_name
+        large_model = settings.larger_model
+        confidence_threshold = settings.confidence_threshold
         current_model = small_model
 
         # Call LLM with dynamic model selection

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import time
 from enum import Enum
 from typing import Any
 
 from openai import OpenAI
 
+from env.config import get_settings, normalize_openai_base_url
 from env.models import (
     AIResponse,
     AIDecisionTrace,
@@ -53,41 +53,6 @@ Output ONLY valid JSON with these fields:
 - confidence: 0.0-1.0 (how certain you are this is the right strategy)
 - key_emails: List of email IDs this strategy should focus on
 """
-
-
-def _normalize_openai_base_url(api_base_url: str) -> str:
-    """Normalize API base URL for OpenAI and Azure OpenAI compatibility."""
-    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-    
-    cleaned = api_base_url.strip()
-    if not cleaned:
-        return "https://api.openai.com/v1"
-
-    parsed = urlsplit(cleaned)
-    host = (parsed.netloc or "").lower()
-
-    if "openai.azure.com" not in host:
-        return cleaned
-
-    if "/openai/deployments/" not in parsed.path:
-        raise ValueError(
-            "Azure API_BASE_URL must include /openai/deployments/<deployment>. "
-            "Example: https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
-        )
-
-    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    if "api-version" not in query:
-        query["api-version"] = os.environ.get("AZURE_API_VERSION", "2024-02-15-preview")
-
-    return urlunsplit(
-        (
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            urlencode(query),
-            parsed.fragment,
-        )
-    )
 
 
 def _build_planner_prompt(observation: Observation) -> str:
@@ -181,16 +146,17 @@ class Planner:
     def _get_client(self) -> OpenAI:
         """Lazy initialization of OpenAI client."""
         if self._client is None:
-            api_base_url = _normalize_openai_base_url(
-                os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+            settings = get_settings()
+            api_base_url = normalize_openai_base_url(
+                settings.api_base_url, settings.azure_api_version
             )
-            api_key = os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY"))
-            
+            api_key = settings.resolved_api_key
+
             if not api_key:
                 raise ValueError("HF_TOKEN or OPENAI_API_KEY environment variable not set")
-            
-            model = os.environ.get("MODEL_NAME", self._model)
-            
+
+            model = settings.model_name or self._model
+
             self._client = OpenAI(
                 base_url=api_base_url,
                 api_key=api_key,
