@@ -52,6 +52,7 @@ from .learning.trajectory_store import trajectory_store, feedback_store
 from .learning.example_extractor import example_extractor
 from .learning.prompt_enhancer import prompt_enhancer
 from .dashboard_api import dashboard_router
+from .logging_config import configure_logging, set_request_id
 
 from reports.generator import PDFGenerator
 from telemetry.metrics import (
@@ -64,6 +65,7 @@ from telemetry.metrics import (
 )
 from telemetry.alerts import alert_manager, AlertRule, Alert
 
+configure_logging()
 logger = logging.getLogger(__name__)
 
 migrate_db()
@@ -81,7 +83,9 @@ runtime_env = ExecutiveEmailEnv()
 
 @app.middleware("http")
 async def _telemetry_middleware(request, call_next):
-    """Record per-request latency, count, and error metrics for every route."""
+    """Set a request id, record per-request latency/count/error metrics, and
+    echo the id back as the X-Request-ID header for log correlation."""
+    request_id = set_request_id(request.headers.get("X-Request-ID"))
     start = time.perf_counter()
     # Prefer the matched route template (e.g. /episodes/{episode_id}) over the
     # concrete path to keep metric label cardinality bounded.
@@ -92,6 +96,7 @@ async def _telemetry_middleware(request, call_next):
         path = _metric_path(request)
         record_request(duration_ms, {"path": path, "method": request.method, "status": "500"})
         record_api_error("unhandled_exception")
+        logger.exception("Unhandled error handling %s %s", request.method, request.url.path)
         raise
     duration_ms = (time.perf_counter() - start) * 1000.0
     path = _metric_path(request)
@@ -101,6 +106,7 @@ async def _telemetry_middleware(request, call_next):
     )
     if response.status_code >= 500:
         record_api_error(str(response.status_code))
+    response.headers["X-Request-ID"] = request_id
     return response
 
 
