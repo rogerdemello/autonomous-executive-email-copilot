@@ -57,6 +57,9 @@ class AlertManager:
         return triggered
 
     def _send_webhook(self, webhook: str, alert: Alert) -> None:
+        # Only POST to http(s) webhooks; reject file:// and other schemes.
+        if not webhook.lower().startswith(("http://", "https://")):
+            return
         try:
             payload = json.dumps(
                 {
@@ -70,7 +73,7 @@ class AlertManager:
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
-            urllib.request.urlopen(req, timeout=5)
+            urllib.request.urlopen(req, timeout=5)  # nosec B310 - scheme restricted to http(s) above
         except Exception:
             pass
 
