@@ -35,3 +35,16 @@ Thumbs.db
 .playwright-mcp/
 .sisyphus/
 playwright-output/
+
+# Databases (runtime state, not source)
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated benchmark / leaderboard outputs
+artifacts/
+leaderboard*.csv
+
+# Node / dashboard build artifacts
+node_modules/
+dashboard/dist/

@@ -1,4 +1,0 @@
-task,persona,avg_score,avg_reward,avg_steps,min_score,max_score
-hard_full_management,chill_manager,0.458889,2.51619,23.333,0.413333,0.513333
-hard_full_management,balanced,0.458889,2.492857,23.333,0.413333,0.513333
-hard_full_management,strict_ceo,0.458889,2.469524,23.333,0.413333,0.513333
