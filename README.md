@@ -1,49 +1,107 @@
----
-title: Autonomous Executive Email Copilot
-emoji: "📧"
-colorFrom: blue
-colorTo: green
-sdk: docker
-python_version: "3.10"
-app_port: 7860
-pinned: false
----
-
 # Autonomous Executive Email Copilot
 
-Autonomous Executive Email Copilot is an OpenEnv-style environment that simulates executive inbox management under time pressure and business risk.
+Autonomous Executive Email Copilot is a deterministic, OpenEnv-style executive inbox simulation for evaluating agents that triage and manage high-stakes email workloads. It models an executive mailbox with incoming messages, deadlines, business value, risk tags, thread history, and mid-episode interruptions. Agents interact with the environment through a standard reset/step/state loop, choose among classify, prioritize, reply, escalate, and defer actions, and are scored by task-specific graders that keep results bounded and validator-friendly.
 
-All task/scenario content is data-driven from YAML files under data/ (no scenario emails are hardcoded in Python source).
+The project is built as a full experimentation stack rather than a single simulator. Scenario generation is driven by YAML task and scenario files, policies include heuristic baseline, stress-test corruption, LLM-backed decisioning, and hybrid planner/executor modes, and the surrounding tooling supports approvals, replay, leaderboard comparison, reports, telemetry, and alerts. The codebase also exposes two user interfaces: a Streamlit operations console and a React dashboard for inbox review, approvals, replay, and team settings.
 
-## Highlights
+Full deep documentation is kept in [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md).
 
-- Multi-step decisions: classify, prioritize, reply, escalate, defer
-- Risk-aware scoring with penalties for costly mistakes
-- Persona-aware reward shaping: strict_ceo, balanced, chill_manager
-- Mid-episode interruptions with new incoming emails
-- Deterministic tasks for reproducible evaluation
-- API endpoints for tasks, grading, and baseline runs
+## What You Can Do
 
-## Observation
+- Simulate executive inbox workloads with deterministic seeds and personas.
+- Run baseline, stress, hybrid, and LLM-backed decision policies.
+- Score trajectories with bounded validator-friendly grading.
+- Compare results across tasks, personas, and seeds.
+- Collect approvals, preferences, feedback, replay artifacts, reports, and telemetry.
+- Operate via FastAPI, Streamlit, and a React dashboard.
+
+## Supported Tasks
+
+- `easy_classification`
+- `medium_prioritization`
+- `hard_full_management`
+
+Task, scenario, and tuning config live in [data/tasks.yaml](data/tasks.yaml), [data/settings.yaml](data/settings.yaml), and [data/scenarios/](data/scenarios/).
+
+## Quick Start
+
+### 1) Install
+
+```bash
+python -m venv .venv
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+# Linux/macOS
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 2) Run API
+
+```bash
+uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3) Run Streamlit Console (optional)
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### 4) Run React Dashboard (optional)
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+### 5) Tests
+
+```bash
+python -m pytest -q
+```
+
+## API Surface With Examples
+
+Base URL: `http://localhost:8000`
+
+### 1) Core Runtime
+
+Endpoints:
+
+- `GET /`
+- `GET /favicon.ico`
+- `GET /health`
+- `GET /tasks`
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `POST /state`
+
+Request:
+
+```bash
+curl -s -X POST http://localhost:8000/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task_id":"easy_classification","seed":42,"persona":"balanced"}'
+```
+
+Response (trimmed):
 
 ```json
 {
   "emails": [
     {
-      "id": "e1",
-      "sender": "client@company.com",
-      "sender_role": "client",
-      "subject": "URGENT: Contract issue",
-      "body": "Need legal review before signing.",
+      "id": "msg_001",
+      "sender": "client@example.com",
       "priority_hint": "high",
-      "deadline_minutes": 120,
-      "business_value": 0.9,
-      "risk_tag": "legal",
-      "thread_history": []
+      "risk_tag": "none"
     }
   ],
-  "time_remaining": 180,
-  "pending_actions": ["e1"],
+  "time_remaining": 60,
+  "pending_actions": ["classify", "reply", "defer", "escalate", "prioritize"],
   "risk_level": "medium",
   "current_minute": 0,
   "persona": "balanced",
@@ -51,207 +109,291 @@ All task/scenario content is data-driven from YAML files under data/ (no scenari
 }
 ```
 
-## Action
+Step action:
 
-```json
-{
-  "action_type": "classify | reply | defer | escalate | prioritize",
-  "email_id": "e1",
-  "label": "spam | normal | urgent",
-  "content": "Optional response",
-  "priority_order": ["e1", "e2"],
-  "escalate_to": "legal_team"
-}
+```bash
+curl -s -X POST http://localhost:8000/step \
+  -H "Content-Type: application/json" \
+  -d '{"action_type":"classify","email_id":"msg_001","label":"urgent"}'
 ```
 
-## Reward Signals
+### 2) Scoring And Policy Execution
 
-- Correct classification: +0.2
-- Prioritization quality: up to +0.3
-- Reply quality: up to +0.5
-- Smart escalation: +0.4 (+0.1 if escalation target matches)
-- Missed urgent deadline: -0.7
-- Wrong reply on critical email: -1.0
-- Redundant action: -0.1
+Endpoints:
 
-Persona profiles scale penalties differently:
+- `POST /grader`
+- `POST /baseline`
+- `POST /leaderboard`
+- `GET /replay/{episode_id}`
 
-- strict_ceo: strongest deadline and terminal penalties
-- balanced: default policy
-- chill_manager: softer delay penalties
+Baseline run:
 
-## Tasks
-
-- easy_classification
-- medium_prioritization
-- hard_full_management
-
-Task definitions and scenario payloads live in:
-
-- data/tasks.yaml
-- data/scenarios/easy_classification.yaml
-- data/scenarios/medium_prioritization.yaml
-- data/scenarios/hard_full_management.yaml
-
-Runtime tuning values also live in data/settings.yaml:
-
-- action costs
-- persona penalty multipliers
-- classifier keyword lists
-
-YAML hot reload is enabled by default. If you edit any file under data/, subsequent resets/steps/requests will use updated values without restarting the server.
-
-Hard-task score formula:
-
-```python
-score = (
-    0.3 * classification_accuracy +
-    0.3 * action_correctness +
-    0.4 * response_quality
-)
+```bash
+curl -s -X POST http://localhost:8000/baseline \
+  -H "Content-Type: application/json" \
+  -d '{"task_id":"hard_full_management","seed":42,"persona":"balanced","mode":"baseline","max_steps":100}'
 ```
 
-## API
-
-- GET /tasks
-- POST /grader
-- POST /baseline
-- POST /leaderboard
-
-Both /grader and /baseline accept persona in request JSON:
+Response (trimmed):
 
 ```json
 {
   "task_id": "hard_full_management",
   "seed": 42,
-  "persona": "strict_ceo"
+  "persona": "balanced",
+  "mode": "baseline",
+  "stress_rate": 0.0,
+  "score": 0.732,
+  "total_reward": 5.4,
+  "steps": 11,
+  "breakdown": {
+    "classification_accuracy": 0.8,
+    "sla": 0.7
+  },
+  "action_trace": [],
+  "decision_trace": []
 }
 ```
 
-Baseline also supports:
-
-- mode: baseline, stress, or llm
-- stress_rate: 0.0 to 1.0 (used only in stress mode)
-
-## Local Setup
-
-### 1) Create and use .venv
-
-Windows PowerShell:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-### 2) Start server
+Trajectory grading:
 
 ```bash
-uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
+curl -s -X POST http://localhost:8000/grader \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_id":"easy_classification",
+    "seed":42,
+    "persona":"balanced",
+    "actions":[{"action_type":"classify","email_id":"msg_001","label":"normal"}]
+  }'
 ```
 
-### 2b) Start Streamlit dashboard
+### 3) Approval Workflow
+
+Endpoints:
+
+- `POST /approval/request`
+- `POST /approval/{request_id}/approve`
+- `POST /approval/{request_id}/reject`
+- `GET /approval/{request_id}`
+- `GET /approval/pending`
+- `GET /approval/history`
+
+Create request:
 
 ```bash
-python -m streamlit run streamlit_app.py --server.port 8501 --server.headless true
+curl -s -X POST http://localhost:8000/approval/request \
+  -H "Content-Type: application/json" \
+  -d '{"action_type":"escalate","email_id":"msg_002","escalate_to":"legal-team"}'
 ```
 
-Then open: http://localhost:8501
-
-### 3) Run baseline directly
+Approve request:
 
 ```bash
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona balanced
+curl -s -X POST http://localhost:8000/approval/REQUEST_ID/approve \
+  -H "Content-Type: application/json" \
+  -d '{"approver_id":"ops_lead","comment":"Approved for compliance"}'
 ```
 
-Stress baseline run:
+### 4) Episode And Preference Repositories
+
+Endpoints:
+
+- `GET /episodes`
+- `GET /episodes/{episode_id}`
+- `GET /episodes/stats`
+- `GET /preferences/user/{user_id}`
+- `PUT /preferences/user/{user_id}`
+- `GET /preferences/users`
+- `GET /preferences/team/{team_id}`
+- `PUT /preferences/team/{team_id}`
+- `GET /preferences/teams`
+
+List episodes:
 
 ```bash
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona strict_ceo --mode stress --stress-rate 0.5
+curl -s "http://localhost:8000/episodes?page=1&limit=2"
 ```
 
-### 4) Run AI mode (LLM-powered decisions)
+Response (trimmed):
 
-Prerequisites:
+```json
+{
+  "episodes": [
+    {
+      "episode_id": "hard_full_management_42_balanced",
+      "task_id": "hard_full_management",
+      "score": 0.732
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 2,
+  "total_pages": 1
+}
+```
+
+Save user preference:
 
 ```bash
-# Set your OpenAI API key (or use HF_TOKEN for Hugging Face endpoints)
-$env:OPENAI_API_KEY = "sk-..."  # Windows PowerShell
-export OPENAI_API_KEY="sk-..."   # Linux/Mac
+curl -s -X PUT http://localhost:8000/preferences/user/alex \
+  -H "Content-Type: application/json" \
+  -d '{"default_persona":"strict_ceo","notification_email":"alex@company.com"}'
 ```
 
-Or use the hackathon-required environment variables:
+### 5) Learning And Feedback
+
+Endpoints:
+
+- `POST /feedback`
+- `GET /feedback`
+- `GET /learning/stats`
+- `GET /learning/examples/{task_id}/{persona}`
+
+Submit feedback:
 
 ```bash
-export API_BASE_URL="https://api.openai.com/v1"
-export MODEL_NAME="gpt-4o-mini"
-export HF_TOKEN="sk-..."  # Or use OPENAI_API_KEY as fallback
+curl -s -X POST http://localhost:8000/feedback \
+  -H "Content-Type: application/json" \
+  -d '{
+    "episode_id":"hard_full_management_42_balanced",
+    "task_id":"hard_full_management",
+    "seed":42,
+    "persona":"balanced",
+    "step_index":3,
+    "action_type":"reply",
+    "email_id":"msg_004",
+    "feedback":"good",
+    "comment":"Clear and concise response"
+  }'
 ```
 
-Hugging Face Spaces (Azure OpenAI) recommended secrets:
+Fetch examples:
 
 ```bash
-API_BASE_URL="https://<resource>.openai.azure.com/openai/deployments/<deployment>?api-version=2024-02-15-preview"
-MODEL_NAME="gpt-4o"
-HF_TOKEN="<azure-api-key>"
-APP_API_BASE_URL="http://127.0.0.1:8000"
+curl -s http://localhost:8000/learning/examples/hard_full_management/balanced
 ```
 
-Notes:
+### 6) Benchmark And Reports
 
-- API_BASE_URL must include `/openai/deployments/<deployment>` for Azure with the OpenAI client.
-- If `api-version` is omitted, code auto-adds `2024-02-15-preview` (or `AZURE_API_VERSION` if set).
-- APP_API_BASE_URL is used by the Streamlit dashboard to call this app's FastAPI endpoints (`/health`, `/tasks`, `/baseline`, etc.).
-- Do not set APP_API_BASE_URL to Azure/OpenAI endpoints.
-- Keep temperature low (0.1 to 0.2) for stable hackathon runs.
+Endpoints:
 
-Run AI baseline:
+- `POST /benchmark/run`
+- `POST /benchmark/run_html`
+- `GET /reports/episode/{episode_id}`
+- `POST /reports/generate`
+
+Run benchmark:
 
 ```bash
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode llm
+curl -s -X POST http://localhost:8000/benchmark/run \
+  -H "Content-Type: application/json" \
+  -d '{"tasks":["easy_classification"],"personas":["balanced"],"seeds":[42],"max_steps":50}'
 ```
 
-### 5) Build leaderboard across seeds/personas
+Download PDF report:
 
 ```bash
-python -m baseline.leaderboard --tasks easy_classification,medium_prioritization,hard_full_management --personas strict_ceo,balanced,chill_manager --seeds 42,43,44
+curl -L -o report.pdf http://localhost:8000/reports/episode/hard_full_management_42_balanced
 ```
 
-Leaderboard with stress mode and CSV export:
+### 7) Telemetry And Alerting
+
+Endpoints:
+
+- `GET /metrics`
+- `POST /alerts/webhook`
+- `GET /alerts`
+
+Attach webhook rule:
 
 ```bash
-python -m baseline.leaderboard --tasks hard_full_management --personas strict_ceo,balanced,chill_manager --seeds 42,43,44 --mode stress --stress-rate 0.5 --csv-out artifacts/leaderboard_stress.csv
+curl -s -X POST http://localhost:8000/alerts/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/webhook","rule_name":"high_failure_rate"}'
 ```
 
-## Tests
+Response:
 
-Run the test suite:
+```json
+{
+  "status": "ok",
+  "message": "Webhook added to rule high_failure_rate"
+}
+```
+
+Read metrics:
 
 ```bash
-python -m pytest -q
+curl -s http://localhost:8000/metrics
 ```
 
-## Inference Script (Hackathon Submission)
+### 8) Dashboard Router
 
-Run the inference script with required environment variables:
+Endpoints:
+
+- `WS /ws/dashboard`
+- `GET /dashboard/health`
+- `GET /dashboard/state`
+- `POST /dashboard/state`
+- `POST /dashboard/reset`
+
+Dashboard reset call:
 
 ```bash
-export API_BASE_URL="https://api.openai.com/v1"
-export MODEL_NAME="gpt-4o-mini"
-export HF_TOKEN="sk-..."
-
-python inference.py
+curl -s -X POST "http://localhost:8000/dashboard/reset?task_id=hard_full_management&seed=42&persona=balanced"
 ```
 
-The inference script outputs logs in the exact format required:
-- `[START] task={task} env={env} model={model}`
-- `[STEP] step={step} action={action} reward={reward} done={done} error={error}`
-- `[END] success={success} steps={steps} score={score} rewards={rewards}`
+WebSocket ping frame:
 
-## Docker
+```json
+{"type":"ping"}
+```
+
+WebSocket pong frame:
+
+```json
+{"type":"pong"}
+```
+
+### Auto-Generated Docs
+
+- `GET /docs`
+
+## Modes
+
+- `baseline`: deterministic heuristic agent.
+- `stress`: heuristic with randomized perturbation by `stress_rate`.
+- `llm`: LLM-driven strategy and action synthesis with safety/approval gates.
+- `hybrid`: supported in CLI runner, not accepted by the `/baseline` API schema.
+
+## UIs
+
+- Streamlit console in [streamlit_app.py](streamlit_app.py): overview, tasks, baseline, leaderboard, grader, AI demo, replay, approvals.
+- React dashboard in [dashboard/src/App.tsx](dashboard/src/App.tsx): inbox, timeline, replay, approvals, team settings, user settings.
+
+## Deployment Notes
+
+- API entrypoint export: [main.py](main.py)
+- Server launcher: [server/app.py](server/app.py)
+- OpenEnv manifest: [openenv.yaml](openenv.yaml)
+- Container build: [Dockerfile](Dockerfile)
+- CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+
+Run container:
 
 ```bash
 docker build -t exec-email-copilot .
-docker run -p 8000:8000 exec-email-copilot
+docker run -p 7860:7860 exec-email-copilot
 ```
+
+## Testing Coverage
+
+Tests under [tests/](tests/) cover API contracts, determinism, grading bounds, approvals, LLM behavior, benchmark/report generation, telemetry, dashboard routes, and validator parity.
+
+## Important Constraints
+
+- `/baseline` mode enum is `baseline | stress | llm`.
+- `/baseline` runs are persisted to the episode DB and (when they clear the score threshold) auto-saved to the learning trajectory store; `/replay/{episode_id}` falls back to the DB so replay survives a restart.
+- LLM mode behavior depends on provider credentials and guardrail checks. The human-in-the-loop approval gate is opt-in (`LLMAgent(require_approval=True)` or the `REQUIRE_APPROVAL` env var); with it off the agent returns its decided action directly.
+- LLM responses are cached by observation hash (TTL + size cap); the cache is bypassed when approval is required.

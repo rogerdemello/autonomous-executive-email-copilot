@@ -11,16 +11,19 @@
 
 ---
 
-## Phase 0 — Make it honest & green (correctness foundation)
+## Phase 0 — Make it honest & green (correctness foundation) ✅ COMPLETE
 Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a test.
 
-- [ ] Resolve HITL/agent contract & fix failing test: make approval-gating opt-in (`REQUIRE_APPROVAL`), default off for raw agent (`reply`→`reply`), on in API/product path; update `test_llm_agent.py`. *(env/llm_agent.py:579, tests/test_llm_agent.py:71)*
-- [ ] Wire episode persistence: `EpisodeRepository.save_episode()` from `/baseline`; `/replay` & `/episodes` read DB. *(env/api.py:64,182)*
-- [ ] Wire learning auto-save: persist above-threshold trajectories from baseline/grader flow. *(env/learning/trajectory_store.py)*
-- [ ] Wire telemetry: increment counters/histograms from API handlers via middleware. *(telemetry/metrics.py, env/api.py)*
-- [ ] Fix LLM cache: remove `_clear_cache()` per call; key by observation hash + TTL/size cap. *(env/llm_agent.py:435)*
-- [ ] Replace `datetime.utcnow()` with timezone-aware UTC; remove bare `except:` (env/llm_agent.py:565).
-- [ ] Update README/TECHNICAL_REFERENCE "Operational Notes & Constraints" as gaps close.
+- [x] Resolve HITL/agent contract & fix failing test: approval-gating now opt-in (`require_approval` arg / `REQUIRE_APPROVAL` env), default off (`reply`→`reply`); both modes tested. *(env/llm_agent.py)*
+- [x] Wire episode persistence: `EpisodeRepository.save_episode()` from `/baseline`; `/replay` falls back to DB. *(env/api.py)*
+- [x] Wire learning auto-save: above-threshold trajectories persisted from the baseline flow. *(env/api.py, env/learning/trajectory_store.py)*
+- [x] Wire telemetry: HTTP middleware records request count/latency/errors + episode start/end. *(env/api.py, telemetry/metrics.py)*
+- [x] Fix LLM cache: removed per-call `_clear_cache()`; keyed by observation hash + TTL/size cap; bypassed under approval. *(env/llm_agent.py)*
+- [x] Replace `datetime.utcnow()` with timezone-aware UTC; remove bare `except:`. *(db.py, repositories.py, trajectory_store.py, alerts.py, llm_agent.py)*
+- [x] Fixed latent bugs found en route: `Episode.to_dict()` ignored `decisions_json`; `expire_on_commit=True` caused `DetachedInstanceError` on returned ORM objects.
+- [x] Updated README/TECHNICAL_REFERENCE "Operational Notes & Constraints" to reflect closed gaps.
+
+> **Carried into Phase 1:** a large set of real source files (`benchmark/`, `telemetry/`, `reports/`, `dashboard/`, `docs/`, `env/agents/`, `env/dashboard_api.py`, `env/approval.py`, several `tests/`) are present in the working tree but **never committed to git** — the history is missing chunks of the codebase. Phase 1 must commit real source and untrack DB artifacts.
 
 ## Phase 1 — Repo hygiene & developer experience
 - [ ] Untrack `data/episodes.db`, `env/data/trajectories.db`; gitignore; create schema on startup.
