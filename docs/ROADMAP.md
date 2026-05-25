@@ -25,12 +25,16 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 
 > **Carried into Phase 1:** a large set of real source files (`benchmark/`, `telemetry/`, `reports/`, `dashboard/`, `docs/`, `env/agents/`, `env/dashboard_api.py`, `env/approval.py`, several `tests/`) are present in the working tree but **never committed to git** — the history is missing chunks of the codebase. Phase 1 must commit real source and untrack DB artifacts.
 
-## Phase 1 — Repo hygiene & developer experience
-- [ ] Untrack `data/episodes.db`, `env/data/trajectories.db`; gitignore; create schema on startup.
-- [ ] Add LICENSE (MIT), CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, `.env.example`.
-- [ ] Centralize config in `env/config.py` (pydantic-settings); replace scattered `os.getenv`; de-dup `_normalize_openai_base_url`.
-- [ ] Structured logging + request-id middleware; replace prints.
-- [ ] pre-commit: ruff (Python), eslint+prettier (TS), whitespace/EOF.
+## Phase 1 — Repo hygiene & developer experience ✅ COMPLETE
+- [x] Committed the large body of **untracked source** (benchmark/, telemetry/, reports/, dashboard/, docs/, env/agents, env/dashboard_api, env/approval, env/learning extras, 7 tests, CI, lockfile) — the history was missing chunks of the codebase.
+- [x] Untrack generated CSVs; gitignore `*.db/sqlite`, `artifacts/`, `leaderboard*.csv`, `node_modules/`, `dashboard/dist/`. (Schema is created on startup via `migrate_db()`.)
+- [x] Add LICENSE (MIT) + license field, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, `.env.example`.
+- [x] Centralize config in `env/config.py` (pydantic-settings, fresh-read); replace scattered `os.getenv` in llm_agent/llm_policy; de-dup `normalize_openai_base_url`.
+- [x] Structured logging (`env/logging_config.py`) + request-id middleware (X-Request-ID). (Existing prints are intentional CLI/validator output.)
+- [x] pre-commit: ruff lint+format + prettier (dashboard) + whitespace/EOF/yaml/toml. `ruff check` clean; repo formatted.
+- [ ] eslint for the dashboard is deferred to Phase 4 (frontend tooling) — the dashboard has no eslint config yet.
+
+> Test count: 165 passing (Phase 0 + new config/logging tests). Branch: `phase0-correctness`.
 
 ## Phase 2 — Security & API hardening
 - [ ] AuthN/Z middleware (configurable; enforced on mutating/sensitive routes).
