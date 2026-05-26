@@ -70,8 +70,12 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [ ] Reproducible benchmark report (JSON+HTML+CSV) as a CI artifact + persist leaderboard to DB — deferred.
 - [ ] Improve hybrid's deterministic (no-key) fallback quality (currently scores ~0 without a provider) — deferred.
 
-## Phase 6 — Observability & operations
-- [ ] Prometheus scrape + provisioned Grafana; tested alert rules; liveness/readiness split; graceful shutdown; DB pooling; LLM cost/latency dashboard; runbook.
+## Phase 6 — Observability & operations ✅ COMPLETE
+- [x] Liveness (`/health/live`) + readiness (`/health/ready`, DB probe -> 200/503) split; lifespan logs startup/shutdown (graceful SIGTERM).
+- [x] Prometheus scrape config + Grafana datasource provisioning + optional observability docker-compose; existing Grafana dashboard JSON.
+- [x] Alert rule evaluation wired via `/alerts` (verified by test); webhooks restricted to http(s).
+- [x] `docs/RUNBOOK.md` (probes, metrics, alerts, log correlation, incident table, security toggles).
+- [ ] DB connection pooling tuning + a dedicated LLM cost/latency Grafana panel — deferred (SQLite default; metrics exist).
 
 ## Phase 7 — Documentation & API versioning
 - [ ] Slim duplicated README into crisp top-level + `docs/`; sync TECHNICAL_REFERENCE; architecture diagram + ADRs (grading transform, HITL, multi-agent); version API (`/v1`) with OpenAPI examples; CI-verified quickstart.
