@@ -5,6 +5,8 @@ import Replay from './components/Replay'
 import ApprovalQueue from './components/ApprovalQueue'
 import Settings from './components/Settings'
 import Team from './components/Team'
+import { createApiClient } from './api'
+import { useDashboardSocket } from './useDashboardSocket'
 
 type Tab = 'inbox' | 'timeline' | 'replay' | 'approvals' | 'settings' | 'team'
 
@@ -18,20 +20,21 @@ function App() {
   const [activeTab, setActiveTab] = useState<Tab>('inbox')
   const [apiBase, setApiBase] = useState(API_BASE)
   const [health, setHealth] = useState<HealthStatus | null>(null)
-  const [connected, setConnected] = useState(false)
+  const [healthy, setHealthy] = useState(false)
+
+  // Live connection via WebSocket (falls back to the periodic health check).
+  const { connected: live } = useDashboardSocket(apiBase)
+  const connected = live || healthy
 
   const checkHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${apiBase}/health`)
-      if (res.ok) {
-        const data = await res.json()
-        setHealth(data)
-        setConnected(true)
-      } else {
-        setConnected(false)
-      }
+      const data = await createApiClient(apiBase).get<HealthStatus>('/health', {
+        timeoutMs: 5000,
+      })
+      setHealth(data)
+      setHealthy(true)
     } catch {
-      setConnected(false)
+      setHealthy(false)
     }
   }, [apiBase])
 
@@ -56,7 +59,7 @@ function App() {
         <h1>Email Copilot</h1>
         <p className="subtitle">Dashboard</p>
         <nav>
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <div
               key={tab.id}
               className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
@@ -70,20 +73,18 @@ function App() {
           <input
             type="text"
             value={apiBase}
-            onChange={e => setApiBase(e.target.value)}
+            onChange={(e) => setApiBase(e.target.value)}
             placeholder="API Base URL"
           />
           <div style={{ fontSize: '0.75rem', color: connected ? '#22c55e' : '#ef4444' }}>
-            {connected ? 'Connected' : 'Disconnected'}
+            {live ? 'Live' : connected ? 'Connected' : 'Disconnected'}
           </div>
         </div>
       </aside>
       <main className="main">
         <div className="header">
-          <h2>{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
-          {health && (
-            <span className="status-badge status-success">API: {health.status}</span>
-          )}
+          <h2>{tabs.find((t) => t.id === activeTab)?.label || 'Dashboard'}</h2>
+          {health && <span className="status-badge status-success">API: {health.status}</span>}
         </div>
         {activeTab === 'inbox' && <Inbox apiBase={apiBase} />}
         {activeTab === 'timeline' && <Timeline apiBase={apiBase} />}

@@ -20,6 +20,7 @@ function Team({ apiBase }: Props) {
 
   useEffect(() => {
     loadTeamSettings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadTeamSettings = async () => {
@@ -41,7 +42,10 @@ function Team({ apiBase }: Props) {
     if (teamSettings) {
       setTeamSettings({
         ...teamSettings,
-        approval_rules: [...teamSettings.approval_rules, { action_type: 'reply', requires_approval: false }],
+        approval_rules: [
+          ...teamSettings.approval_rules,
+          { action_type: 'reply', requires_approval: false },
+        ],
       })
     }
   }
@@ -129,7 +133,7 @@ function Team({ apiBase }: Props) {
                 <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <select
                     value={rule.action_type}
-                    onChange={e => updateApprovalRule(idx, 'action_type', e.target.value)}
+                    onChange={(e) => updateApprovalRule(idx, 'action_type', e.target.value)}
                   >
                     <option value="classify">classify</option>
                     <option value="reply">reply</option>
@@ -139,15 +143,21 @@ function Team({ apiBase }: Props) {
                   </select>
                   <select
                     value={rule.requires_approval ? 'true' : 'false'}
-                    onChange={e => updateApprovalRule(idx, 'requires_approval', e.target.value === 'true')}
+                    onChange={(e) =>
+                      updateApprovalRule(idx, 'requires_approval', e.target.value === 'true')
+                    }
                   >
                     <option value="true">Requires Approval</option>
                     <option value="false">Auto-approve</option>
                   </select>
-                  <button className="btn" onClick={() => removeApprovalRule(idx)}>Remove</button>
+                  <button className="btn" onClick={() => removeApprovalRule(idx)}>
+                    Remove
+                  </button>
                 </div>
               ))}
-              <button className="btn" onClick={addApprovalRule}>Add Rule</button>
+              <button className="btn" onClick={addApprovalRule}>
+                Add Rule
+              </button>
 
               <h4 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Escalation Targets</h4>
               {teamSettings.escalation_targets.map((target, idx) => (
@@ -155,29 +165,38 @@ function Team({ apiBase }: Props) {
                   <input
                     type="text"
                     value={target.target}
-                    onChange={e => updateEscalationTarget(idx, 'target', e.target.value)}
+                    onChange={(e) => updateEscalationTarget(idx, 'target', e.target.value)}
                     placeholder="Target name"
                     style={{ flex: 1 }}
                   />
                   <input
                     type="text"
                     value={target.description}
-                    onChange={e => updateEscalationTarget(idx, 'description', e.target.value)}
+                    onChange={(e) => updateEscalationTarget(idx, 'description', e.target.value)}
                     placeholder="Description"
                     style={{ flex: 2 }}
                   />
-                  <button className="btn" onClick={() => removeEscalationTarget(idx)}>Remove</button>
+                  <button className="btn" onClick={() => removeEscalationTarget(idx)}>
+                    Remove
+                  </button>
                 </div>
               ))}
-              <button className="btn" onClick={addEscalationTarget}>Add Target</button>
+              <button className="btn" onClick={addEscalationTarget}>
+                Add Target
+              </button>
 
-              {error && (
-                <div style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</div>
-              )}
+              {error && <div style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</div>}
               {success && (
-                <div style={{ color: 'var(--success)', marginTop: '1rem' }}>Team settings saved!</div>
+                <div style={{ color: 'var(--success)', marginTop: '1rem' }}>
+                  Team settings saved!
+                </div>
               )}
-              <button className="btn btn-primary" onClick={saveTeamSettings} disabled={saving} style={{ marginTop: '1rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={saveTeamSettings}
+                disabled={saving}
+                style={{ marginTop: '1rem' }}
+              >
                 {saving ? 'Saving...' : 'Save Team Settings'}
               </button>
             </>

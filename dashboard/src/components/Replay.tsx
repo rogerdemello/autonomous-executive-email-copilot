@@ -136,13 +136,24 @@ function Replay({ apiBase }: Props) {
       </div>
 
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="form-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          <select value={taskId} onChange={e => setTaskId(e.target.value)} style={{ width: 'auto' }}>
+        <div
+          className="form-group"
+          style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}
+        >
+          <select
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+            style={{ width: 'auto' }}
+          >
             <option value="easy_classification">easy_classification</option>
             <option value="medium_prioritization">medium_prioritization</option>
             <option value="hard_full_management">hard_full_management</option>
           </select>
-          <select value={persona} onChange={e => setPersona(e.target.value)} style={{ width: 'auto' }}>
+          <select
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+            style={{ width: 'auto' }}
+          >
             <option value="strict_ceo">strict_ceo</option>
             <option value="balanced">balanced</option>
             <option value="chill_manager">chill_manager</option>
@@ -150,7 +161,7 @@ function Replay({ apiBase }: Props) {
           <input
             type="number"
             value={seed}
-            onChange={e => setSeed(parseInt(e.target.value) || 42)}
+            onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
             style={{ width: '80px' }}
             placeholder="Seed"
           />
@@ -164,31 +175,46 @@ function Replay({ apiBase }: Props) {
 
         {episode && (
           <div className="replay-controls">
-            <button onClick={goToStart} disabled={currentStep === 0}>|&lt;</button>
-            <button onClick={stepBack} disabled={currentStep === 0}>&lt;</button>
+            <button onClick={goToStart} disabled={currentStep === 0}>
+              |&lt;
+            </button>
+            <button onClick={stepBack} disabled={currentStep === 0}>
+              &lt;
+            </button>
             {isPlaying ? (
               <button onClick={pause}>Pause</button>
             ) : (
-              <button onClick={play} disabled={currentStep >= (episode.decisions.length - 1)}>Play</button>
+              <button onClick={play} disabled={currentStep >= episode.decisions.length - 1}>
+                Play
+              </button>
             )}
-            <button onClick={stepForward} disabled={currentStep >= (episode.decisions.length - 1)}>&gt;</button>
-            <button onClick={goToEnd} disabled={currentStep >= (episode.decisions.length - 1)}>&gt;|</button>
+            <button onClick={stepForward} disabled={currentStep >= episode.decisions.length - 1}>
+              &gt;
+            </button>
+            <button onClick={goToEnd} disabled={currentStep >= episode.decisions.length - 1}>
+              &gt;|
+            </button>
             <div className="slider-container">
               <input
                 type="range"
                 min={0}
                 max={episode.decisions.length - 1}
                 value={currentStep}
-                onChange={e => setCurrentStep(parseInt(e.target.value))}
+                onChange={(e) => setCurrentStep(parseInt(e.target.value))}
               />
             </div>
-            <span style={{ fontSize: '0.75rem' }}>{currentStep + 1} / {episode.decisions.length}</span>
+            <span style={{ fontSize: '0.75rem' }}>
+              {currentStep + 1} / {episode.decisions.length}
+            </span>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}>
+        <div
+          className="card"
+          style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
+        >
           {error}
         </div>
       )}
@@ -199,9 +225,20 @@ function Replay({ apiBase }: Props) {
           <p style={{ color: 'var(--text-muted)' }}>Load an episode to replay</p>
         ) : currentDecision ? (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <strong>Step {currentDecision.step}: {currentDecision.action.action_type}</strong>
-              <span className={`status-badge status-${currentDecision.status === 'success' ? 'success' : currentDecision.status === 'fallback' ? 'warning' : 'error'}`}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <strong>
+                Step {currentDecision.step}: {currentDecision.action.action_type}
+              </strong>
+              <span
+                className={`status-badge status-${currentDecision.status === 'success' ? 'success' : currentDecision.status === 'fallback' ? 'warning' : 'error'}`}
+              >
                 {currentDecision.status}
               </span>
             </div>
@@ -218,7 +255,10 @@ function Replay({ apiBase }: Props) {
             )}
             {currentDecision.model_name && (
               <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                Model: {currentDecision.model_name} {currentDecision.latency_ms ? ` | Latency: ${currentDecision.latency_ms.toFixed(0)}ms` : ''}
+                Model: {currentDecision.model_name}{' '}
+                {currentDecision.latency_ms
+                  ? ` | Latency: ${currentDecision.latency_ms.toFixed(0)}ms`
+                  : ''}
               </div>
             )}
           </div>

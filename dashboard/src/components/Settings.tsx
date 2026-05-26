@@ -22,6 +22,7 @@ function Settings({ apiBase }: Props) {
 
   useEffect(() => {
     loadPreference()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadPreference = async () => {
@@ -79,7 +80,7 @@ function Settings({ apiBase }: Props) {
               </div>
               <div className="form-group">
                 <label>Default Persona</label>
-                <select value={defaultPersona} onChange={e => setDefaultPersona(e.target.value)}>
+                <select value={defaultPersona} onChange={(e) => setDefaultPersona(e.target.value)}>
                   <option value="strict_ceo">strict_ceo</option>
                   <option value="balanced">balanced</option>
                   <option value="chill_manager">chill_manager</option>
@@ -90,15 +91,15 @@ function Settings({ apiBase }: Props) {
                 <input
                   type="email"
                   value={notificationEmail}
-                  onChange={e => setNotificationEmail(e.target.value)}
+                  onChange={(e) => setNotificationEmail(e.target.value)}
                   placeholder="email@example.com"
                 />
               </div>
-              {error && (
-                <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>
-              )}
+              {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>}
               {success && (
-                <div style={{ color: 'var(--success)', marginBottom: '1rem' }}>Preferences saved!</div>
+                <div style={{ color: 'var(--success)', marginBottom: '1rem' }}>
+                  Preferences saved!
+                </div>
               )}
               <button className="btn btn-primary" onClick={savePreference} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Preferences'}

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { createApiClient } from '../api'
 
 interface Email {
   id: string
@@ -34,17 +35,17 @@ function Inbox({ apiBase }: Props) {
   const [seed, setSeed] = useState(42)
   const [persona, setPersona] = useState('balanced')
 
+  const client = useMemo(() => createApiClient(apiBase), [apiBase])
+
   const loadInbox = async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${apiBase}/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, seed, persona }),
+      const data = await client.post<Observation>('/reset', {
+        task_id: taskId,
+        seed,
+        persona,
       })
-      if (!res.ok) throw new Error('Failed to load inbox')
-      const data = await res.json()
       setObs(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
@@ -55,17 +56,15 @@ function Inbox({ apiBase }: Props) {
 
   useEffect(() => {
     loadInbox()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const refreshInbox = async () => {
     if (!obs) return
     setLoading(true)
     try {
-      const res = await fetch(`${apiBase}/state`, { method: 'POST' })
-      if (res.ok) {
-        const data = await res.json()
-        setObs(data)
-      }
+      const data = await client.post<Observation>('/state')
+      setObs(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to refresh')
     } finally {
@@ -102,12 +101,20 @@ function Inbox({ apiBase }: Props) {
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="form-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <select value={taskId} onChange={e => setTaskId(e.target.value)} style={{ width: 'auto' }}>
+          <select
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+            style={{ width: 'auto' }}
+          >
             <option value="easy_classification">easy_classification</option>
             <option value="medium_prioritization">medium_prioritization</option>
             <option value="hard_full_management">hard_full_management</option>
           </select>
-          <select value={persona} onChange={e => setPersona(e.target.value)} style={{ width: 'auto' }}>
+          <select
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+            style={{ width: 'auto' }}
+          >
             <option value="strict_ceo">strict_ceo</option>
             <option value="balanced">balanced</option>
             <option value="chill_manager">chill_manager</option>
@@ -115,7 +122,7 @@ function Inbox({ apiBase }: Props) {
           <input
             type="number"
             value={seed}
-            onChange={e => setSeed(parseInt(e.target.value) || 42)}
+            onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
             style={{ width: '80px' }}
             placeholder="Seed"
           />
@@ -129,7 +136,10 @@ function Inbox({ apiBase }: Props) {
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}>
+        <div
+          className="card"
+          style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
+        >
           {error}
         </div>
       )}
@@ -140,12 +150,18 @@ function Inbox({ apiBase }: Props) {
           <p style={{ color: 'var(--text-muted)' }}>No emails in inbox</p>
         ) : (
           <div className="email-list">
-            {obs?.emails.map(email => (
+            {obs?.emails.map((email) => (
               <div key={email.id} className={`email-item ${getPriorityClass(email.priority_hint)}`}>
-                <div className="email-sender">{email.sender} <span style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>({email.sender_role})</span></div>
+                <div className="email-sender">
+                  {email.sender}{' '}
+                  <span style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>
+                    ({email.sender_role})
+                  </span>
+                </div>
                 <div className="email-subject">{email.subject}</div>
                 <div className="email-meta">
-                  Priority: {email.priority_hint} | Deadline: {email.deadline_minutes}m | Value: {email.business_value} | Risk: {email.risk_tag}
+                  Priority: {email.priority_hint} | Deadline: {email.deadline_minutes}m | Value:{' '}
+                  {email.business_value} | Risk: {email.risk_tag}
                 </div>
               </div>
             ))}

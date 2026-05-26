@@ -62,32 +62,38 @@ function Timeline({ apiBase }: Props) {
         </div>
         <div className="metric">
           <div className="metric-value">
-            {decisions.filter(d => d.status === 'success').length}
+            {decisions.filter((d) => d.status === 'success').length}
           </div>
           <div className="metric-label">AI Mode</div>
         </div>
         <div className="metric">
           <div className="metric-value">
-            {decisions.filter(d => d.status === 'fallback').length}
+            {decisions.filter((d) => d.status === 'fallback').length}
           </div>
           <div className="metric-label">Fallback</div>
         </div>
         <div className="metric">
-          <div className="metric-value">
-            {decisions.filter(d => d.status === 'error').length}
-          </div>
+          <div className="metric-value">{decisions.filter((d) => d.status === 'error').length}</div>
           <div className="metric-label">Errors</div>
         </div>
       </div>
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="form-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <select value={taskId} onChange={e => setTaskId(e.target.value)} style={{ width: 'auto' }}>
+          <select
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+            style={{ width: 'auto' }}
+          >
             <option value="easy_classification">easy_classification</option>
             <option value="medium_prioritization">medium_prioritization</option>
             <option value="hard_full_management">hard_full_management</option>
           </select>
-          <select value={persona} onChange={e => setPersona(e.target.value)} style={{ width: 'auto' }}>
+          <select
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+            style={{ width: 'auto' }}
+          >
             <option value="strict_ceo">strict_ceo</option>
             <option value="balanced">balanced</option>
             <option value="chill_manager">chill_manager</option>
@@ -95,7 +101,7 @@ function Timeline({ apiBase }: Props) {
           <input
             type="number"
             value={seed}
-            onChange={e => setSeed(parseInt(e.target.value) || 42)}
+            onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
             style={{ width: '80px' }}
             placeholder="Seed"
           />
@@ -106,7 +112,10 @@ function Timeline({ apiBase }: Props) {
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}>
+        <div
+          className="card"
+          style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
+        >
           {error}
         </div>
       )}
@@ -119,26 +128,43 @@ function Timeline({ apiBase }: Props) {
           <div className="timeline">
             {decisions.map((decision, idx) => (
               <div key={idx} className={`timeline-item ${getStatusClass(decision.status)}`}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>Step {decision.step}: {decision.action.action_type}</strong>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <strong>
+                    Step {decision.step}: {decision.action.action_type}
+                  </strong>
                   <span className={`status-badge status-${getStatusClass(decision.status)}`}>
                     {decision.status}
                   </span>
                 </div>
-                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                <div
+                  style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}
+                >
                   Target: {decision.action.email_id || 'N/A'}
                 </div>
                 <div style={{ marginTop: '0.5rem' }}>
-                  {decision.reason.length > 200 ? decision.reason.slice(0, 200) + '...' : decision.reason}
+                  {decision.reason.length > 200
+                    ? decision.reason.slice(0, 200) + '...'
+                    : decision.reason}
                 </div>
                 {decision.confidence !== undefined && (
                   <div style={{ marginTop: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem' }}>Confidence: {decision.confidence.toFixed(2)}</span>
+                    <span style={{ fontSize: '0.75rem' }}>
+                      Confidence: {decision.confidence.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {decision.model_name && (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    Model: {decision.model_name} {decision.latency_ms ? `| ${decision.latency_ms.toFixed(0)}ms` : ''}
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    Model: {decision.model_name}{' '}
+                    {decision.latency_ms ? `| ${decision.latency_ms.toFixed(0)}ms` : ''}
                   </div>
                 )}
               </div>

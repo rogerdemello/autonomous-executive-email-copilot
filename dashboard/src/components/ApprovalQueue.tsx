@@ -47,6 +47,7 @@ function ApprovalQueue({ apiBase }: Props) {
   useEffect(() => {
     loadPending()
     loadHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleApprove = async (requestId: string) => {
@@ -100,23 +101,34 @@ function ApprovalQueue({ apiBase }: Props) {
           <div className="metric-label">Pending</div>
         </div>
         <div className="metric">
-          <div className="metric-value">{history.filter(h => h.id).length}</div>
+          <div className="metric-value">{history.filter((h) => h.id).length}</div>
           <div className="metric-label">History</div>
         </div>
       </div>
 
       <div className="tabs">
-        <button className={`tab ${activeTab === 'pending' ? 'active' : ''}`} onClick={() => setActiveTab('pending')}>
+        <button
+          className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pending')}
+        >
           Pending ({pending.length})
         </button>
-        <button className={`tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+        <button
+          className={`tab ${activeTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
           History
         </button>
-        <button className="btn" onClick={refresh} style={{ marginLeft: 'auto' }}>Refresh</button>
+        <button className="btn" onClick={refresh} style={{ marginLeft: 'auto' }}>
+          Refresh
+        </button>
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}>
+        <div
+          className="card"
+          style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
+        >
           {error}
         </div>
       )}
@@ -128,17 +140,38 @@ function ApprovalQueue({ apiBase }: Props) {
             {pending.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>No pending approvals</p>
             ) : (
-              pending.map(req => (
+              pending.map((req) => (
                 <div key={req.id} className="approval-item">
-                  <div><strong>ID:</strong> {req.id}</div>
-                  <div><strong>Action:</strong> {req.action_type} | <strong>Email:</strong> {req.email_id}</div>
-                  {req.content && <div><strong>Content:</strong> {req.content.slice(0, 100)}...</div>}
-                  {req.escalate_to && <div><strong>Escalate to:</strong> {req.escalate_to}</div>}
+                  <div>
+                    <strong>ID:</strong> {req.id}
+                  </div>
+                  <div>
+                    <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
+                    {req.email_id}
+                  </div>
+                  {req.content && (
+                    <div>
+                      <strong>Content:</strong> {req.content.slice(0, 100)}...
+                    </div>
+                  )}
+                  {req.escalate_to && (
+                    <div>
+                      <strong>Escalate to:</strong> {req.escalate_to}
+                    </div>
+                  )}
                   <div className="approval-actions">
-                    <button className="approve" onClick={() => handleApprove(req.id)} disabled={loading}>
+                    <button
+                      className="approve"
+                      onClick={() => handleApprove(req.id)}
+                      disabled={loading}
+                    >
                       Approve
                     </button>
-                    <button className="reject" onClick={() => handleReject(req.id)} disabled={loading}>
+                    <button
+                      className="reject"
+                      onClick={() => handleReject(req.id)}
+                      disabled={loading}
+                    >
                       Reject
                     </button>
                   </div>
@@ -156,8 +189,13 @@ function ApprovalQueue({ apiBase }: Props) {
             ) : (
               history.map((req, idx) => (
                 <div key={idx} className="approval-item" style={{ opacity: 0.7 }}>
-                  <div><strong>ID:</strong> {req.id}</div>
-                  <div><strong>Action:</strong> {req.action_type} | <strong>Email:</strong> {req.email_id}</div>
+                  <div>
+                    <strong>ID:</strong> {req.id}
+                  </div>
+                  <div>
+                    <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
+                    {req.email_id}
+                  </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     Requested at: {new Date(req.requested_at * 1000).toLocaleString()}
                   </div>
