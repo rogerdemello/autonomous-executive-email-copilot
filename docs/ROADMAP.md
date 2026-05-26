@@ -77,8 +77,12 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [x] `docs/RUNBOOK.md` (probes, metrics, alerts, log correlation, incident table, security toggles).
 - [ ] DB connection pooling tuning + a dedicated LLM cost/latency Grafana panel — deferred (SQLite default; metrics exist).
 
-## Phase 7 — Documentation & API versioning
-- [ ] Slim duplicated README into crisp top-level + `docs/`; sync TECHNICAL_REFERENCE; architecture diagram + ADRs (grading transform, HITL, multi-agent); version API (`/v1`) with OpenAPI examples; CI-verified quickstart.
+## Phase 7 — Documentation & API versioning ✅ CORE COMPLETE (/v1 move deferred)
+- [x] README gains a Documentation index + Security & Configuration section + new endpoints (it was a single doc, not duplicated).
+- [x] `docs/ARCHITECTURE.md` (layers, request flow, components, invariants, design decisions) — covers the architecture-diagram + decision-record intent.
+- [x] Enriched OpenAPI metadata + `/version` endpoint; documented versioning policy.
+- [x] CI-verified quickstart (inference-smoke + docker smoke jobs).
+- [ ] Breaking `/v1` path move + per-endpoint OpenAPI examples — deferred (a `/v1`-only move conflicts with the validator's unversioned `/reset|/step|/state`; revisit with a back-compat alias).
 
 ---
 
