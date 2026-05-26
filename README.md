@@ -4,7 +4,13 @@ Autonomous Executive Email Copilot is a deterministic, OpenEnv-style executive i
 
 The project is built as a full experimentation stack rather than a single simulator. Scenario generation is driven by YAML task and scenario files, policies include heuristic baseline, stress-test corruption, LLM-backed decisioning, and hybrid planner/executor modes, and the surrounding tooling supports approvals, replay, leaderboard comparison, reports, telemetry, and alerts. The codebase also exposes two user interfaces: a Streamlit operations console and a React dashboard for inbox review, approvals, replay, and team settings.
 
-Full deep documentation is kept in [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md).
+## Documentation
+
+- [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) — full, code-derived reference.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, request flow, design decisions.
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — operations: probes, metrics, alerts, incidents.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — phased improvement plan and status.
+- [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example) — contributing, security policy, configuration.
 
 ## What You Can Do
 
@@ -74,6 +80,9 @@ Endpoints:
 - `GET /`
 - `GET /favicon.ico`
 - `GET /health`
+- `GET /health/live` (liveness probe)
+- `GET /health/ready` (readiness probe — checks DB)
+- `GET /version`
 - `GET /tasks`
 - `POST /reset`
 - `POST /step`
@@ -380,12 +389,29 @@ WebSocket pong frame:
 - Container build: [Dockerfile](Dockerfile)
 - CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
-Run container:
+Run container (multi-stage build also compiles the React dashboard, served at `/dashboard/`):
 
 ```bash
 docker build -t exec-email-copilot .
 docker run -p 7860:7860 exec-email-copilot
+# or
+docker compose up --build
 ```
+
+## Security & Configuration
+
+All configuration is environment-driven (see [.env.example](.env.example), loaded
+via `env/config.py`). Security controls are **opt-in** so local dev, tests, and
+the OpenEnv validator work with zero setup:
+
+- `API_AUTH_TOKEN` — when set, mutating routes require `Authorization: Bearer <token>` or `X-API-Key`.
+- `CORS_ORIGINS` — comma-separated allowed origins (default `*`).
+- `RATE_LIMIT_PER_MINUTE` — per-IP request cap (default `0` = disabled).
+- `REQUIRE_APPROVAL` — gate `reply`/`escalate` behind human approval (default off).
+- `LOG_LEVEL` — structured logs; every response carries an `X-Request-ID`.
+
+Observability: Prometheus metrics at `/metrics`, alert evaluation at `/alerts`,
+provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.md).
 
 ## Testing Coverage
 

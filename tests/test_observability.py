@@ -9,6 +9,14 @@ from env.api import app
 client = TestClient(app)
 
 
+def test_version_endpoint():
+    resp = client.get("/version")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["name"] == "autonomous-executive-email-copilot"
+    assert body["version"]
+
+
 def test_liveness_is_cheap_and_ok():
     resp = client.get("/health/live")
     assert resp.status_code == 200

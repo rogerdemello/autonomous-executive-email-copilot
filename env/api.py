@@ -94,7 +94,20 @@ async def lifespan(_app: FastAPI):
     logger.info("Shutting down Autonomous Executive Email Copilot API")
 
 
-app = FastAPI(title="Autonomous Executive Email Copilot", version="0.1.0", lifespan=lifespan)
+API_VERSION = "0.1.0"
+
+app = FastAPI(
+    title="Autonomous Executive Email Copilot",
+    version=API_VERSION,
+    description=(
+        "Deterministic, OpenEnv-style executive inbox simulation for evaluating "
+        "agents that triage and manage high-stakes email. Endpoints are stable "
+        "within a major version; breaking changes will be introduced under a "
+        "versioned path. See /docs for the full schema."
+    ),
+    license_info={"name": "MIT"},
+    lifespan=lifespan,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
@@ -233,6 +246,12 @@ def favicon() -> Response:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/version")
+def version() -> dict[str, str]:
+    """Service name and version (semver). Useful for clients and deploys."""
+    return {"name": "autonomous-executive-email-copilot", "version": API_VERSION}
 
 
 @app.get("/health/live")
