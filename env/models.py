@@ -10,7 +10,7 @@ RiskType = Literal["low", "medium", "high"]
 SenderRole = Literal["client", "internal", "vendor", "unknown"]
 RiskTag = Literal["none", "legal", "security", "finance", "ops"]
 PersonaType = Literal["strict_ceo", "balanced", "chill_manager"]
-PolicyMode = Literal["baseline", "stress", "llm"]
+PolicyMode = Literal["baseline", "stress", "llm", "hybrid"]
 AIStatusType = Literal[
     "success",
     "fallback_timeout",
