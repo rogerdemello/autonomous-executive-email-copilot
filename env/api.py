@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -81,7 +82,19 @@ team_settings_repo = TeamSettingsRepository()
 # In-memory episode history storage
 episode_history_store: dict[str, EpisodeHistory] = {}
 
-app = FastAPI(title="Autonomous Executive Email Copilot", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Startup. uvicorn translates SIGTERM into lifespan shutdown, so cleanup
+    # here runs on graceful termination.
+    logger.info(
+        "Starting Autonomous Executive Email Copilot API (log_level=%s)", get_settings().log_level
+    )
+    yield
+    logger.info("Shutting down Autonomous Executive Email Copilot API")
+
+
+app = FastAPI(title="Autonomous Executive Email Copilot", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
@@ -220,6 +233,24 @@ def favicon() -> Response:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/health/live")
+def liveness() -> dict[str, str]:
+    """Liveness: the process is up and serving. Cheap, no dependencies."""
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+def readiness() -> Response:
+    """Readiness: dependencies (the database) are reachable."""
+    try:
+        # A trivial lookup exercises the DB connection without side effects.
+        repo.get_episode(episode_id="__readiness_probe__")
+    except Exception as exc:  # noqa: BLE001 - report not-ready rather than 500
+        logger.warning("Readiness probe failed: %s", exc)
+        return JSONResponse(status_code=503, content={"status": "not_ready"})
+    return JSONResponse(status_code=200, content={"status": "ready"})
 
 
 @app.get("/tasks", response_model=TasksResponse)
