@@ -56,11 +56,11 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 
 > Note: Docker image build verified via the dashboard build + CI; not built locally (daemon was down). Run `docker compose up --build` to verify end-to-end.
 
-## Phase 4 — Frontend & UX polish
-- [ ] vitest + @testing-library/react; eslint/prettier; component + mocked-API tests.
-- [ ] Robust API layer: env-driven base URL, timeouts, retry/backoff, error boundaries, loading/empty states.
-- [ ] Wire `/ws/dashboard` WebSocket with auto-reconnect (replace polling).
-- [ ] Accessibility & responsive pass.
+## Phase 4 — Frontend & UX polish ✅ COMPLETE (a11y pass deferred)
+- [x] vitest + @testing-library/react (jsdom); eslint flat config + prettier; api + Inbox tests (6 passing). CI frontend job runs eslint + prettier + vitest + tsc + build.
+- [x] Robust API layer (`dashboard/src/api.ts`): timeouts (AbortController), retry/backoff, typed `ApiError`; Inbox + App refactored onto it.
+- [x] Live `/ws/dashboard` WebSocket via `useDashboardSocket` (ping/pong + capped-backoff reconnect); App shows Live/Connected/Disconnected.
+- [ ] Dedicated accessibility & responsive pass — deferred (semantic/ARIA + mobile layout audit not yet done).
 
 ## Phase 5 — Benchmark & simulation rigor
 - [ ] Document/justify `strict_unit_interval` + `atan` reward transform; hypothesis property tests; golden-trajectory metric→score tests.
