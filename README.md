@@ -1,3 +1,14 @@
+---
+title: Autonomous Executive Email Copilot
+emoji: "📧"
+colorFrom: blue
+colorTo: green
+sdk: docker
+python_version: "3.10"
+app_port: 7860
+pinned: false
+---
+
 # Autonomous Executive Email Copilot
 
 Autonomous Executive Email Copilot is a deterministic, OpenEnv-style executive inbox simulation for evaluating agents that triage and manage high-stakes email workloads. It models an executive mailbox with incoming messages, deadlines, business value, risk tags, thread history, and mid-episode interruptions. Agents interact with the environment through a standard reset/step/state loop, choose among classify, prioritize, reply, escalate, and defer actions, and are scored by task-specific graders that keep results bounded and validator-friendly.
