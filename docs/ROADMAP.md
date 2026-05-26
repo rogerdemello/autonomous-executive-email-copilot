@@ -62,11 +62,13 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [x] Live `/ws/dashboard` WebSocket via `useDashboardSocket` (ping/pong + capped-backoff reconnect); App shows Live/Connected/Disconnected.
 - [ ] Dedicated accessibility & responsive pass — deferred (semantic/ARIA + mobile layout audit not yet done).
 
-## Phase 5 — Benchmark & simulation rigor
-- [ ] Document/justify `strict_unit_interval` + `atan` reward transform; hypothesis property tests; golden-trajectory metric→score tests.
-- [ ] Determinism golden-score snapshots across seeds/personas/tasks; CI drift guard.
-- [ ] More YAML scenarios + schema validation; tests for adversarial/conflicting-deadline generators.
-- [ ] `/baseline` accepts `hybrid`; finish multi-agent benchmark; reproducible JSON+HTML+CSV report as CI artifact; persist leaderboard to DB.
+## Phase 5 — Benchmark & simulation rigor ✅ CORE COMPLETE (additive items deferred)
+- [x] Documented `strict_unit_interval` + `atan` reward transform in grader.py; property tests (open-unit + monotonicity sweeps) for both; hard-task weight check. (Used dependency-free sweeps instead of hypothesis.)
+- [x] Golden-score snapshot + determinism tests across tasks (CI drift guard via `tests/test_grading_rigor.py`).
+- [x] `/baseline` accepts `hybrid` (added to PolicyMode; endpoint test).
+- [ ] More YAML scenarios + a pydantic scenario schema validator — deferred.
+- [ ] Reproducible benchmark report (JSON+HTML+CSV) as a CI artifact + persist leaderboard to DB — deferred.
+- [ ] Improve hybrid's deterministic (no-key) fallback quality (currently scores ~0 without a provider) — deferred.
 
 ## Phase 6 — Observability & operations
 - [ ] Prometheus scrape + provisioned Grafana; tested alert rules; liveness/readiness split; graceful shutdown; DB pooling; LLM cost/latency dashboard; runbook.
