@@ -29,6 +29,7 @@ The project is built as a full experimentation stack rather than a single simula
 - [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) — full, code-derived reference.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, request flow, design decisions.
 - [docs/BENCHMARK.md](docs/BENCHMARK.md) — benchmark methodology, scoring, and how to reproduce results.
+- [docs/WHITEPAPER.md](docs/WHITEPAPER.md) — positioning & methods: what it measures, real results, honest findings.
 - [docs/RUNBOOK.md](docs/RUNBOOK.md) — operations: probes, metrics, alerts, incidents.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — phased improvement plan and status.
 - [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example) — contributing, security policy, configuration.

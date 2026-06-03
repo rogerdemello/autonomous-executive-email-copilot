@@ -325,11 +325,26 @@ runner = BenchmarkRunner(
 results = runner.run_all()          # 1 x 1 x 1 x 3 agents = 3 runs
 ```
 
+### Reproducing the LLM column for **free** ($0)
+
+The `llm` agent speaks the OpenAI chat-completions API, so it works with **any
+OpenAI-compatible endpoint** — not just Azure. To reproduce the LLM column at no
+cost, point it at a free provider (see [.env.example](../.env.example) "Style C"):
+
+- **Groq** — free tier, OpenAI-compatible, fast Llama models:
+  `API_BASE_URL=https://api.groq.com/openai/v1`, `MODEL_NAME=llama-3.3-70b-versatile`,
+  `OPENAI_API_KEY=<free Groq key>`.
+- **Local Ollama** — fully offline/free: `ollama serve`, then
+  `API_BASE_URL=http://localhost:11434/v1`, `MODEL_NAME=llama3.1`, `OPENAI_API_KEY=ollama`.
+
+Then run `python scripts/run_benchmark.py --agents baseline multiagent llm --out artifacts/results`.
+The deterministic `baseline` and `multiagent` agents are always free (no API calls).
+
 ### Notes for live (Azure OpenAI) runs
 
-- The `llm` agent requires provider credentials; configure the OpenAI/Azure client
-  used by `env/llm_agent.py` before running. The baseline and multi-agent agents
-  run offline.
+- The `llm` agent requires provider credentials; the standard `AZURE_OPENAI_*` block
+  (see [.env.example](../.env.example) "Style A") is read natively. The baseline and
+  multi-agent agents run offline.
 - The default agent model is `gpt-4o-mini` (`data/settings.yaml` `agent_config`,
   and `LLMAgent` default in `benchmark/agents.py` line 86). To price `gpt-4o`, the
   rate `{prompt: 2.50, completion: 10.00}` is already in `MODEL_PRICING`.
