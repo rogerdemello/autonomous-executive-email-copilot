@@ -96,3 +96,8 @@ def test_build_chat_client_azure_injects_api_key_header(monkeypatch):
     # Azure key auth requires the `api-key` header, not Authorization: Bearer.
     headers = {k.lower(): v for k, v in client.default_headers.items()}
     assert headers.get("api-key") == "az-secret"
+    # api-version must ride on default_query (the SDK drops base_url's query when
+    # it appends the request path), and base_url must be the bare deployment path.
+    assert dict(client.default_query).get("api-version") == "2024-02-15-preview"
+    assert "?" not in str(client.base_url)
+    assert str(client.base_url).rstrip("/").endswith("/openai/deployments/gpt4o")

@@ -150,8 +150,17 @@ def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:
         "timeout": timeout_seconds,
     }
     if is_azure_endpoint(api_base_url):
-        # Azure validates the resource key via the `api-key` header.
+        # Azure validates the resource key via the `api-key` header (not Bearer).
+        # Critically, the base_url must be the bare deployment path WITHOUT a query
+        # string: the OpenAI SDK resolves the request path relative to base_url and
+        # an embedded `?api-version=...` corrupts that join (-> 404). So strip the
+        # query and supply `api-version` via default_query, which rides on every
+        # request.
+        parts = urlsplit(api_base_url)
+        api_version = dict(parse_qsl(parts.query)).get("api-version", settings.azure_api_version)
+        kwargs["base_url"] = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
         kwargs["default_headers"] = {"api-key": api_key}
+        kwargs["default_query"] = {"api-version": api_version}
 
     return kwargs, (settings.model_name or DEFAULT_MODEL)
 

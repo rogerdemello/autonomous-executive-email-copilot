@@ -125,7 +125,9 @@ class TestLLMUsageMetrics(unittest.TestCase):
         self.assertEqual(mock_record.call_count, 1)
 
         # Second identical observation is served from cache -> no API call,
-        # therefore no second usage record.
+        # therefore no second usage record. Clear per-email progress so the same
+        # observation is re-presented (handled emails are otherwise hidden).
+        agent._handled_ids.clear()
         second = agent.get_action(obs)
         self.assertEqual(mock_record.call_count, 1, "cache hit must not record LLM usage")
         self.assertEqual(second.action.action_type, first.action.action_type)

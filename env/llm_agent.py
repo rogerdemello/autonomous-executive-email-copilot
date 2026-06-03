@@ -373,6 +373,10 @@ class LLMAgent:
         self._timeout_seconds = timeout_seconds
         self._client: OpenAI | None = None
         self._did_prioritize = False
+        # Emails already acted on this episode. The environment keeps listing every
+        # email (handled or not), so without progress tracking the agent re-acts on
+        # the same email forever and never works through the inbox.
+        self._handled_ids: set[str] = set()
         # Human-in-the-loop approval gating for reply/escalate actions.
         # Off by default so the raw agent returns the action it decided on; the
         # API/product path can enable it (constructor arg or REQUIRE_APPROVAL env).
@@ -436,10 +440,29 @@ class LLMAgent:
                 ),
             )
 
-        # Guardrail: Auto-escalate legal/security risk emails
+        # Work the inbox one email at a time: hide already-handled emails so the
+        # agent advances instead of re-deciding on the same email every step.
+        pending_emails = [e for e in observation.emails if e.id not in self._handled_ids]
+        if not pending_emails:
+            return AIResponse(
+                action=Action(action_type="defer", email_id=None),
+                trace=AIDecisionTrace(
+                    reason="All emails handled this episode",
+                    confidence=1.0,
+                    alternatives_considered=[],
+                    why_not="",
+                    latency_ms=int((time.time() - start_time) * 1000),
+                    model_name=self._model,
+                    status="success",
+                ),
+            )
+        observation = observation.model_copy(update={"emails": pending_emails})
+
+        # Guardrail: Auto-escalate legal/security risk emails (once each).
         for email in observation.emails:
             if email.risk_tag in {"legal", "security"}:
                 target = "legal_team" if email.risk_tag == "legal" else "chief_of_staff"
+                self._handled_ids.add(email.id)
                 return AIResponse(
                     action=Action(
                         action_type="escalate",
@@ -462,6 +485,8 @@ class LLMAgent:
         if not self._require_approval:
             cached = _get_cached_response(observation)
             if cached:
+                if cached.action and cached.action.email_id:
+                    self._handled_ids.add(cached.action.email_id)
                 logger.info("Cache hit - returning immediately (latency <1ms)")
                 return cached
 
@@ -472,8 +497,12 @@ class LLMAgent:
         confidence_threshold = settings.confidence_threshold
         current_model = small_model
 
-        # Call LLM with dynamic model selection
-        client = self._get_client()
+        # Call LLM with dynamic model selection. No provider configured (or a bad
+        # endpoint) surfaces here as a ValueError -> graceful provider_error fallback.
+        try:
+            client = self._get_client()
+        except ValueError:
+            return self._fallback_response("provider_error", start_time)
         retry_with_larger = False
 
         while True:
@@ -641,6 +670,8 @@ class LLMAgent:
         except Exception:  # noqa: BLE001 - telemetry is best-effort
             logger.debug("record_llm_usage failed", exc_info=True)
 
+        if action.email_id:
+            self._handled_ids.add(action.email_id)
         _cache_response(observation, ai_response)
         return ai_response
 
@@ -681,6 +712,7 @@ class LLMAgent:
     def reset(self) -> None:
         """Reset agent state for new episode."""
         self._did_prioritize = False
+        self._handled_ids.clear()
 
     def safety_check(
         self,

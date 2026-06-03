@@ -151,6 +151,9 @@ class TestLLMAgentCaching(unittest.TestCase):
         obs = _make_observation()
 
         first = agent.get_action(obs)
+        # Clear only per-email progress so the identical observation is re-presented
+        # (the agent otherwise hides the handled email); the response cache persists.
+        agent._handled_ids.clear()
         second = agent.get_action(obs)
 
         self.assertEqual(first.action.action_type, "reply")

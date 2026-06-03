@@ -101,25 +101,32 @@ class LLMAgent(BaseBenchmarkAgent):
         persona: str,
         max_steps: int = 100,
     ) -> BenchmarkMetrics:
+        from env.llm_agent import get_action as llm_get_action
+        from env.llm_agent import reset_agent
+
         env = ExecutiveEmailEnv(task_id=task_id, seed=seed, persona=persona)
         observation = env.reset(task_id=task_id, seed=seed, persona=persona)
-        agent = self._get_agent()
-        agent._did_prioritize = False
+        # The benchmark drives the module-global agent via get_action(); reset it
+        # per episode so per-episode guardrail state (prioritize-once, escalate-once)
+        # does not leak across the matrix.
+        reset_agent()
         trace = []
 
         start_time = time.time()
         total_tokens = 0
+        total_cost = 0.0
 
         for _ in range(max(1, max_steps)):
-            from env.llm_agent import get_action as llm_get_action
-
             ai_response = llm_get_action(observation)
             action = ai_response.action
             if action is None:
                 break
 
-            if ai_response.trace and ai_response.trace.token_usage:
-                total_tokens += ai_response.trace.token_usage.total_tokens
+            if ai_response.trace:
+                if ai_response.trace.token_usage:
+                    total_tokens += ai_response.trace.token_usage.total_tokens
+                # Sum the real per-call cost (priced with the actual model used).
+                total_cost += ai_response.trace.cost_usd or 0.0
 
             trace.append(action)
             result = env.step(action)
@@ -130,18 +137,11 @@ class LLMAgent(BaseBenchmarkAgent):
         elapsed_ms = int((time.time() - start_time) * 1000)
         graded = evaluate_trajectory(task_id=task_id, seed=seed, actions=trace, persona=persona)
 
-        cost_usd = 0.0
-        if total_tokens > 0:
-            from env.llm_agent import MODEL_PRICING
-
-            pricing = MODEL_PRICING.get(self.model, {"prompt": 0.15, "completion": 0.60})
-            cost_usd = (total_tokens / 1_000_000) * pricing["completion"]
-
         return BenchmarkMetrics(
             score=graded.score,
             time_ms=elapsed_ms,
             tokens=total_tokens,
-            cost_usd=cost_usd,
+            cost_usd=total_cost,
         )
 
 
