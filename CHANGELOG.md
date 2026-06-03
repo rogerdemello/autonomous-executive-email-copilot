@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Real Azure OpenAI benchmark results (LLM column) pending provider credentials.
+### Added
+
+- **Real Azure OpenAI `gpt-4o` benchmark results** published in the README and
+  `docs/BENCHMARK.md` (3×3×3 grid; LLM 0.17 / 1.00 / 0.62 on easy / medium / hard).
+
+### Fixed
+
+- Azure OpenAI 404s: carry `api-version` via `default_query` (the SDK drops the
+  base-URL query when appending the request path).
+- LLM agent re-acted on the same email indefinitely (the environment always lists
+  every email); it now tracks handled emails and works through the inbox, so it
+  actually reaches the model. Benchmark resets the agent per episode.
 
 ## [0.1.0] - 2026-06-03
 

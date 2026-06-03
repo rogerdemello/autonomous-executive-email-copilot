@@ -52,28 +52,30 @@ Task, scenario, and tuning config live in [data/tasks.yaml](data/tasks.yaml), [d
 
 ## Benchmark Results
 
-Mean task score (open interval `(0,1)`, higher is better) over **3 personas × 8 seeds**
-per cell, produced by the reproducible harness. Full methodology — scoring weights,
-the `atan` reward squash, determinism guarantees — is in
+Mean task score (open interval `(0,1)`, higher is better) over **3 personas × 3 seeds**
+per cell, produced by the reproducible harness. The LLM column is **real Azure OpenAI
+`gpt-4o`** (deployment `gpt-4o`, API `2024-12-01-preview`). Full methodology — scoring
+weights, the `atan` reward squash, determinism guarantees — is in
 [docs/BENCHMARK.md](docs/BENCHMARK.md).
 
-| Task | Baseline (heuristic) | Multi-agent (task-aware) | LLM — Azure OpenAI |
+| Task | Baseline (heuristic) | Multi-agent (task-aware) | LLM — Azure `gpt-4o` |
 |------|:---:|:---:|:---:|
-| `easy_classification` | **1.00** | 0.80 | _pending creds_ |
-| `medium_prioritization` | **1.00** | **1.00** | _pending creds_ |
-| `hard_full_management` | **0.71** | 0.09 | _pending creds_ |
+| `easy_classification` | **1.00** | 0.80 | 0.17 |
+| `medium_prioritization` | **1.00** | **1.00** | **1.00** |
+| `hard_full_management` | **0.67** | 0.09 | 0.62 |
 
-<sub>95% CI ≈ 0 for every cell except baseline `hard_full_management` (≈ ±0.03); scores are
-**persona-invariant** by design — personas shape per-step reward/penalties, not the headline
-metric (see [docs/BENCHMARK.md](docs/BENCHMARK.md)). The LLM column runs against a configured
-provider; wire Azure OpenAI per [.env.example](.env.example) and re-run the harness to fill it.</sub>
+<sub>Deterministic agents (baseline, multi-agent) have ≈0 variance; the LLM ran at
+`temperature=0.2` and averaged ~3k tokens / **≈ $0.009 per episode** (gpt-4o), ~$0.23 for the
+full 27-episode LLM sweep. Scores are **persona-invariant** by design — personas shape per-step
+reward/penalties, not the headline metric (see [docs/BENCHMARK.md](docs/BENCHMARK.md)).</sub>
 
 **What the numbers say (honest findings, not tuned):**
-- The benchmark **discriminates** — a strong hand-written heuristic, a naive multi-agent crew, and an LLM are clearly separated.
-- The **multi-agent crew is task-conditioned**: it now classifies on the classification task (was 0.00 before the coordinator became task-aware — see the finding in [docs/BENCHMARK.md](docs/BENCHMARK.md)) but is still weak on full management (0.09), where it escalates/replies without classifying first.
-- The **no-key hybrid** policy falls back to the strong baseline heuristics, so it scores `1.00 / 1.00 / 0.60` with **no provider configured** (was ~0 before).
+- The benchmark **discriminates** — a strong heuristic, a naive multi-agent crew, and a frontier LLM separate clearly, and differently per task.
+- On the realistic **full-management** task, the LLM (`0.62`) is competitive with the hand-tuned baseline (`0.67`) and far ahead of the naive multi-agent (`0.09`) — this is where model flexibility pays off.
+- On narrow **classification**, the LLM scores low (`0.17`): its task-blind safety guardrails (always prioritize first, auto-escalate risk, prefer replies) trade classification coverage for caution. That's an honest **agent-design** finding, not a model-capability one.
+- The **multi-agent crew is task-conditioned** (was 0.00 on classification before the coordinator became task-aware — see [docs/BENCHMARK.md](docs/BENCHMARK.md)); the **no-key hybrid** falls back to the strong baseline heuristics, scoring `1.00 / 1.00 / 0.60` with no provider configured (was ~0).
 
-Reproduce (no API key needed for the deterministic agents):
+Reproduce (deterministic agents need no API key; add `llm` after configuring a provider):
 
 ```bash
 python scripts/run_benchmark.py --agents baseline multiagent --out artifacts/results

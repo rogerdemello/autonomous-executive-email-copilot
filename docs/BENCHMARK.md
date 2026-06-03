@@ -347,42 +347,49 @@ the metrics shape, and the reporter JSON/HTML output.
 
 ## 7. Results
 
-> **PLACEHOLDER — to be filled by the integrator with real Azure OpenAI numbers.**
-> The rows below are illustrative only and contain no measured data. Populate from
-> a full `BenchmarkRunner().run_all()` over the default 3x3x3 grid, aggregating the
-> three seeds per (task, persona, agent) cell into `mean_score` and a 95% confidence
-> interval (`ci95`), and averaging `tokens` -> `mean_tokens`, `cost_usd` ->
-> `mean_cost_usd`.
+Measured run over a 3×3×3 grid (3 tasks × 3 personas × 3 seeds = 27 cells/agent).
+The `llm` agent is **real Azure OpenAI `gpt-4o`** (deployment `gpt-4o`, API version
+`2024-12-01-preview`, `temperature=0.2`); `baseline` and `multiagent` are deterministic.
+Each cell aggregates the 3 seeds into `mean_score`, a 95% CI half-width (`ci95`),
+`mean_tokens`, and `mean_cost_usd`.
+
+**Headline (mean over personas):** `baseline` 1.00 / 1.00 / 0.67, `multiagent`
+0.80 / 1.00 / 0.09, `llm` 0.17 / 1.00 / 0.62 on easy / medium / hard. The LLM is
+competitive with the heuristic baseline on the realistic full-management task and far
+ahead of the naive multi-agent there, but its task-blind safety guardrails
+(prioritize-first, auto-escalate risk, prefer replies) cost it coverage on the narrow
+classification task. Scores are persona-invariant (personas affect per-step reward
+shaping, not the headline metric — Section 4). The full LLM sweep cost ≈ $0.23.
 
 | task | persona | agent | mean_score | ci95 | mean_tokens | mean_cost_usd |
 |------|---------|-------|-----------:|-----:|------------:|--------------:|
-| easy_classification | strict_ceo | baseline | TBD | TBD | TBD | TBD |
-| easy_classification | strict_ceo | llm | TBD | TBD | TBD | TBD |
-| easy_classification | strict_ceo | multiagent | TBD | TBD | TBD | TBD |
-| easy_classification | balanced | baseline | TBD | TBD | TBD | TBD |
-| easy_classification | balanced | llm | TBD | TBD | TBD | TBD |
-| easy_classification | balanced | multiagent | TBD | TBD | TBD | TBD |
-| easy_classification | chill_manager | baseline | TBD | TBD | TBD | TBD |
-| easy_classification | chill_manager | llm | TBD | TBD | TBD | TBD |
-| easy_classification | chill_manager | multiagent | TBD | TBD | TBD | TBD |
-| medium_prioritization | strict_ceo | baseline | TBD | TBD | TBD | TBD |
-| medium_prioritization | strict_ceo | llm | TBD | TBD | TBD | TBD |
-| medium_prioritization | strict_ceo | multiagent | TBD | TBD | TBD | TBD |
-| medium_prioritization | balanced | baseline | TBD | TBD | TBD | TBD |
-| medium_prioritization | balanced | llm | TBD | TBD | TBD | TBD |
-| medium_prioritization | balanced | multiagent | TBD | TBD | TBD | TBD |
-| medium_prioritization | chill_manager | baseline | TBD | TBD | TBD | TBD |
-| medium_prioritization | chill_manager | llm | TBD | TBD | TBD | TBD |
-| medium_prioritization | chill_manager | multiagent | TBD | TBD | TBD | TBD |
-| hard_full_management | strict_ceo | baseline | TBD | TBD | TBD | TBD |
-| hard_full_management | strict_ceo | llm | TBD | TBD | TBD | TBD |
-| hard_full_management | strict_ceo | multiagent | TBD | TBD | TBD | TBD |
-| hard_full_management | balanced | baseline | TBD | TBD | TBD | TBD |
-| hard_full_management | balanced | llm | TBD | TBD | TBD | TBD |
-| hard_full_management | balanced | multiagent | TBD | TBD | TBD | TBD |
-| hard_full_management | chill_manager | baseline | TBD | TBD | TBD | TBD |
-| hard_full_management | chill_manager | llm | TBD | TBD | TBD | TBD |
-| hard_full_management | chill_manager | multiagent | TBD | TBD | TBD | TBD |
+| easy_classification | strict_ceo | baseline | 1.000 | ±0.000 | 0 | $0.00000 |
+| easy_classification | strict_ceo | llm | 0.167 | ±0.000 | 2080 | $0.00614 |
+| easy_classification | strict_ceo | multiagent | 0.800 | ±0.000 | 0 | $0.00000 |
+| easy_classification | balanced | baseline | 1.000 | ±0.000 | 0 | $0.00000 |
+| easy_classification | balanced | llm | 0.167 | ±0.000 | 2072 | $0.00612 |
+| easy_classification | balanced | multiagent | 0.800 | ±0.000 | 0 | $0.00000 |
+| easy_classification | chill_manager | baseline | 1.000 | ±0.000 | 0 | $0.00000 |
+| easy_classification | chill_manager | llm | 0.167 | ±0.000 | 2076 | $0.00613 |
+| easy_classification | chill_manager | multiagent | 0.800 | ±0.000 | 0 | $0.00000 |
+| medium_prioritization | strict_ceo | baseline | 1.000 | ±0.000 | 0 | $0.00000 |
+| medium_prioritization | strict_ceo | llm | 1.000 | ±0.000 | 2264 | $0.00660 |
+| medium_prioritization | strict_ceo | multiagent | 1.000 | ±0.000 | 0 | $0.00000 |
+| medium_prioritization | balanced | baseline | 1.000 | ±0.000 | 0 | $0.00000 |
+| medium_prioritization | balanced | llm | 1.000 | ±0.000 | 2261 | $0.00662 |
+| medium_prioritization | balanced | multiagent | 1.000 | ±0.000 | 0 | $0.00000 |
+| medium_prioritization | chill_manager | baseline | 1.000 | ±0.000 | 0 | $0.00000 |
+| medium_prioritization | chill_manager | llm | 1.000 | ±0.000 | 2264 | $0.00662 |
+| medium_prioritization | chill_manager | multiagent | 1.000 | ±0.000 | 0 | $0.00000 |
+| hard_full_management | strict_ceo | baseline | 0.669 | ±0.067 | 0 | $0.00000 |
+| hard_full_management | strict_ceo | llm | 0.588 | ±0.149 | 4565 | $0.01333 |
+| hard_full_management | strict_ceo | multiagent | 0.086 | ±0.000 | 0 | $0.00000 |
+| hard_full_management | balanced | baseline | 0.669 | ±0.067 | 0 | $0.00000 |
+| hard_full_management | balanced | llm | 0.657 | ±0.086 | 4553 | $0.01332 |
+| hard_full_management | balanced | multiagent | 0.086 | ±0.000 | 0 | $0.00000 |
+| hard_full_management | chill_manager | baseline | 0.669 | ±0.067 | 0 | $0.00000 |
+| hard_full_management | chill_manager | llm | 0.601 | ±0.061 | 4551 | $0.01325 |
+| hard_full_management | chill_manager | multiagent | 0.086 | ±0.000 | 0 | $0.00000 |
 
 Column definitions:
 
