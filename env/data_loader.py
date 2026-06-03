@@ -285,9 +285,7 @@ def resolve_scenario_path(
     if not get_settings().scenario_variants:
         return canonical
 
-    candidates = sorted(
-        p for p in dir_path.glob(f"{base_task_id}*.yaml") if p.is_file()
-    )
+    candidates = sorted(p for p in dir_path.glob(f"{base_task_id}*.yaml") if p.is_file())
     if not candidates:
         return canonical
 

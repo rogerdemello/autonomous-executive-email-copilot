@@ -88,9 +88,7 @@ def test_aggregate_groups_by_task_persona_agent():
     }
 
     baseline_easy = next(
-        r
-        for r in rows
-        if r["task_id"] == "easy_classification" and r["agent_name"] == "baseline"
+        r for r in rows if r["task_id"] == "easy_classification" and r["agent_name"] == "baseline"
     )
     assert baseline_easy["n"] == 2
     assert baseline_easy["mean_score"] == round(mean([0.5, 0.7]), 6)
@@ -98,8 +96,26 @@ def test_aggregate_groups_by_task_persona_agent():
 
 def test_aggregate_means_tokens_cost_time():
     results = [
-        _result("hard_full_management", "balanced", "llm", 42, 0.5, tokens=100, cost_usd=0.01, time_ms=200),
-        _result("hard_full_management", "balanced", "llm", 43, 0.5, tokens=300, cost_usd=0.03, time_ms=400),
+        _result(
+            "hard_full_management",
+            "balanced",
+            "llm",
+            42,
+            0.5,
+            tokens=100,
+            cost_usd=0.01,
+            time_ms=200,
+        ),
+        _result(
+            "hard_full_management",
+            "balanced",
+            "llm",
+            43,
+            0.5,
+            tokens=300,
+            cost_usd=0.03,
+            time_ms=400,
+        ),
     ]
 
     rows = aggregate_results(results)

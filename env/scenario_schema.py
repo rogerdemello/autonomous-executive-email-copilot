@@ -56,9 +56,7 @@ class ScenarioInterruption(BaseModel):
     @model_validator(mode="after")
     def _check_trigger(self) -> ScenarioInterruption:
         if self.trigger_minute is None and self.trigger_minute_range is None:
-            raise ValueError(
-                "interruption requires 'trigger_minute' or 'trigger_minute_range'"
-            )
+            raise ValueError("interruption requires 'trigger_minute' or 'trigger_minute_range'")
         if self.trigger_minute_range is not None and len(self.trigger_minute_range) != 2:
             raise ValueError("'trigger_minute_range' must contain exactly two values")
         return self

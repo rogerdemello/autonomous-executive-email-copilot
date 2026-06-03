@@ -76,8 +76,7 @@ def test_flag_on_selection_is_deterministic_per_seed(monkeypatch):
 def test_flag_on_selection_spans_more_than_canonical(monkeypatch):
     monkeypatch.setenv("SCENARIO_VARIANTS", "true")
     chosen = {
-        resolve_scenario_path("easy_classification", seed, SCENARIOS_DIR).name
-        for seed in range(50)
+        resolve_scenario_path("easy_classification", seed, SCENARIOS_DIR).name for seed in range(50)
     }
     # With at least two candidates, a 50-seed sweep should surface more than one.
     assert len(chosen) >= 2
@@ -93,9 +92,7 @@ def test_flag_on_build_scenario_is_seed_deterministic(monkeypatch):
 
 def test_every_globbed_candidate_is_schema_valid():
     for task_id in TASKS:
-        candidates = sorted(
-            p for p in SCENARIOS_DIR.glob(f"{task_id}*.yaml") if p.is_file()
-        )
+        candidates = sorted(p for p in SCENARIOS_DIR.glob(f"{task_id}*.yaml") if p.is_file())
         assert candidates, f"no scenario files for {task_id}"
         for path in candidates:
             validate_scenario_file(path)

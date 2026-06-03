@@ -108,9 +108,7 @@ function App() {
       <main className="main" id="main-content">
         <div className="header">
           <h2>{activeLabel}</h2>
-          {health && (
-            <span className="status-badge status-success">API: {health.status}</span>
-          )}
+          {health && <span className="status-badge status-success">API: {health.status}</span>}
         </div>
         <div
           role="tabpanel"

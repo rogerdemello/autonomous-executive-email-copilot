@@ -131,12 +131,7 @@ function ApprovalQueue({ apiBase }: Props) {
         >
           History
         </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={refresh}
-          style={{ marginLeft: 'auto' }}
-        >
+        <button type="button" className="btn" onClick={refresh} style={{ marginLeft: 'auto' }}>
           Refresh
         </button>
       </div>
@@ -153,11 +148,7 @@ function ApprovalQueue({ apiBase }: Props) {
 
       <div className="card">
         {activeTab === 'pending' && (
-          <div
-            role="tabpanel"
-            id="approval-panel-pending"
-            aria-labelledby="approval-tab-pending"
-          >
+          <div role="tabpanel" id="approval-panel-pending" aria-labelledby="approval-tab-pending">
             <h3 style={{ marginBottom: '1rem' }}>Pending Approvals</h3>
             {pending.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>No pending approvals</p>
@@ -210,11 +201,7 @@ function ApprovalQueue({ apiBase }: Props) {
         )}
 
         {activeTab === 'history' && (
-          <div
-            role="tabpanel"
-            id="approval-panel-history"
-            aria-labelledby="approval-tab-history"
-          >
+          <div role="tabpanel" id="approval-panel-history" aria-labelledby="approval-tab-history">
             <h3 style={{ marginBottom: '1rem' }}>Approval History</h3>
             {history.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>No approval history</p>

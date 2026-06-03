@@ -155,10 +155,7 @@ function Inbox({ apiBase }: Props) {
         ) : (
           <ul className="email-list" aria-label="Emails">
             {obs?.emails.map((email) => (
-              <li
-                key={email.id}
-                className={`email-item ${getPriorityClass(email.priority_hint)}`}
-              >
+              <li key={email.id} className={`email-item ${getPriorityClass(email.priority_hint)}`}>
                 <div className="email-sender">
                   {email.sender}{' '}
                   <span style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>
