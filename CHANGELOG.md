@@ -7,26 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Phase A (evaluation correctness & reproducibility) is in progress. Highlights so far:
+- Real Azure OpenAI benchmark results (LLM column) pending provider credentials.
+
+## [0.1.0] - 2026-06-03
+
+First tagged release of the "global-level" build-out. Evaluation correctness and
+reproducibility, a flagship OSS surface, and production-grade infrastructure.
 
 ### Added
 
-- Results harness for running and aggregating benchmark scores across
-  `(task, seed, persona)` combinations into reproducible result sets.
-- Scenario schema that formalizes task scenario definitions, enabling
-  validation of fixtures and stable, documented inputs.
-- Methodology document describing how scores are computed and compared, so
-  reported numbers are traceable to a procedure.
+- Reproducible **results harness** (`scripts/run_benchmark.py` + `benchmark/results_report.py`)
+  aggregating scores across `(task, seed, persona)` with 95% confidence intervals,
+  emitting `results.json` / `.csv` / `.html`.
+- **Benchmark methodology** doc (`docs/BENCHMARK.md`) and a pydantic **scenario schema**
+  validator (`env/scenario_schema.py`); optional gated **scenario variants** (`SCENARIO_VARIANTS`).
+- **Benchmark Results** table in the README from real deterministic runs.
+- **Release pipeline** (`.github/workflows/release.yml`): tag-triggered GHCR image publish,
+  SPDX SBOM, and a GitHub Release; issue/PR templates, CODEOWNERS.
+- Optional **Postgres** backend (`DATABASE_URL`) with connection pooling (SQLite stays default).
+- **LLM cost/latency metrics** (`llm_cost_usd_total`, `llm_tokens_total`, `llm_latency_ms`)
+  wired into the agent, with Grafana panels; optional **Locust load test** (`scripts/loadtest/`).
+- **Multi-tenant authentication** (`API_TENANTS`, opt-in) and a dashboard **accessibility +
+  responsive** pass.
 
 ### Changed
 
-- Improved test isolation: tests no longer leak state (config, env vars,
-  database artifacts) between cases, making the suite deterministic regardless
-  of run order.
+- The **multi-agent coordinator** is now task-aware (classifies on classification tasks instead
+  of always escalating): easy-task score 0.00 → 0.80, medium 0.00 → 1.00.
+- The **hybrid policy** falls back to the strong baseline heuristics with no provider configured
+  (no-key scores 0/0/0.03 → 1.00/1.00/0.60). Default benchmark seeds widened 3 → 8.
+- Improved **test isolation**: a developer's real `.env` no longer leaks into the config tests.
 
 ### Fixed
 
-- Azure OpenAI authentication: corrected credential/base-URL handling so that
-  Azure-hosted deployments authenticate correctly (previously misconfigured).
+- **Azure OpenAI authentication**: inject the `api-key` header for Azure hosts (Azure rejects
+  `Authorization: Bearer` for resource keys), so Azure-hosted deployments authenticate correctly.
 
-[Unreleased]: https://github.com/OWNER/REPO/compare/HEAD
+[Unreleased]: https://github.com/rogerdemello/autonomous-executive-email-copilot/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/rogerdemello/autonomous-executive-email-copilot/releases/tag/v0.1.0

@@ -15,9 +15,8 @@ permissions:
   packages: write   # push the image to GHCR
 
 env:
-  # NOTE: replace OWNER/REPO with the actual GitHub owner/repository slug
-  # (lowercase). Both the GHCR image name and the release target use this.
-  IMAGE_NAME: ghcr.io/OWNER/REPO
+  # GHCR image name (lowercase owner/repo). Both the image and the release use this.
+  IMAGE_NAME: ghcr.io/rogerdemello/autonomous-executive-email-copilot
 
 jobs:
   release:
