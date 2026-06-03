@@ -5,15 +5,66 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import Column, Float, Integer, String, Text, create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+from .config import get_settings
 
 # Database path - store in project root for persistence
 DB_PATH = Path(__file__).parent.parent / "data" / "episodes.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-# SQLAlchemy setup
-DATABASE_URL = f"sqlite:///{DB_PATH}"
-engine = create_engine(DATABASE_URL, echo=False)
+# Default zero-config database: a local SQLite file requiring no extra deps.
+DEFAULT_SQLITE_URL = f"sqlite:///{DB_PATH}"
+
+# Pool tuning for server-backed databases (e.g. Postgres). These are ignored for
+# SQLite, which uses a file/in-memory connection rather than a network pool.
+DEFAULT_POOL_SIZE = 5
+DEFAULT_MAX_OVERFLOW = 10
+DEFAULT_POOL_RECYCLE_SECONDS = 1800
+
+
+def resolve_database_url() -> str:
+    """Resolve the active database URL.
+
+    Honors ``DATABASE_URL`` (via :class:`env.config.Settings`) when set, falling
+    back to the zero-config local SQLite database otherwise.
+    """
+    configured = get_settings().database_url
+    if configured and configured.strip():
+        return configured.strip()
+    return DEFAULT_SQLITE_URL
+
+
+def build_engine_kwargs(database_url: str) -> dict:
+    """Compute ``create_engine`` keyword args appropriate for ``database_url``.
+
+    SQLite keeps its current behavior (``check_same_thread=False`` so the
+    file-backed connection can be shared across threads, as FastAPI does). Any
+    non-SQLite backend (e.g. Postgres) gets connection-pool tuning:
+    ``pool_pre_ping`` (drop dead connections), ``pool_recycle`` (recycle stale
+    ones), plus ``pool_size``/``max_overflow``. This is a pure function so it can
+    be unit-tested without a live database.
+    """
+    backend = make_url(database_url).get_backend_name()
+    if backend == "sqlite":
+        return {"echo": False, "connect_args": {"check_same_thread": False}}
+    return {
+        "echo": False,
+        "pool_size": DEFAULT_POOL_SIZE,
+        "max_overflow": DEFAULT_MAX_OVERFLOW,
+        "pool_pre_ping": True,
+        "pool_recycle": DEFAULT_POOL_RECYCLE_SECONDS,
+    }
+
+
+# SQLAlchemy setup. ``DATABASE_URL`` is resolved once at import time; setting the
+# ``DATABASE_URL`` env var before import switches the app to Postgres while
+# SQLite remains the default. The Postgres driver (``psycopg``) is imported by
+# SQLAlchemy only when a Postgres URL is actually used, so it stays an optional
+# dependency.
+DATABASE_URL = resolve_database_url()
+engine = create_engine(DATABASE_URL, **build_engine_kwargs(DATABASE_URL))
 # expire_on_commit=False keeps attributes readable on objects returned from a
 # closed session (get_session commits then closes), so repository callers can
 # safely read/serialize ORM instances after the context manager exits.

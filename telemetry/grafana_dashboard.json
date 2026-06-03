@@ -151,6 +151,42 @@
             }
           }
         }
+      },
+      {
+        "id": 11,
+        "title": "LLM Cost (USD)",
+        "type": "stat",
+        "gridPos": {"x": 16, "y": 16, "w": 8, "h": 8},
+        "targets": [
+          {
+            "expr": "llm_cost_usd_total",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "LLM Tokens",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 24, "w": 8, "h": 8},
+        "targets": [
+          {
+            "expr": "llm_tokens_total",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "LLM Latency (ms)",
+        "type": "graph",
+        "gridPos": {"x": 8, "y": 24, "w": 16, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(llm_latency_ms_sum[5m]) / rate(llm_latency_ms_count[5m])",
+            "refId": "A"
+          }
+        ]
       }
     ]
   },

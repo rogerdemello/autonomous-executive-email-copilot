@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
     azure_api_version: str = DEFAULT_AZURE_API_VERSION
 
+    # Database
+    # Optional SQLAlchemy URL. When unset (default) the app uses a zero-config
+    # local SQLite database. Set to a Postgres URL (e.g.
+    # ``postgresql+psycopg://user:pass@host:5432/db``) to run on Postgres; the
+    # driver (``pip install psycopg[binary]``) is an optional dependency.
+    database_url: str | None = None
+
     # Behavior
     require_approval: bool = False
 
