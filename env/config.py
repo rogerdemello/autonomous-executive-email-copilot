@@ -44,6 +44,16 @@ class Settings(BaseSettings):
     confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
     azure_api_version: str = DEFAULT_AZURE_API_VERSION
 
+    # Native Azure OpenAI block (standard AZURE_OPENAI_* names). When the endpoint
+    # and chat deployment are set, these take precedence and the app derives the
+    # base URL / key / version / model automatically — no need to also set
+    # API_BASE_URL / OPENAI_API_KEY / MODEL_NAME.
+    azure_openai_endpoint: str | None = None
+    azure_openai_api_key: str | None = None
+    azure_openai_api_version: str | None = None
+    azure_openai_deployment_name: str | None = None
+    azure_openai_embedding_deployment: str | None = None
+
     # Database
     # Optional SQLAlchemy URL. When unset (default) the app uses a zero-config
     # local SQLite database. Set to a Postgres URL (e.g.
@@ -111,8 +121,8 @@ class Settings(BaseSettings):
 
     @property
     def resolved_api_key(self) -> str | None:
-        """Provider key, preferring HF_TOKEN then OPENAI_API_KEY (legacy order)."""
-        return self.hf_token or self.openai_api_key
+        """Provider key: HF_TOKEN, then OPENAI_API_KEY, then AZURE_OPENAI_API_KEY."""
+        return self.hf_token or self.openai_api_key or self.azure_openai_api_key
 
 
 def get_settings() -> Settings:
@@ -139,10 +149,24 @@ def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:
     ``OpenAI`` so unit tests can patch it locally).
     """
     settings = get_settings()
-    api_base_url = normalize_openai_base_url(settings.api_base_url, settings.azure_api_version)
-    api_key = settings.resolved_api_key
+
+    # Native AZURE_OPENAI_* block wins when an endpoint + chat deployment are set:
+    # derive the deployment base URL, key, version, and model from it.
+    if settings.azure_openai_endpoint and settings.azure_openai_deployment_name:
+        endpoint = settings.azure_openai_endpoint.rstrip("/")
+        deployment = settings.azure_openai_deployment_name
+        api_base_url = f"{endpoint}/openai/deployments/{deployment}"
+        api_key = settings.azure_openai_api_key or settings.resolved_api_key
+        api_version = settings.azure_openai_api_version or settings.azure_api_version
+        model = deployment
+    else:
+        api_base_url = normalize_openai_base_url(settings.api_base_url, settings.azure_api_version)
+        api_key = settings.resolved_api_key
+        api_version = settings.azure_api_version
+        model = settings.model_name or DEFAULT_MODEL
+
     if not api_key:
-        raise ValueError("HF_TOKEN or OPENAI_API_KEY environment variable not set")
+        raise ValueError("No provider key set (OPENAI_API_KEY / AZURE_OPENAI_API_KEY / HF_TOKEN)")
 
     kwargs: dict = {
         "base_url": api_base_url,
@@ -157,12 +181,12 @@ def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:
         # query and supply `api-version` via default_query, which rides on every
         # request.
         parts = urlsplit(api_base_url)
-        api_version = dict(parse_qsl(parts.query)).get("api-version", settings.azure_api_version)
+        api_version = dict(parse_qsl(parts.query)).get("api-version", api_version)
         kwargs["base_url"] = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
         kwargs["default_headers"] = {"api-key": api_key}
         kwargs["default_query"] = {"api-version": api_version}
 
-    return kwargs, (settings.model_name or DEFAULT_MODEL)
+    return kwargs, model
 
 
 def build_chat_client(timeout_seconds: float = 30.0):  # type: ignore[no-untyped-def]

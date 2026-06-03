@@ -101,3 +101,22 @@ def test_build_chat_client_azure_injects_api_key_header(monkeypatch):
     assert dict(client.default_query).get("api-version") == "2024-02-15-preview"
     assert "?" not in str(client.base_url)
     assert str(client.base_url).rstrip("/").endswith("/openai/deployments/gpt4o")
+
+
+def test_build_chat_client_native_azure_block(monkeypatch):
+    # The standard AZURE_OPENAI_* names work natively (no API_BASE_URL/MODEL_NAME).
+    for var in ("OPENAI_API_KEY", "HF_TOKEN", "API_BASE_URL", "MODEL_NAME"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://res.openai.azure.com/")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "az-native")
+    monkeypatch.setenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+
+    assert get_settings().resolved_api_key == "az-native"
+    client, model = build_chat_client()
+    assert model == "gpt-4o"
+    assert str(client.base_url).rstrip("/").endswith("/openai/deployments/gpt-4o")
+    assert "?" not in str(client.base_url)
+    headers = {k.lower(): v for k, v in client.default_headers.items()}
+    assert headers.get("api-key") == "az-native"
+    assert dict(client.default_query).get("api-version") == "2024-12-01-preview"
