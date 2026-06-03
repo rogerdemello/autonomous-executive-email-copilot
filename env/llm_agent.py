@@ -627,6 +627,20 @@ class LLMAgent:
             f"Savings: small model tokens would have cost ~${_calculate_cost(small_model, token_usage):.4f}"
         )
 
+        # Record LLM observability (telemetry must never break the agent).
+        try:
+            from telemetry.metrics import record_llm_usage
+
+            record_llm_usage(
+                latency_ms=latency_ms,
+                cost_usd=cost_usd,
+                prompt_tokens=token_usage.prompt_tokens,
+                completion_tokens=token_usage.completion_tokens,
+                model=current_model,
+            )
+        except Exception:  # noqa: BLE001 - telemetry is best-effort
+            logger.debug("record_llm_usage failed", exc_info=True)
+
         _cache_response(observation, ai_response)
         return ai_response
 

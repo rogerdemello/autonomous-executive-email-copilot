@@ -1,0 +1,77 @@
+time_budget: 90
+risk_level: low
+emails:
+  - id: e1
+    sender: legal@partnerco.com
+    sender_role: client
+    subject: "URGENT: NDA countersignature required"
+    body: Need the countersigned NDA returned before our 3pm sync.
+    priority_hint: high
+    deadline_minutes: 120
+    business_value: 0.93
+    risk_tag: legal
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [nda, signature]
+    critical: true
+  - id: e2
+    sender: promos@dealsite.net
+    sender_role: unknown
+    subject: Flash sale ends tonight
+    body: Grab 70 percent off premium tools before midnight.
+    priority_hint: low
+    deadline_minutes: 1000
+    business_value: 0.04
+    expected_label: spam
+    expected_action: ignore
+  - id: e3
+    sender: planning@company.com
+    sender_role: internal
+    subject: Q3 headcount review
+    body: Please look over the headcount draft before the planning call.
+    priority_hint: medium
+    deadline_minutes: 720
+    business_value: 0.68
+    risk_tag: finance
+    expected_label: normal
+    expected_action: defer
+  - id: e4
+    sender: billing@supply.com
+    sender_role: vendor
+    subject: Statement reminder
+    body: Statement 9043 has been outstanding for 10 days.
+    priority_hint: medium
+    deadline_minutes: 480
+    business_value: 0.42
+    risk_tag: finance
+    expected_label: normal
+    expected_action: reply
+    expected_reply_keywords: [statement, payment]
+  - id: e5
+    sender: itsec@company.com
+    sender_role: internal
+    subject: MFA enrollment confirmation
+    body: Confirm executive device MFA enrollment by end of day.
+    priority_hint: high
+    deadline_minutes: 300
+    business_value: 0.82
+    risk_tag: security
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [confirmed, mfa]
+    critical: true
+interruptions:
+  - trigger_minute_range: [24, 30]
+    email:
+      id: e6
+      sender: exec.office@company.com
+      sender_role: internal
+      subject: Approval needed for venue hold
+      body: Approve the venue hold within the hour to keep the rate.
+      priority_hint: medium
+      deadline_minutes: 70
+      business_value: 0.54
+      risk_tag: ops
+      expected_label: normal
+      expected_action: reply
+      expected_reply_keywords: [approve, venue]

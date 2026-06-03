@@ -1,0 +1,89 @@
+time_budget: 140
+risk_level: medium
+emails:
+  - id: m1
+    sender: chair.office@company.com
+    sender_role: internal
+    subject: Investor update deck revisions
+    body: Need the updated investor slides before 5 PM.
+    priority_hint: high
+    deadline_minutes: 240
+    business_value: 0.9
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [deck, updated]
+  - id: m2
+    sender: account.emea@clientco.com
+    sender_role: client
+    subject: Renewal pricing confirmation
+    body: Please confirm the renewal pricing tiers by tomorrow.
+    priority_hint: high
+    deadline_minutes: 600
+    business_value: 0.91
+    risk_tag: legal
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [pricing, confirm]
+    critical: true
+  - id: m3
+    sender: brand@company.com
+    sender_role: internal
+    subject: Tagline shortlist review
+    body: Need a quick review of three tagline options this week.
+    priority_hint: low
+    deadline_minutes: 1800
+    business_value: 0.3
+    expected_label: normal
+    expected_action: defer
+  - id: m4
+    sender: notices@bank.com
+    sender_role: vendor
+    subject: Card declined for cloud subscription
+    body: Retry within 24h to avoid a service interruption.
+    priority_hint: high
+    deadline_minutes: 1440
+    business_value: 0.84
+    risk_tag: finance
+    expected_label: urgent
+    expected_action: reply
+    expected_reply_keywords: [retry, payment]
+  - id: m5
+    sender: invites@summit.org
+    sender_role: unknown
+    subject: Summit early-bird registration
+    body: Limited early bird registration offer inside.
+    priority_hint: low
+    deadline_minutes: 5000
+    business_value: 0.1
+    expected_label: spam
+    expected_action: ignore
+  - id: m6
+    sender: counsel@company.com
+    sender_role: internal
+    subject: Partner NDA clause sign-off
+    body: Approve the revised NDA clause for the strategic partner.
+    priority_hint: medium
+    deadline_minutes: 900
+    business_value: 0.8
+    risk_tag: legal
+    expected_label: normal
+    expected_action: escalate
+    recommended_escalation: legal_team
+    critical: true
+interruptions:
+  - trigger_minute_range: [26, 34]
+    email:
+      id: m7
+      sender: account.us@clientco.com
+      sender_role: client
+      subject: "Escalation: quote mismatch in draft"
+      body: Need immediate clarification ahead of procurement review.
+      priority_hint: high
+      deadline_minutes: 95
+      business_value: 0.9
+      risk_tag: legal
+      expected_label: urgent
+      expected_action: escalate
+      recommended_escalation: legal_team
+      expected_reply_keywords: [clarification, pricing]
+      critical: true

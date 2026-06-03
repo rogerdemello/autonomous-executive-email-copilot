@@ -54,8 +54,22 @@ class Settings(BaseSettings):
     # Behavior
     require_approval: bool = False
 
+    # Scenario selection
+    # When False (default) the loader resolves exactly ``{task_id}.yaml`` so
+    # golden scores stay byte-identical. When True the loader globs
+    # ``{task_id}*.yaml`` (canonical + variants) and picks one deterministically
+    # from the seed.
+    scenario_variants: bool = False
+
     # Security (all opt-in; the API runs open by default)
     api_auth_token: str | None = None
+    # Optional multi-tenant token map in the form
+    # ``token1:tenantA,token2:tenantB``. Each token authenticates exactly like
+    # ``api_auth_token`` but additionally resolves a tenant label used for the
+    # ``X-Tenant`` response header and per-tenant rate-limit keying. Full
+    # per-tenant DB row isolation is intentionally OUT OF SCOPE here (no tenant
+    # column is added); treat that as a follow-up.
+    api_tenants: str | None = None
     cors_origins: str = "*"
     rate_limit_per_minute: int = 0  # 0 disables rate limiting
 
@@ -72,6 +86,28 @@ class Settings(BaseSettings):
         if raw == "*":
             return ["*"]
         return [o.strip() for o in raw.split(",") if o.strip()]
+
+    @property
+    def tenant_token_map(self) -> dict[str, str]:
+        """Parse ``api_tenants`` into a ``{token: tenant}`` mapping.
+
+        Format is ``token1:tenantA,token2:tenantB``. Malformed or empty
+        entries (missing token or tenant) are skipped. Returns an empty dict
+        when unset, so multi-tenant auth stays fully opt-in.
+        """
+        raw = (self.api_tenants or "").strip()
+        if not raw:
+            return {}
+        mapping: dict[str, str] = {}
+        for pair in raw.split(","):
+            token, sep, tenant = pair.partition(":")
+            if not sep:
+                continue
+            token = token.strip()
+            tenant = tenant.strip()
+            if token and tenant:
+                mapping[token] = tenant
+        return mapping
 
     @property
     def resolved_api_key(self) -> str | None:

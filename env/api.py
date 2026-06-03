@@ -68,7 +68,7 @@ from .models import (
     TasksResponse,
 )
 from .repositories import EpisodeRepository, TeamSettingsRepository, UserPreferenceRepository
-from .security import is_valid_identifier, rate_limiter, request_is_authorized
+from .security import is_valid_identifier, rate_limiter, resolve_auth
 from .tasks import list_tasks
 
 configure_logging()
@@ -132,8 +132,23 @@ async def _gateway_middleware(request, call_next):
     start = time.perf_counter()
     path = request.url.path  # refined to the route template after routing
 
-    # Opt-in rate limiting (disabled when RATE_LIMIT_PER_MINUTE <= 0).
-    if not rate_limiter.allow(_client_key(request), settings.rate_limit_per_minute):
+    # Resolve auth + tenant up front so rate limiting can key on the tenant when
+    # one is known. With neither API_AUTH_TOKEN nor API_TENANTS set, ``tenant`` is
+    # None and the rate-limit key falls back to the client IP -- byte-identical to
+    # the previous IP-only behavior. (Tenant tagging does NOT enforce per-tenant
+    # DB isolation; that is a deliberate follow-up.)
+    authorized, tenant = resolve_auth(
+        request.method,
+        settings.api_auth_token,
+        settings.tenant_token_map,
+        request.headers.get("Authorization"),
+        request.headers.get("X-API-Key"),
+    )
+
+    # Opt-in rate limiting (disabled when RATE_LIMIT_PER_MINUTE <= 0). Key per
+    # tenant when resolved, else per client IP.
+    rate_key = f"tenant:{tenant}" if tenant else _client_key(request)
+    if not rate_limiter.allow(rate_key, settings.rate_limit_per_minute):
         record_request(0.0, {"path": path, "method": request.method, "status": "429"})
         return JSONResponse(
             status_code=429,
@@ -141,13 +156,9 @@ async def _gateway_middleware(request, call_next):
             headers={"X-Request-ID": request_id, "Retry-After": "60"},
         )
 
-    # Opt-in auth (open when API_AUTH_TOKEN is unset; only gates mutating methods).
-    if not request_is_authorized(
-        request.method,
-        settings.api_auth_token,
-        request.headers.get("Authorization"),
-        request.headers.get("X-API-Key"),
-    ):
+    # Opt-in auth (open when neither API_AUTH_TOKEN nor API_TENANTS is set; only
+    # gates mutating methods).
+    if not authorized:
         record_request(0.0, {"path": path, "method": request.method, "status": "401"})
         record_api_error("unauthorized")
         return JSONResponse(
@@ -155,6 +166,10 @@ async def _gateway_middleware(request, call_next):
             content={"detail": "Missing or invalid API token", "request_id": request_id},
             headers={"X-Request-ID": request_id},
         )
+
+    # Tag the request with the resolved tenant for downstream handlers/logging.
+    if tenant is not None:
+        request.state.tenant = tenant
 
     try:
         response = await call_next(request)
@@ -180,6 +195,8 @@ async def _gateway_middleware(request, call_next):
     if response.status_code >= 500:
         record_api_error(str(response.status_code))
     response.headers["X-Request-ID"] = request_id
+    if tenant is not None:
+        response.headers["X-Tenant"] = tenant
     return response
 
 
