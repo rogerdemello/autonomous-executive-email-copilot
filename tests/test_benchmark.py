@@ -16,7 +16,7 @@ def test_default_personas():
 
 
 def test_default_seeds():
-    assert DEFAULT_SEEDS == [42, 43, 44]
+    assert DEFAULT_SEEDS == [42, 43, 44, 45, 46, 47, 48, 49]
 
 
 def test_benchmark_runner_init():

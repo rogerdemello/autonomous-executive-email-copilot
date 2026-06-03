@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a defect in the Autonomous Executive Email Copilot
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill out the
+        sections below so we can reproduce the problem quickly.
+
+        For **security vulnerabilities**, do not open a public issue — follow
+        [SECURITY.md](../../SECURITY.md) instead.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am running the latest `main` (or I have noted my version/commit below).
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md).
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug, including the exact command you ran.
+      placeholder: |
+        I ran `python -m pytest -q` and ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, deterministic steps. Include `task`, `seed`, and `persona` if relevant — the baseline policy is deterministic for a given `(task, seed, persona)`.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Paste the relevant log lines. If this touches inference, include the `[START]/[STEP]/[END]` log block.
+      render: shell
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Where does the bug live?
+      options:
+        - "env (environment / API / grader)"
+        - "baseline policy"
+        - "benchmark"
+        - "reports"
+        - "telemetry"
+        - "server"
+        - "dashboard (frontend)"
+        - "inference / OpenEnv validator"
+        - "docs"
+        - "other / not sure"
+    validations:
+      required: true
+  - type: input
+    id: task
+    attributes:
+      label: Task id (if applicable)
+      description: One of the supported task ids.
+      placeholder: "easy_classification | medium_prioritization | hard_full_management"
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version (project targets 3.10), commit/version, and run mode (baseline / LLM / hybrid).
+      placeholder: |
+        - OS: Windows 11 / Ubuntu 22.04
+        - Python: 3.10.x
+        - Commit/version: 0.1.0 (abcdef1)
+        - Mode: baseline
+    validations:
+      required: true

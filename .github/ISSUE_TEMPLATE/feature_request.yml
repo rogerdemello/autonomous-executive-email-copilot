@@ -1,0 +1,73 @@
+name: Feature request
+description: Suggest an enhancement for the Autonomous Executive Email Copilot
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an improvement. Please describe the problem first,
+        then the solution you have in mind. Proposals that keep the project's
+        invariants intact (OpenEnv validator parity, deterministic baseline,
+        stable API response shapes) are easiest to land.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I searched existing issues and discussions and this is not a duplicate.
+          required: true
+        - label: I checked the [roadmap](../../docs/ROADMAP.md) and this is not already planned.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve? Who is affected and when?
+      placeholder: "I'm always frustrated when ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you'd like. Note any new API surface, config, or docs it implies.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed and why you ruled them out.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - "env (environment / API / grader)"
+        - "baseline policy"
+        - "benchmark"
+        - "reports"
+        - "telemetry"
+        - "server"
+        - "dashboard (frontend)"
+        - "inference / OpenEnv validator"
+        - "docs"
+        - "other"
+    validations:
+      required: true
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Invariant impact
+      description: Check any that this proposal could affect (see CONTRIBUTING.md).
+      options:
+        - label: Changes API response shapes (would need versioning).
+        - label: Affects OpenEnv validator parity (log format or `(0,1)` score contract).
+        - label: Affects baseline determinism for a given `(task, seed, persona)`.
+        - label: Introduces a new task id (note — the grader only knows the three existing ids).
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links, or anything else that helps.

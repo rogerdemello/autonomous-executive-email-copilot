@@ -24,6 +24,12 @@ body {
   line-height: 1.5;
 }
 
+/* Visible keyboard focus indicator across all interactive controls */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .app {
   display: flex;
   min-height: 100vh;
@@ -51,7 +57,18 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.nav-list {
+  list-style: none;
+}
+
 .nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
   padding: 0.75rem 1rem;
   border-radius: 6px;
   cursor: pointer;
@@ -73,12 +90,38 @@ body {
   border-top: 1px solid var(--border);
 }
 
+.connection-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
 .connection-panel input {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid var(--border);
   border-radius: 4px;
   margin-bottom: 0.5rem;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+.connection-status.is-connected {
+  color: var(--success);
+}
+.connection-status.is-disconnected {
+  color: var(--danger);
+}
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 /* Main Content */
@@ -128,6 +171,7 @@ body {
 
 /* Email List */
 .email-list {
+  list-style: none;
   max-height: 400px;
   overflow-y: auto;
 }
@@ -164,6 +208,7 @@ body {
 
 /* Timeline */
 .timeline {
+  list-style: none;
   position: relative;
   padding-left: 2rem;
 }
@@ -232,6 +277,10 @@ body {
 }
 
 /* Approval Queue */
+.approval-list {
+  list-style: none;
+}
+
 .approval-item {
   padding: 1rem;
   border: 1px solid var(--border);
@@ -356,12 +405,46 @@ body {
   color: #991b1b;
 }
 
-/* Responsive */
+/* Tabs wrap on small screens instead of overflowing */
+.tabs {
+  flex-wrap: wrap;
+}
+
+/* Replay transport stays usable on narrow screens */
+.replay-controls {
+  flex-wrap: wrap;
+}
+
+/* Responsive: reflow the sidebar into a top bar instead of hiding nav */
 @media (max-width: 768px) {
-  .sidebar {
-    display: none;
-  }
   .app {
     flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar .nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .nav-item {
+    width: auto;
+    margin-bottom: 0;
+  }
+  .connection-panel {
+    margin-top: 1rem;
+  }
+  .main {
+    padding: 1rem;
+  }
+  .header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .metrics {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }

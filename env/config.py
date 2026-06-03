@@ -44,11 +44,42 @@ class Settings(BaseSettings):
     confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
     azure_api_version: str = DEFAULT_AZURE_API_VERSION
 
+    # Native Azure OpenAI block (standard AZURE_OPENAI_* names). When the endpoint
+    # and chat deployment are set, these take precedence and the app derives the
+    # base URL / key / version / model automatically — no need to also set
+    # API_BASE_URL / OPENAI_API_KEY / MODEL_NAME.
+    azure_openai_endpoint: str | None = None
+    azure_openai_api_key: str | None = None
+    azure_openai_api_version: str | None = None
+    azure_openai_deployment_name: str | None = None
+    azure_openai_embedding_deployment: str | None = None
+
+    # Database
+    # Optional SQLAlchemy URL. When unset (default) the app uses a zero-config
+    # local SQLite database. Set to a Postgres URL (e.g.
+    # ``postgresql+psycopg://user:pass@host:5432/db``) to run on Postgres; the
+    # driver (``pip install psycopg[binary]``) is an optional dependency.
+    database_url: str | None = None
+
     # Behavior
     require_approval: bool = False
 
+    # Scenario selection
+    # When False (default) the loader resolves exactly ``{task_id}.yaml`` so
+    # golden scores stay byte-identical. When True the loader globs
+    # ``{task_id}*.yaml`` (canonical + variants) and picks one deterministically
+    # from the seed.
+    scenario_variants: bool = False
+
     # Security (all opt-in; the API runs open by default)
     api_auth_token: str | None = None
+    # Optional multi-tenant token map in the form
+    # ``token1:tenantA,token2:tenantB``. Each token authenticates exactly like
+    # ``api_auth_token`` but additionally resolves a tenant label used for the
+    # ``X-Tenant`` response header and per-tenant rate-limit keying. Full
+    # per-tenant DB row isolation is intentionally OUT OF SCOPE here (no tenant
+    # column is added); treat that as a follow-up.
+    api_tenants: str | None = None
     cors_origins: str = "*"
     rate_limit_per_minute: int = 0  # 0 disables rate limiting
 
@@ -67,14 +98,107 @@ class Settings(BaseSettings):
         return [o.strip() for o in raw.split(",") if o.strip()]
 
     @property
+    def tenant_token_map(self) -> dict[str, str]:
+        """Parse ``api_tenants`` into a ``{token: tenant}`` mapping.
+
+        Format is ``token1:tenantA,token2:tenantB``. Malformed or empty
+        entries (missing token or tenant) are skipped. Returns an empty dict
+        when unset, so multi-tenant auth stays fully opt-in.
+        """
+        raw = (self.api_tenants or "").strip()
+        if not raw:
+            return {}
+        mapping: dict[str, str] = {}
+        for pair in raw.split(","):
+            token, sep, tenant = pair.partition(":")
+            if not sep:
+                continue
+            token = token.strip()
+            tenant = tenant.strip()
+            if token and tenant:
+                mapping[token] = tenant
+        return mapping
+
+    @property
     def resolved_api_key(self) -> str | None:
-        """Provider key, preferring HF_TOKEN then OPENAI_API_KEY (legacy order)."""
-        return self.hf_token or self.openai_api_key
+        """Provider key: HF_TOKEN, then OPENAI_API_KEY, then AZURE_OPENAI_API_KEY."""
+        return self.hf_token or self.openai_api_key or self.azure_openai_api_key
 
 
 def get_settings() -> Settings:
     """Build a Settings object from the current environment."""
     return Settings()
+
+
+def is_azure_endpoint(api_base_url: str | None) -> bool:
+    """True if the base URL points at an Azure OpenAI resource."""
+    host = (urlsplit((api_base_url or "").strip()).netloc or "").lower()
+    return "openai.azure.com" in host
+
+
+def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:
+    """Compute keyword args for an OpenAI client + the resolved model name.
+
+    Returns ``(kwargs, model_name)``. Works for both public OpenAI-compatible
+    endpoints and **Azure OpenAI**. Azure authenticates with an ``api-key``
+    request header (not ``Authorization: Bearer``) and pins the deployment in the
+    URL path, so for Azure hosts we inject the ``api-key`` header explicitly —
+    otherwise key-based auth 401s.
+
+    Construction is left to the caller (each module instantiates its own
+    ``OpenAI`` so unit tests can patch it locally).
+    """
+    settings = get_settings()
+
+    # Native AZURE_OPENAI_* block wins when an endpoint + chat deployment are set:
+    # derive the deployment base URL, key, version, and model from it.
+    if settings.azure_openai_endpoint and settings.azure_openai_deployment_name:
+        endpoint = settings.azure_openai_endpoint.rstrip("/")
+        deployment = settings.azure_openai_deployment_name
+        api_base_url = f"{endpoint}/openai/deployments/{deployment}"
+        api_key = settings.azure_openai_api_key or settings.resolved_api_key
+        api_version = settings.azure_openai_api_version or settings.azure_api_version
+        model = deployment
+    else:
+        api_base_url = normalize_openai_base_url(settings.api_base_url, settings.azure_api_version)
+        api_key = settings.resolved_api_key
+        api_version = settings.azure_api_version
+        model = settings.model_name or DEFAULT_MODEL
+
+    if not api_key:
+        raise ValueError("No provider key set (OPENAI_API_KEY / AZURE_OPENAI_API_KEY / HF_TOKEN)")
+
+    kwargs: dict = {
+        "base_url": api_base_url,
+        "api_key": api_key,
+        "timeout": timeout_seconds,
+    }
+    if is_azure_endpoint(api_base_url):
+        # Azure validates the resource key via the `api-key` header (not Bearer).
+        # Critically, the base_url must be the bare deployment path WITHOUT a query
+        # string: the OpenAI SDK resolves the request path relative to base_url and
+        # an embedded `?api-version=...` corrupts that join (-> 404). So strip the
+        # query and supply `api-version` via default_query, which rides on every
+        # request.
+        parts = urlsplit(api_base_url)
+        api_version = dict(parse_qsl(parts.query)).get("api-version", api_version)
+        kwargs["base_url"] = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        kwargs["default_headers"] = {"api-key": api_key}
+        kwargs["default_query"] = {"api-version": api_version}
+
+    return kwargs, model
+
+
+def build_chat_client(timeout_seconds: float = 30.0):  # type: ignore[no-untyped-def]
+    """Construct an OpenAI/Azure client wired for the configured provider.
+
+    Convenience wrapper over :func:`chat_client_kwargs` for direct callers.
+    Returns ``(client, model_name)``.
+    """
+    from openai import OpenAI
+
+    kwargs, model = chat_client_kwargs(timeout_seconds)
+    return OpenAI(**kwargs), model
 
 
 def normalize_openai_base_url(api_base_url: str, azure_api_version: str | None = None) -> str:

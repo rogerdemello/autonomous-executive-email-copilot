@@ -11,6 +11,15 @@ pinned: false
 
 # Autonomous Executive Email Copilot
 
+![Tests](https://img.shields.io/badge/tests-239%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-77%25-green)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Lint](https://img.shields.io/badge/lint-ruff-261230)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Build](https://img.shields.io/badge/docker-multi--stage-2496ED)
+
+> **A reproducible, deterministic benchmark *and* a production-style product for executive-inbox agents.** Reset/step/state like an RL environment, bounded validator-friendly scoring, baseline / hybrid / LLM / multi-agent policies, and a full ops stack (FastAPI + Streamlit + React, approvals, telemetry, alerts).
+
 Autonomous Executive Email Copilot is a deterministic, OpenEnv-style executive inbox simulation for evaluating agents that triage and manage high-stakes email workloads. It models an executive mailbox with incoming messages, deadlines, business value, risk tags, thread history, and mid-episode interruptions. Agents interact with the environment through a standard reset/step/state loop, choose among classify, prioritize, reply, escalate, and defer actions, and are scored by task-specific graders that keep results bounded and validator-friendly.
 
 The project is built as a full experimentation stack rather than a single simulator. Scenario generation is driven by YAML task and scenario files, policies include heuristic baseline, stress-test corruption, LLM-backed decisioning, and hybrid planner/executor modes, and the surrounding tooling supports approvals, replay, leaderboard comparison, reports, telemetry, and alerts. The codebase also exposes two user interfaces: a Streamlit operations console and a React dashboard for inbox review, approvals, replay, and team settings.
@@ -19,6 +28,7 @@ The project is built as a full experimentation stack rather than a single simula
 
 - [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) — full, code-derived reference.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, request flow, design decisions.
+- [docs/BENCHMARK.md](docs/BENCHMARK.md) — benchmark methodology, scoring, and how to reproduce results.
 - [docs/RUNBOOK.md](docs/RUNBOOK.md) — operations: probes, metrics, alerts, incidents.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — phased improvement plan and status.
 - [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example) — contributing, security policy, configuration.
@@ -39,6 +49,38 @@ The project is built as a full experimentation stack rather than a single simula
 - `hard_full_management`
 
 Task, scenario, and tuning config live in [data/tasks.yaml](data/tasks.yaml), [data/settings.yaml](data/settings.yaml), and [data/scenarios/](data/scenarios/).
+
+## Benchmark Results
+
+Mean task score (open interval `(0,1)`, higher is better) over **3 personas × 3 seeds**
+per cell, produced by the reproducible harness. The LLM column is **real Azure OpenAI
+`gpt-4o`** (deployment `gpt-4o`, API `2024-12-01-preview`). Full methodology — scoring
+weights, the `atan` reward squash, determinism guarantees — is in
+[docs/BENCHMARK.md](docs/BENCHMARK.md).
+
+| Task | Baseline (heuristic) | Multi-agent (task-aware) | LLM — Azure `gpt-4o` |
+|------|:---:|:---:|:---:|
+| `easy_classification` | **1.00** | 0.80 | 0.17 |
+| `medium_prioritization` | **1.00** | **1.00** | **1.00** |
+| `hard_full_management` | **0.67** | 0.09 | 0.62 |
+
+<sub>Deterministic agents (baseline, multi-agent) have ≈0 variance; the LLM ran at
+`temperature=0.2` and averaged ~3k tokens / **≈ $0.009 per episode** (gpt-4o), ~$0.23 for the
+full 27-episode LLM sweep. Scores are **persona-invariant** by design — personas shape per-step
+reward/penalties, not the headline metric (see [docs/BENCHMARK.md](docs/BENCHMARK.md)).</sub>
+
+**What the numbers say (honest findings, not tuned):**
+- The benchmark **discriminates** — a strong heuristic, a naive multi-agent crew, and a frontier LLM separate clearly, and differently per task.
+- On the realistic **full-management** task, the LLM (`0.62`) is competitive with the hand-tuned baseline (`0.67`) and far ahead of the naive multi-agent (`0.09`) — this is where model flexibility pays off.
+- On narrow **classification**, the LLM scores low (`0.17`): its task-blind safety guardrails (always prioritize first, auto-escalate risk, prefer replies) trade classification coverage for caution. That's an honest **agent-design** finding, not a model-capability one.
+- The **multi-agent crew is task-conditioned** (was 0.00 on classification before the coordinator became task-aware — see [docs/BENCHMARK.md](docs/BENCHMARK.md)); the **no-key hybrid** falls back to the strong baseline heuristics, scoring `1.00 / 1.00 / 0.60` with no provider configured (was ~0).
+
+Reproduce (deterministic agents need no API key; add `llm` after configuring a provider):
+
+```bash
+python scripts/run_benchmark.py --agents baseline multiagent --out artifacts/results
+# writes results.json / results.csv / results.html (aggregated with 95% CIs)
+```
 
 ## Quick Start
 

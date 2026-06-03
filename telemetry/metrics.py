@@ -28,12 +28,18 @@ class PrometheusMetrics:
         self._histograms: dict[str, dict[tuple, Histogram]] = defaultdict(dict)
         self._lock = threading.Lock()
 
-    def counter(self, name: str, labels: dict | None = None, description: str = "") -> None:
+    def counter(
+        self,
+        name: str,
+        labels: dict | None = None,
+        description: str = "",
+        amount: float = 1.0,
+    ) -> None:
         key = tuple(sorted((labels or {}).items()))
         with self._lock:
             if key not in self._counters[name]:
                 self._counters[name][key] = Counter(labels=labels or {})
-            self._counters[name][key].value += 1
+            self._counters[name][key].value += amount
 
     def gauge(
         self, name: str, value: float, labels: dict | None = None, description: str = ""
@@ -109,6 +115,36 @@ def record_tokens_used(tokens: int) -> None:
 
 def record_cost_usd(cost: float) -> None:
     metrics.counter("cost_usd_total", {"cost": str(cost)})
+
+
+def record_llm_usage(
+    *,
+    latency_ms: float,
+    cost_usd: float = 0.0,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    model: str | None = None,
+) -> None:
+    """Record one LLM call's cost, latency, and token usage.
+
+    Accumulates cumulative USD cost (``llm_cost_usd_total``) and token counts
+    (``llm_tokens_total`` split by ``kind``), and observes the call latency in
+    the ``llm_latency_ms`` histogram. ``model`` is attached as a label where it
+    keeps label cardinality bounded (one series per model name).
+    """
+    label = {"model": model} if model else None
+    metrics.histogram("llm_latency_ms", latency_ms, label)
+    if cost_usd:
+        metrics.counter("llm_cost_usd_total", label, amount=float(cost_usd))
+    total_tokens = int(prompt_tokens) + int(completion_tokens)
+    if prompt_tokens:
+        prompt_label = {**(label or {}), "kind": "prompt"}
+        metrics.counter("llm_tokens_total", prompt_label, amount=float(prompt_tokens))
+    if completion_tokens:
+        completion_label = {**(label or {}), "kind": "completion"}
+        metrics.counter("llm_tokens_total", completion_label, amount=float(completion_tokens))
+    if total_tokens:
+        metrics.counter("llm_calls_total", label)
 
 
 def get_metrics_output() -> str:

@@ -75,29 +75,38 @@ function Settings({ apiBase }: Props) {
           ) : (
             <>
               <div className="form-group">
-                <label>User ID</label>
-                <input type="text" value={userId} disabled />
+                <label htmlFor="settings-user-id">User ID</label>
+                <input id="settings-user-id" type="text" value={userId} disabled />
               </div>
               <div className="form-group">
-                <label>Default Persona</label>
-                <select value={defaultPersona} onChange={(e) => setDefaultPersona(e.target.value)}>
+                <label htmlFor="settings-default-persona">Default Persona</label>
+                <select
+                  id="settings-default-persona"
+                  value={defaultPersona}
+                  onChange={(e) => setDefaultPersona(e.target.value)}
+                >
                   <option value="strict_ceo">strict_ceo</option>
                   <option value="balanced">balanced</option>
                   <option value="chill_manager">chill_manager</option>
                 </select>
               </div>
               <div className="form-group">
-                <label>Notification Email</label>
+                <label htmlFor="settings-notification-email">Notification Email</label>
                 <input
+                  id="settings-notification-email"
                   type="email"
                   value={notificationEmail}
                   onChange={(e) => setNotificationEmail(e.target.value)}
                   placeholder="email@example.com"
                 />
               </div>
-              {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>}
+              {error && (
+                <div role="alert" style={{ color: 'var(--danger)', marginBottom: '1rem' }}>
+                  {error}
+                </div>
+              )}
               {success && (
-                <div style={{ color: 'var(--success)', marginBottom: '1rem' }}>
+                <div role="status" style={{ color: 'var(--success)', marginBottom: '1rem' }}>
                   Preferences saved!
                 </div>
               )}
@@ -111,12 +120,17 @@ function Settings({ apiBase }: Props) {
         <div className="settings-section" style={{ marginTop: '2rem' }}>
           <h3>API Settings</h3>
           <div className="form-group">
-            <label>API Base URL</label>
-            <input type="text" value={apiBase} disabled />
+            <label htmlFor="settings-api-base">API Base URL</label>
+            <input id="settings-api-base" type="text" value={apiBase} disabled />
           </div>
           <div className="form-group">
-            <label>Documentation</label>
-            <a href={`${apiBase}/docs`} target="_blank" rel="noopener noreferrer">
+            <label id="settings-docs-label">Documentation</label>
+            <a
+              href={`${apiBase}/docs`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-labelledby="settings-docs-label"
+            >
               OpenAPI Docs
             </a>
           </div>

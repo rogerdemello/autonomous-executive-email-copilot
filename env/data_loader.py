@@ -265,6 +265,33 @@ def scale_difficulty(
     return scenario
 
 
+def resolve_scenario_path(
+    base_task_id: str,
+    seed: int,
+    dir_path: Path,
+) -> Path:
+    """Resolve which scenario YAML to load for ``base_task_id``.
+
+    Default behaviour (the :class:`~env.config.Settings` ``scenario_variants``
+    flag is off) resolves exactly ``{base_task_id}.yaml`` -- byte-identical to
+    historical behaviour. When the flag is on, all ``{base_task_id}*.yaml`` files
+    (canonical + authored variants) are globbed, sorted deterministically, and
+    one is chosen via ``random.Random(seed)`` so the selection is reproducible.
+    """
+    from .config import get_settings
+
+    canonical = dir_path / f"{base_task_id}.yaml"
+
+    if not get_settings().scenario_variants:
+        return canonical
+
+    candidates = sorted(p for p in dir_path.glob(f"{base_task_id}*.yaml") if p.is_file())
+    if not candidates:
+        return canonical
+
+    return random.Random(seed).choice(candidates)
+
+
 def generate_synthetic_scenario(
     base_task_id: str,
     seed: int,
@@ -275,9 +302,9 @@ def generate_synthetic_scenario(
     rng = random.Random(seed)
 
     dir_path = scenarios_dir or SCENARIOS_DIR
-    path = dir_path / f"{base_task_id}.yaml"
+    path = resolve_scenario_path(base_task_id, seed, dir_path)
     if not path.exists():
-        raise ValueError(f"Missing scenario file: {path}")
+        raise ValueError(f"Missing scenario file: {dir_path / f'{base_task_id}.yaml'}")
 
     base_scenario = load_yaml(path)
 

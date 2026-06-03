@@ -105,6 +105,7 @@ function Inbox({ apiBase }: Props) {
             value={taskId}
             onChange={(e) => setTaskId(e.target.value)}
             style={{ width: 'auto' }}
+            aria-label="Task"
           >
             <option value="easy_classification">easy_classification</option>
             <option value="medium_prioritization">medium_prioritization</option>
@@ -114,6 +115,7 @@ function Inbox({ apiBase }: Props) {
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
             style={{ width: 'auto' }}
+            aria-label="Persona"
           >
             <option value="strict_ceo">strict_ceo</option>
             <option value="balanced">balanced</option>
@@ -125,6 +127,7 @@ function Inbox({ apiBase }: Props) {
             onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
             style={{ width: '80px' }}
             placeholder="Seed"
+            aria-label="Seed"
           />
           <button className="btn btn-primary" onClick={loadInbox} disabled={loading}>
             {loading ? 'Loading...' : 'New Episode'}
@@ -138,20 +141,21 @@ function Inbox({ apiBase }: Props) {
       {error && (
         <div
           className="card"
+          role="alert"
           style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
         >
           {error}
         </div>
       )}
 
-      <div className="card">
+      <section className="card" aria-label="Inbox">
         <h3 style={{ marginBottom: '1rem' }}>Inbox</h3>
         {obs?.emails.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>No emails in inbox</p>
         ) : (
-          <div className="email-list">
+          <ul className="email-list" aria-label="Emails">
             {obs?.emails.map((email) => (
-              <div key={email.id} className={`email-item ${getPriorityClass(email.priority_hint)}`}>
+              <li key={email.id} className={`email-item ${getPriorityClass(email.priority_hint)}`}>
                 <div className="email-sender">
                   {email.sender}{' '}
                   <span style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>
@@ -163,11 +167,11 @@ function Inbox({ apiBase }: Props) {
                   Priority: {email.priority_hint} | Deadline: {email.deadline_minutes}m | Value:{' '}
                   {email.business_value} | Risk: {email.risk_tag}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
     </div>
   )
 }

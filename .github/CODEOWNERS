@@ -1,0 +1,31 @@
+# CODEOWNERS — automatic review requests for matching paths.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# TODO: replace @maintainer with the real GitHub username(s) or team(s)
+# (e.g. @your-org/maintainers) before relying on required reviews.
+
+# Default owner for everything in the repo.
+*                       @maintainer
+
+# Core evaluation environment, API, and grader.
+/env/                   @maintainer
+
+# Baseline policy, benchmark, reports, telemetry, and server.
+/baseline/              @maintainer
+/benchmark/             @maintainer
+/reports/               @maintainer
+/telemetry/             @maintainer
+/server/                @maintainer
+
+# OpenEnv validator entrypoint — changes here affect validator parity.
+/inference.py           @maintainer
+
+# Frontend dashboard.
+/dashboard/             @maintainer
+
+# CI, issue/PR templates, and repo governance.
+/.github/               @maintainer
+
+# Documentation.
+/docs/                  @maintainer
+/CHANGELOG.md           @maintainer
