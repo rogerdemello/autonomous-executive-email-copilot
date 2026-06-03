@@ -106,20 +106,37 @@ function ApprovalQueue({ apiBase }: Props) {
         </div>
       </div>
 
-      <div className="tabs">
+      <div className="tabs" role="tablist" aria-label="Approval views">
         <button
+          type="button"
+          role="tab"
+          id="approval-tab-pending"
+          aria-selected={activeTab === 'pending'}
+          aria-controls="approval-panel-pending"
+          tabIndex={activeTab === 'pending' ? 0 : -1}
           className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
           onClick={() => setActiveTab('pending')}
         >
           Pending ({pending.length})
         </button>
         <button
+          type="button"
+          role="tab"
+          id="approval-tab-history"
+          aria-selected={activeTab === 'history'}
+          aria-controls="approval-panel-history"
+          tabIndex={activeTab === 'history' ? 0 : -1}
           className={`tab ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
         >
           History
         </button>
-        <button className="btn" onClick={refresh} style={{ marginLeft: 'auto' }}>
+        <button
+          type="button"
+          className="btn"
+          onClick={refresh}
+          style={{ marginLeft: 'auto' }}
+        >
           Refresh
         </button>
       </div>
@@ -127,6 +144,7 @@ function ApprovalQueue({ apiBase }: Props) {
       {error && (
         <div
           className="card"
+          role="alert"
           style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
         >
           {error}
@@ -135,74 +153,90 @@ function ApprovalQueue({ apiBase }: Props) {
 
       <div className="card">
         {activeTab === 'pending' && (
-          <>
+          <div
+            role="tabpanel"
+            id="approval-panel-pending"
+            aria-labelledby="approval-tab-pending"
+          >
             <h3 style={{ marginBottom: '1rem' }}>Pending Approvals</h3>
             {pending.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>No pending approvals</p>
             ) : (
-              pending.map((req) => (
-                <div key={req.id} className="approval-item">
-                  <div>
-                    <strong>ID:</strong> {req.id}
-                  </div>
-                  <div>
-                    <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
-                    {req.email_id}
-                  </div>
-                  {req.content && (
+              <ul className="approval-list" aria-label="Pending approvals">
+                {pending.map((req) => (
+                  <li key={req.id} className="approval-item">
                     <div>
-                      <strong>Content:</strong> {req.content.slice(0, 100)}...
+                      <strong>ID:</strong> {req.id}
                     </div>
-                  )}
-                  {req.escalate_to && (
                     <div>
-                      <strong>Escalate to:</strong> {req.escalate_to}
+                      <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
+                      {req.email_id}
                     </div>
-                  )}
-                  <div className="approval-actions">
-                    <button
-                      className="approve"
-                      onClick={() => handleApprove(req.id)}
-                      disabled={loading}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="reject"
-                      onClick={() => handleReject(req.id)}
-                      disabled={loading}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))
+                    {req.content && (
+                      <div>
+                        <strong>Content:</strong> {req.content.slice(0, 100)}...
+                      </div>
+                    )}
+                    {req.escalate_to && (
+                      <div>
+                        <strong>Escalate to:</strong> {req.escalate_to}
+                      </div>
+                    )}
+                    <div className="approval-actions">
+                      <button
+                        type="button"
+                        className="approve"
+                        onClick={() => handleApprove(req.id)}
+                        disabled={loading}
+                        aria-label={`Approve request ${req.id}`}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="reject"
+                        onClick={() => handleReject(req.id)}
+                        disabled={loading}
+                        aria-label={`Reject request ${req.id}`}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
-          </>
+          </div>
         )}
 
         {activeTab === 'history' && (
-          <>
+          <div
+            role="tabpanel"
+            id="approval-panel-history"
+            aria-labelledby="approval-tab-history"
+          >
             <h3 style={{ marginBottom: '1rem' }}>Approval History</h3>
             {history.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>No approval history</p>
             ) : (
-              history.map((req, idx) => (
-                <div key={idx} className="approval-item" style={{ opacity: 0.7 }}>
-                  <div>
-                    <strong>ID:</strong> {req.id}
-                  </div>
-                  <div>
-                    <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
-                    {req.email_id}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Requested at: {new Date(req.requested_at * 1000).toLocaleString()}
-                  </div>
-                </div>
-              ))
+              <ul className="approval-list" aria-label="Approval history">
+                {history.map((req, idx) => (
+                  <li key={idx} className="approval-item" style={{ opacity: 0.7 }}>
+                    <div>
+                      <strong>ID:</strong> {req.id}
+                    </div>
+                    <div>
+                      <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
+                      {req.email_id}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Requested at: {new Date(req.requested_at * 1000).toLocaleString()}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

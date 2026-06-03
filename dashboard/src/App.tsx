@@ -53,45 +53,78 @@ function App() {
     { id: 'settings', label: 'Settings' },
   ]
 
+  const connectionLabel = live ? 'Live' : connected ? 'Connected' : 'Disconnected'
+  const activeLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard'
+
   return (
     <div className="app">
-      <aside className="sidebar">
+      <header className="sidebar">
         <h1>Email Copilot</h1>
         <p className="subtitle">Dashboard</p>
-        <nav>
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </div>
-          ))}
+        <nav aria-label="Primary">
+          <ul className="nav-list" role="tablist" aria-orientation="vertical">
+            {tabs.map((tab) => {
+              const selected = activeTab === tab.id
+              return (
+                <li key={tab.id} role="presentation">
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={selected}
+                    aria-controls={`panel-${tab.id}`}
+                    tabIndex={selected ? 0 : -1}
+                    className={`nav-item ${selected ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         </nav>
         <div className="connection-panel">
+          <label className="connection-label" htmlFor="api-base">
+            API Base URL
+          </label>
           <input
+            id="api-base"
             type="text"
             value={apiBase}
             onChange={(e) => setApiBase(e.target.value)}
             placeholder="API Base URL"
           />
-          <div style={{ fontSize: '0.75rem', color: connected ? '#22c55e' : '#ef4444' }}>
-            {live ? 'Live' : connected ? 'Connected' : 'Disconnected'}
+          <div
+            className={`connection-status ${connected ? 'is-connected' : 'is-disconnected'}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="connection-dot" aria-hidden="true" />
+            {connectionLabel}
           </div>
         </div>
-      </aside>
-      <main className="main">
+      </header>
+      <main className="main" id="main-content">
         <div className="header">
-          <h2>{tabs.find((t) => t.id === activeTab)?.label || 'Dashboard'}</h2>
-          {health && <span className="status-badge status-success">API: {health.status}</span>}
+          <h2>{activeLabel}</h2>
+          {health && (
+            <span className="status-badge status-success">API: {health.status}</span>
+          )}
         </div>
-        {activeTab === 'inbox' && <Inbox apiBase={apiBase} />}
-        {activeTab === 'timeline' && <Timeline apiBase={apiBase} />}
-        {activeTab === 'replay' && <Replay apiBase={apiBase} />}
-        {activeTab === 'approvals' && <ApprovalQueue apiBase={apiBase} />}
-        {activeTab === 'settings' && <Settings apiBase={apiBase} />}
-        {activeTab === 'team' && <Team apiBase={apiBase} />}
+        <div
+          role="tabpanel"
+          id={`panel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+          tabIndex={0}
+        >
+          {activeTab === 'inbox' && <Inbox apiBase={apiBase} />}
+          {activeTab === 'timeline' && <Timeline apiBase={apiBase} />}
+          {activeTab === 'replay' && <Replay apiBase={apiBase} />}
+          {activeTab === 'approvals' && <ApprovalQueue apiBase={apiBase} />}
+          {activeTab === 'settings' && <Settings apiBase={apiBase} />}
+          {activeTab === 'team' && <Team apiBase={apiBase} />}
+        </div>
       </main>
     </div>
   )

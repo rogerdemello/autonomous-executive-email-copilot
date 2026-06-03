@@ -84,6 +84,7 @@ function Timeline({ apiBase }: Props) {
             value={taskId}
             onChange={(e) => setTaskId(e.target.value)}
             style={{ width: 'auto' }}
+            aria-label="Task"
           >
             <option value="easy_classification">easy_classification</option>
             <option value="medium_prioritization">medium_prioritization</option>
@@ -93,6 +94,7 @@ function Timeline({ apiBase }: Props) {
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
             style={{ width: 'auto' }}
+            aria-label="Persona"
           >
             <option value="strict_ceo">strict_ceo</option>
             <option value="balanced">balanced</option>
@@ -104,6 +106,7 @@ function Timeline({ apiBase }: Props) {
             onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
             style={{ width: '80px' }}
             placeholder="Seed"
+            aria-label="Seed"
           />
           <button className="btn btn-primary" onClick={runBaseline} disabled={loading}>
             {loading ? 'Running...' : 'Run AI Demo'}
@@ -114,20 +117,21 @@ function Timeline({ apiBase }: Props) {
       {error && (
         <div
           className="card"
+          role="alert"
           style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
         >
           {error}
         </div>
       )}
 
-      <div className="card">
+      <section className="card" aria-label="Decision timeline">
         <h3 style={{ marginBottom: '1rem' }}>Decision Timeline</h3>
         {decisions.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>Run AI Demo to see timeline</p>
         ) : (
-          <div className="timeline">
+          <ol className="timeline">
             {decisions.map((decision, idx) => (
-              <div key={idx} className={`timeline-item ${getStatusClass(decision.status)}`}>
+              <li key={idx} className={`timeline-item ${getStatusClass(decision.status)}`}>
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 >
@@ -167,11 +171,11 @@ function Timeline({ apiBase }: Props) {
                     {decision.latency_ms ? `| ${decision.latency_ms.toFixed(0)}ms` : ''}
                   </div>
                 )}
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         )}
-      </div>
+      </section>
     </div>
   )
 }

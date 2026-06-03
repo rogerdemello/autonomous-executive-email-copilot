@@ -124,8 +124,8 @@ function Team({ apiBase }: Props) {
           ) : teamSettings ? (
             <>
               <div className="form-group">
-                <label>Team ID</label>
-                <input type="text" value={teamId} disabled />
+                <label htmlFor="team-id">Team ID</label>
+                <input id="team-id" type="text" value={teamId} disabled />
               </div>
 
               <h4 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Approval Rules</h4>
@@ -134,6 +134,7 @@ function Team({ apiBase }: Props) {
                   <select
                     value={rule.action_type}
                     onChange={(e) => updateApprovalRule(idx, 'action_type', e.target.value)}
+                    aria-label={`Approval rule ${idx + 1} action type`}
                   >
                     <option value="classify">classify</option>
                     <option value="reply">reply</option>
@@ -146,16 +147,22 @@ function Team({ apiBase }: Props) {
                     onChange={(e) =>
                       updateApprovalRule(idx, 'requires_approval', e.target.value === 'true')
                     }
+                    aria-label={`Approval rule ${idx + 1} approval requirement`}
                   >
                     <option value="true">Requires Approval</option>
                     <option value="false">Auto-approve</option>
                   </select>
-                  <button className="btn" onClick={() => removeApprovalRule(idx)}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => removeApprovalRule(idx)}
+                    aria-label={`Remove approval rule ${idx + 1}`}
+                  >
                     Remove
                   </button>
                 </div>
               ))}
-              <button className="btn" onClick={addApprovalRule}>
+              <button type="button" className="btn" onClick={addApprovalRule}>
                 Add Rule
               </button>
 
@@ -168,6 +175,7 @@ function Team({ apiBase }: Props) {
                     onChange={(e) => updateEscalationTarget(idx, 'target', e.target.value)}
                     placeholder="Target name"
                     style={{ flex: 1 }}
+                    aria-label={`Escalation target ${idx + 1} name`}
                   />
                   <input
                     type="text"
@@ -175,19 +183,29 @@ function Team({ apiBase }: Props) {
                     onChange={(e) => updateEscalationTarget(idx, 'description', e.target.value)}
                     placeholder="Description"
                     style={{ flex: 2 }}
+                    aria-label={`Escalation target ${idx + 1} description`}
                   />
-                  <button className="btn" onClick={() => removeEscalationTarget(idx)}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => removeEscalationTarget(idx)}
+                    aria-label={`Remove escalation target ${idx + 1}`}
+                  >
                     Remove
                   </button>
                 </div>
               ))}
-              <button className="btn" onClick={addEscalationTarget}>
+              <button type="button" className="btn" onClick={addEscalationTarget}>
                 Add Target
               </button>
 
-              {error && <div style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</div>}
+              {error && (
+                <div role="alert" style={{ color: 'var(--danger)', marginTop: '1rem' }}>
+                  {error}
+                </div>
+              )}
               {success && (
-                <div style={{ color: 'var(--success)', marginTop: '1rem' }}>
+                <div role="status" style={{ color: 'var(--success)', marginTop: '1rem' }}>
                   Team settings saved!
                 </div>
               )}

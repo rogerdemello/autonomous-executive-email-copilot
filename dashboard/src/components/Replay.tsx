@@ -144,6 +144,7 @@ function Replay({ apiBase }: Props) {
             value={taskId}
             onChange={(e) => setTaskId(e.target.value)}
             style={{ width: 'auto' }}
+            aria-label="Task"
           >
             <option value="easy_classification">easy_classification</option>
             <option value="medium_prioritization">medium_prioritization</option>
@@ -153,6 +154,7 @@ function Replay({ apiBase }: Props) {
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
             style={{ width: 'auto' }}
+            aria-label="Persona"
           >
             <option value="strict_ceo">strict_ceo</option>
             <option value="balanced">balanced</option>
@@ -164,6 +166,7 @@ function Replay({ apiBase }: Props) {
             onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
             style={{ width: '80px' }}
             placeholder="Seed"
+            aria-label="Seed"
           />
           <button className="btn" onClick={runAndLoad} disabled={loading}>
             {loading ? 'Running...' : 'Run & Load'}
@@ -174,25 +177,52 @@ function Replay({ apiBase }: Props) {
         </div>
 
         {episode && (
-          <div className="replay-controls">
-            <button onClick={goToStart} disabled={currentStep === 0}>
-              |&lt;
+          <div className="replay-controls" role="group" aria-label="Replay controls">
+            <button
+              type="button"
+              onClick={goToStart}
+              disabled={currentStep === 0}
+              aria-label="Go to first step"
+            >
+              <span aria-hidden="true">|&lt;</span>
             </button>
-            <button onClick={stepBack} disabled={currentStep === 0}>
-              &lt;
+            <button
+              type="button"
+              onClick={stepBack}
+              disabled={currentStep === 0}
+              aria-label="Previous step"
+            >
+              <span aria-hidden="true">&lt;</span>
             </button>
             {isPlaying ? (
-              <button onClick={pause}>Pause</button>
+              <button type="button" onClick={pause} aria-label="Pause">
+                Pause
+              </button>
             ) : (
-              <button onClick={play} disabled={currentStep >= episode.decisions.length - 1}>
+              <button
+                type="button"
+                onClick={play}
+                disabled={currentStep >= episode.decisions.length - 1}
+                aria-label="Play"
+              >
                 Play
               </button>
             )}
-            <button onClick={stepForward} disabled={currentStep >= episode.decisions.length - 1}>
-              &gt;
+            <button
+              type="button"
+              onClick={stepForward}
+              disabled={currentStep >= episode.decisions.length - 1}
+              aria-label="Next step"
+            >
+              <span aria-hidden="true">&gt;</span>
             </button>
-            <button onClick={goToEnd} disabled={currentStep >= episode.decisions.length - 1}>
-              &gt;|
+            <button
+              type="button"
+              onClick={goToEnd}
+              disabled={currentStep >= episode.decisions.length - 1}
+              aria-label="Go to last step"
+            >
+              <span aria-hidden="true">&gt;|</span>
             </button>
             <div className="slider-container">
               <input
@@ -201,6 +231,8 @@ function Replay({ apiBase }: Props) {
                 max={episode.decisions.length - 1}
                 value={currentStep}
                 onChange={(e) => setCurrentStep(parseInt(e.target.value))}
+                aria-label="Step position"
+                aria-valuetext={`Step ${currentStep + 1} of ${episode.decisions.length}`}
               />
             </div>
             <span style={{ fontSize: '0.75rem' }}>
@@ -213,13 +245,14 @@ function Replay({ apiBase }: Props) {
       {error && (
         <div
           className="card"
+          role="alert"
           style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
         >
           {error}
         </div>
       )}
 
-      <div className="card">
+      <section className="card" aria-label="Episode replay" aria-live="polite">
         <h3 style={{ marginBottom: '1rem' }}>Episode Replay</h3>
         {!episode ? (
           <p style={{ color: 'var(--text-muted)' }}>Load an episode to replay</p>
@@ -265,7 +298,7 @@ function Replay({ apiBase }: Props) {
         ) : (
           <p style={{ color: 'var(--text-muted)' }}>No decisions in episode</p>
         )}
-      </div>
+      </section>
     </div>
   )
 }
