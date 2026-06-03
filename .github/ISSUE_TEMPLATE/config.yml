@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussions
+    url: https://github.com/OWNER/REPO/discussions
+    about: Ask questions, share ideas, or get help. Please edit OWNER/REPO to point at the real repository.
+  - name: Report a security vulnerability
+    url: https://github.com/OWNER/REPO/security/advisories/new
+    about: Do not file public issues for security problems. See SECURITY.md and report privately.
+  - name: Contributing guide
+    url: https://github.com/OWNER/REPO/blob/main/CONTRIBUTING.md
+    about: How to set up, test, and open a pull request.
