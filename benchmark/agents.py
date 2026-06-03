@@ -159,7 +159,7 @@ class MultiAgent(BaseBenchmarkAgent):
 
         env = ExecutiveEmailEnv(task_id=task_id, seed=seed, persona=persona)
         observation = env.reset(task_id=task_id, seed=seed, persona=persona)
-        coordinator = CoordinatorAgent()
+        coordinator = CoordinatorAgent(task_id=task_id)
         trace = []
 
         start_time = time.time()

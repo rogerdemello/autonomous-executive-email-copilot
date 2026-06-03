@@ -8,11 +8,22 @@ from typing import Any
 
 from openai import OpenAI
 
-from env.config import chat_client_kwargs
+from env.config import chat_client_kwargs, get_settings
 from env.models import (
     Action,
     Observation,
 )
+
+
+def llm_provider_available() -> bool:
+    """True when a provider key is configured (``resolved_api_key`` is set).
+
+    The hybrid policy uses this to decide whether to run the LLM planner or to
+    skip straight to its strong deterministic fallback. Importantly, the
+    deterministic path does NOT require a key — so when this returns ``False``
+    callers must still produce a non-trivial trajectory (see ``HybridPolicy``).
+    """
+    return get_settings().resolved_api_key is not None
 
 
 class Strategy(Enum):
@@ -177,6 +188,11 @@ class Planner:
                     "confidence": 0.9,
                     "key_emails": [e.id for e in urgent_emails],
                 }
+
+        # No provider key configured: skip the LLM entirely and let the strong
+        # deterministic executor/baseline carry the trajectory.
+        if not llm_provider_available():
+            return self._fallback_strategy()
 
         # Call LLM for strategy
         try:

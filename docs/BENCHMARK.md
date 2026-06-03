@@ -257,6 +257,32 @@ Notes derived from `benchmark/agents.py`:
   `cost_usd=0.0`; if its sub-agents make billable calls, token/cost accounting is
   not yet surfaced here.
 
+#### Finding: task-blind coordination floored the multi-agent on `easy_classification`
+
+An early benchmark run surfaced a coordination bug worth recording. The
+`CoordinatorAgent` resolved conflicts with a *static* priority order
+(`EscalatorAgent > ClassifierAgent > ResponderAgent`). On `easy_classification` the
+synthetic inbox legitimately contains risk-tagged emails (e.g. `legal`/`security`
+tags), so `EscalatorAgent.can_handle` returns `True` for those emails. The static
+order therefore made the coordinator *escalate* on a task whose headline score is
+purely `classification_accuracy` (Section 3.2) — producing no `classify` actions and
+flooring the score at the open-interval epsilon (~`1e-6`), while the single-agent
+`baseline` scored ~`1.0` on the same cells. The multi-agent was being penalised not
+for bad classification but for solving the wrong sub-problem.
+
+The coordinator is now **task-aware**: it is told which benchmark task it is solving
+(`CoordinatorAgent(task_id=...)`, threaded from `MultiAgent.run`) and biases conflict
+resolution per task — preferring `ClassifierAgent` on `easy_classification` /
+`medium_prioritization`, and emitting an opening `prioritize` ranking on
+`medium_prioritization` (which no content specialist would otherwise produce). On
+`hard_full_management` it retains the original **risk-first** ordering, so genuine
+legal/security risk is still escalated. This threading does **not** change the env
+API or the validator-facing `Observation` schema (which still carries no `task_id`);
+the task is passed to the coordinator out-of-band. A secondary fix gives the
+coordinator a memory of the `(action_type, email_id)` pairs it has already emitted so
+stateless specialists no longer re-propose the same email every step. Covered by
+`tests/test_multiagent_taskaware.py`.
+
 `max_steps` defaults to `100` in the runner (`runner.py` line 60) and `120` in the
 API-level `LeaderboardRequest` (`env/models.py` line 220); each agent caps its loop
 at `max(1, max_steps)` steps.

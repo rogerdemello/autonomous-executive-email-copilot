@@ -20,7 +20,10 @@ DEFAULT_PERSONAS = [
     "chill_manager",
 ]
 
-DEFAULT_SEEDS = [42, 43, 44]
+# Fixed, deterministic seed set. Widened from 3 -> 8 seeds so per-agent score
+# distributions have enough samples for meaningful confidence intervals while
+# keeping runs fully reproducible (same seeds -> same scenarios every time).
+DEFAULT_SEEDS = [42, 43, 44, 45, 46, 47, 48, 49]
 
 
 class BenchmarkResult:
