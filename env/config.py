@@ -77,6 +77,54 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def is_azure_endpoint(api_base_url: str | None) -> bool:
+    """True if the base URL points at an Azure OpenAI resource."""
+    host = (urlsplit((api_base_url or "").strip()).netloc or "").lower()
+    return "openai.azure.com" in host
+
+
+def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:
+    """Compute keyword args for an OpenAI client + the resolved model name.
+
+    Returns ``(kwargs, model_name)``. Works for both public OpenAI-compatible
+    endpoints and **Azure OpenAI**. Azure authenticates with an ``api-key``
+    request header (not ``Authorization: Bearer``) and pins the deployment in the
+    URL path, so for Azure hosts we inject the ``api-key`` header explicitly —
+    otherwise key-based auth 401s.
+
+    Construction is left to the caller (each module instantiates its own
+    ``OpenAI`` so unit tests can patch it locally).
+    """
+    settings = get_settings()
+    api_base_url = normalize_openai_base_url(settings.api_base_url, settings.azure_api_version)
+    api_key = settings.resolved_api_key
+    if not api_key:
+        raise ValueError("HF_TOKEN or OPENAI_API_KEY environment variable not set")
+
+    kwargs: dict = {
+        "base_url": api_base_url,
+        "api_key": api_key,
+        "timeout": timeout_seconds,
+    }
+    if is_azure_endpoint(api_base_url):
+        # Azure validates the resource key via the `api-key` header.
+        kwargs["default_headers"] = {"api-key": api_key}
+
+    return kwargs, (settings.model_name or DEFAULT_MODEL)
+
+
+def build_chat_client(timeout_seconds: float = 30.0):  # type: ignore[no-untyped-def]
+    """Construct an OpenAI/Azure client wired for the configured provider.
+
+    Convenience wrapper over :func:`chat_client_kwargs` for direct callers.
+    Returns ``(client, model_name)``.
+    """
+    from openai import OpenAI
+
+    kwargs, model = chat_client_kwargs(timeout_seconds)
+    return OpenAI(**kwargs), model
+
+
 def normalize_openai_base_url(api_base_url: str, azure_api_version: str | None = None) -> str:
     """Normalize an API base URL for OpenAI and Azure OpenAI compatibility.
 

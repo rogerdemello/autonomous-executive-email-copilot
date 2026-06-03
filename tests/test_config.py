@@ -7,9 +7,13 @@ import pytest
 from env.config import (
     DEFAULT_API_BASE_URL,
     DEFAULT_MODEL,
+    build_chat_client,
     get_settings,
+    is_azure_endpoint,
     normalize_openai_base_url,
 )
+
+AZURE_URL = "https://res.openai.azure.com/openai/deployments/gpt4o?api-version=2024-02-15-preview"
 
 
 def test_defaults(monkeypatch):
@@ -55,3 +59,40 @@ def test_normalize_azure_adds_api_version():
         azure_api_version="2024-02-15-preview",
     )
     assert "api-version=2024-02-15-preview" in url
+
+
+def test_is_azure_endpoint():
+    assert is_azure_endpoint(AZURE_URL) is True
+    assert is_azure_endpoint("https://api.openai.com/v1") is False
+    assert is_azure_endpoint("") is False
+    assert is_azure_endpoint(None) is False
+
+
+def test_build_chat_client_requires_key(monkeypatch):
+    for var in ("OPENAI_API_KEY", "HF_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(ValueError):
+        build_chat_client()
+
+
+def test_build_chat_client_openai_no_api_key_header(monkeypatch):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("API_BASE_URL", "https://api.openai.com/v1")
+    monkeypatch.setenv("MODEL_NAME", "gpt-4o-mini")
+    client, model = build_chat_client()
+    assert model == "gpt-4o-mini"
+    # Public OpenAI authenticates via Bearer; no custom api-key header injected.
+    assert "api-key" not in {k.lower() for k in client.default_headers}
+
+
+def test_build_chat_client_azure_injects_api_key_header(monkeypatch):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "az-secret")
+    monkeypatch.setenv("API_BASE_URL", AZURE_URL)
+    monkeypatch.setenv("MODEL_NAME", "gpt-4o")
+    client, model = build_chat_client()
+    assert model == "gpt-4o"
+    # Azure key auth requires the `api-key` header, not Authorization: Bearer.
+    headers = {k.lower(): v for k, v in client.default_headers.items()}
+    assert headers.get("api-key") == "az-secret"

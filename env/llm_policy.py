@@ -8,7 +8,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from env.config import get_settings, normalize_openai_base_url
+from env.config import chat_client_kwargs
 from env.models import (
     Action,
     Observation,
@@ -142,24 +142,10 @@ class Planner:
         self._current_strategy: Strategy | None = None
 
     def _get_client(self) -> OpenAI:
-        """Lazy initialization of OpenAI client."""
+        """Lazy initialization of OpenAI/Azure client."""
         if self._client is None:
-            settings = get_settings()
-            api_base_url = normalize_openai_base_url(
-                settings.api_base_url, settings.azure_api_version
-            )
-            api_key = settings.resolved_api_key
-
-            if not api_key:
-                raise ValueError("HF_TOKEN or OPENAI_API_KEY environment variable not set")
-
-            model = settings.model_name or self._model
-
-            self._client = OpenAI(
-                base_url=api_base_url,
-                api_key=api_key,
-                timeout=self._timeout_seconds,
-            )
+            kwargs, model = chat_client_kwargs(self._timeout_seconds)
+            self._client = OpenAI(**kwargs)
             if model != self._model:
                 self._model = model
         return self._client
