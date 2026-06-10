@@ -1,0 +1,9 @@
+From: client@acme.com
+To: exec@company.com
+Subject: Contract review needed
+Message-ID: <msg-001@acme.com>
+In-Reply-To: <prev-000@acme.com>
+References: <thread-root@acme.com>
+Content-Type: text/plain; charset="utf-8"
+
+Please review the attached contract before Friday and confirm the timeline.

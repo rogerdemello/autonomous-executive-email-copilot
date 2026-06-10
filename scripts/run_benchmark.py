@@ -108,6 +108,16 @@ def run(
     history_path: str = "benchmark/leaderboard_history.jsonl",
 ) -> list[BenchmarkResult]:
     """Run the selected agents and write artifacts to ``out_dir``."""
+    # The benchmark is sim-only by construction: refuse to run if a real-inbox
+    # connector is enabled, so real mail can never contaminate benchmark results.
+    from env.connectors import email_connector_enabled
+
+    if email_connector_enabled():
+        raise RuntimeError(
+            "EMAIL_CONNECTOR_ENABLED is set; the benchmark is sim-only and refuses to "
+            "run with a real-inbox connector enabled. Unset it to run the benchmark."
+        )
+
     runner = BenchmarkRunner(
         tasks=tasks,
         personas=personas,

@@ -1,0 +1,57 @@
+{
+  "__comment": "LLM cost & usage dashboard. Reads the metrics emitted by telemetry/metrics.py::record_llm_usage (llm_cost_usd_total, llm_tokens_total, llm_latency_ms). Import into Grafana with a Prometheus datasource.",
+  "title": "LLM Cost & Usage",
+  "uid": "llm-cost-usage",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["llm", "cost"],
+  "timezone": "",
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total LLM spend (USD)",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 } },
+      "targets": [
+        { "expr": "sum(llm_cost_usd_total)", "legendFormat": "total" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "LLM spend rate (USD/min)",
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [
+        { "expr": "sum(rate(llm_cost_usd_total[5m])) * 60", "legendFormat": "USD/min" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Token throughput (tokens/sec)",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "expr": "sum(rate(llm_tokens_total[5m]))", "legendFormat": "tokens/sec" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "LLM latency p95 (ms)",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_latency_ms_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    }
+  ]
+}

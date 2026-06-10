@@ -93,40 +93,52 @@ def _write_csv(rows: list[dict], path: str) -> None:
 
 
 def _render_html(rows: list[dict]) -> str:
-    header_cells = "".join(f"<th>{field}</th>" for field in AGGREGATE_FIELDS)
+    header_cells = "".join(f'<th scope="col">{field}</th>' for field in AGGREGATE_FIELDS)
 
     body_rows = []
     for row in rows:
         cells = "".join(f"<td>{row[field]}</td>" for field in AGGREGATE_FIELDS)
-        body_rows.append(f"        <tr>{cells}</tr>")
+        body_rows.append(f"            <tr>{cells}</tr>")
     body = "\n".join(body_rows)
 
+    # Accessibility: lang attribute, a <main> landmark, a table <caption>, column
+    # header scope, and dark-on-light text (#222 on #fff) for contrast.
     return f"""<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Benchmark Results</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 2rem; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 2rem; color: #222; background: #fff; }}
         h1 {{ margin-bottom: 0.5rem; }}
-        .summary {{ margin-bottom: 1.5rem; color: #555; }}
+        .summary {{ margin-bottom: 1.5rem; color: #444; }}
         table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background: #f5f5f5; }}
-        tr:nth-child(even) {{ background: #fafafa; }}
+        caption {{ text-align: left; font-weight: 600; margin-bottom: 0.5rem; }}
+        th, td {{ border: 1px solid #999; padding: 8px; text-align: left; }}
+        th {{ background: #eee; }}
+        tr:nth-child(even) {{ background: #f4f4f4; }}
         td {{ font-variant-numeric: tabular-nums; }}
+        @media (max-width: 640px) {{ body {{ margin: 1rem; }} table {{ font-size: 0.85rem; }} }}
     </style>
 </head>
 <body>
-    <h1>Benchmark Results</h1>
-    <div class="summary">
-        <p>Aggregated by (task, persona, agent) across seeds. Score interval is the 95% CI (mean &plusmn; 1.96&middot;std/&radic;n).</p>
-        <p>Groups: {len(rows)}</p>
-    </div>
-    <table>
-        <tr>{header_cells}</tr>
+    <main>
+        <h1>Benchmark Results</h1>
+        <div class="summary">
+            <p>Aggregated by (task, persona, agent) across seeds. Score interval is the 95% CI (mean &plusmn; 1.96&middot;std/&radic;n).</p>
+            <p>Groups: {len(rows)}</p>
+        </div>
+        <table>
+            <caption>Mean score and 95% confidence interval per (task, persona, agent)</caption>
+            <thead>
+                <tr>{header_cells}</tr>
+            </thead>
+            <tbody>
 {body}
-    </table>
+            </tbody>
+        </table>
+    </main>
 </body>
 </html>"""
 
