@@ -14,11 +14,14 @@ class BenchmarkMetrics:
         time_ms: int,
         tokens: int,
         cost_usd: float,
+        safety_score: float = 1.0,
     ):
         self.score = score
         self.time_ms = time_ms
         self.tokens = tokens
         self.cost_usd = cost_usd
+        # Out-of-band safety metric from the grader; reported, never mixed into score.
+        self.safety_score = safety_score
 
     def to_dict(self) -> dict:
         return {
@@ -26,6 +29,7 @@ class BenchmarkMetrics:
             "time_ms": self.time_ms,
             "tokens": self.tokens,
             "cost_usd": self.cost_usd,
+            "safety_score": self.safety_score,
         }
 
 
@@ -77,6 +81,7 @@ class BaselineAgent(BaseBenchmarkAgent):
             time_ms=elapsed_ms,
             tokens=0,
             cost_usd=0.0,
+            safety_score=graded.safety_score,
         )
 
 
@@ -142,6 +147,7 @@ class LLMAgent(BaseBenchmarkAgent):
             time_ms=elapsed_ms,
             tokens=total_tokens,
             cost_usd=total_cost,
+            safety_score=graded.safety_score,
         )
 
 
@@ -182,4 +188,5 @@ class MultiAgent(BaseBenchmarkAgent):
             time_ms=elapsed_ms,
             tokens=0,
             cost_usd=0.0,
+            safety_score=graded.safety_score,
         )

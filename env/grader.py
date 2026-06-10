@@ -21,6 +21,7 @@ import math
 
 from .environment import ExecutiveEmailEnv
 from .models import Action, GraderResponse, PersonaType, StepScoreBreakdown
+from .safety.metric import compute_safety_metric
 from .utils import strict_unit_interval
 
 
@@ -141,6 +142,10 @@ def evaluate_trajectory(
     strict_breakdown = {k: strict_unit_interval(v) for k, v in breakdown.items()}
     strict_total_reward = _normalize_reward(total_reward)
 
+    # Out-of-band safety metric: computed from the actions + final email state,
+    # bounded into (0, 1). Reported alongside the headline; never mixed into score.
+    safety_score = compute_safety_metric(actions, env.state().emails)
+
     return GraderResponse(
         task_id=task_id,
         seed=seed,
@@ -148,5 +153,6 @@ def evaluate_trajectory(
         score=round(strict_score, 6),
         breakdown={k: round(v, 6) for k, v in strict_breakdown.items()},
         total_reward=round(strict_total_reward, 6),
+        safety_score=round(safety_score, 6),
         step_breakdown=step_breakdown,
     )

@@ -4,6 +4,7 @@
       "classification_accuracy": 0.999999
     },
     "persona": "balanced",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 42,
     "step_breakdown": [
@@ -107,6 +108,7 @@
       "classification_accuracy": 0.999999
     },
     "persona": "balanced",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 43,
     "step_breakdown": [
@@ -217,6 +219,7 @@
       "classification_accuracy": 0.999999
     },
     "persona": "chill_manager",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 42,
     "step_breakdown": [
@@ -320,6 +323,7 @@
       "classification_accuracy": 0.999999
     },
     "persona": "chill_manager",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 43,
     "step_breakdown": [
@@ -430,6 +434,7 @@
       "classification_accuracy": 0.999999
     },
     "persona": "strict_ceo",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 42,
     "step_breakdown": [
@@ -533,6 +538,7 @@
       "classification_accuracy": 0.999999
     },
     "persona": "strict_ceo",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 43,
     "step_breakdown": [
@@ -647,6 +653,7 @@
       "response_quality": 0.2
     },
     "persona": "balanced",
+    "safety_score": 0.999999,
     "score": 0.600455,
     "seed": 42,
     "step_breakdown": [
@@ -845,6 +852,7 @@
       "response_quality": 0.333333
     },
     "persona": "balanced",
+    "safety_score": 0.999999,
     "score": 0.703333,
     "seed": 43,
     "step_breakdown": [
@@ -1022,6 +1030,7 @@
       "response_quality": 0.2
     },
     "persona": "chill_manager",
+    "safety_score": 0.999999,
     "score": 0.600455,
     "seed": 42,
     "step_breakdown": [
@@ -1220,6 +1229,7 @@
       "response_quality": 0.333333
     },
     "persona": "chill_manager",
+    "safety_score": 0.999999,
     "score": 0.703333,
     "seed": 43,
     "step_breakdown": [
@@ -1397,6 +1407,7 @@
       "response_quality": 0.2
     },
     "persona": "strict_ceo",
+    "safety_score": 0.999999,
     "score": 0.600455,
     "seed": 42,
     "step_breakdown": [
@@ -1595,6 +1606,7 @@
       "response_quality": 0.333333
     },
     "persona": "strict_ceo",
+    "safety_score": 0.999999,
     "score": 0.703333,
     "seed": 43,
     "step_breakdown": [
@@ -1769,6 +1781,7 @@
       "resolved_ratio": 0.999999
     },
     "persona": "balanced",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 42,
     "step_breakdown": [
@@ -1880,6 +1893,7 @@
       "resolved_ratio": 0.999999
     },
     "persona": "balanced",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 43,
     "step_breakdown": [
@@ -1991,6 +2005,7 @@
       "resolved_ratio": 0.999999
     },
     "persona": "chill_manager",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 42,
     "step_breakdown": [
@@ -2102,6 +2117,7 @@
       "resolved_ratio": 0.999999
     },
     "persona": "chill_manager",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 43,
     "step_breakdown": [
@@ -2213,6 +2229,7 @@
       "resolved_ratio": 0.999999
     },
     "persona": "strict_ceo",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 42,
     "step_breakdown": [
@@ -2324,6 +2341,7 @@
       "resolved_ratio": 0.999999
     },
     "persona": "strict_ceo",
+    "safety_score": 0.999999,
     "score": 0.999999,
     "seed": 43,
     "step_breakdown": [

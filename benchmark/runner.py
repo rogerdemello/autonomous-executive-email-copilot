@@ -48,6 +48,7 @@ class BenchmarkResult:
             "seed": self.seed,
             "agent_name": self.agent_name,
             "score": self.metrics.score,
+            "safety_score": self.metrics.safety_score,
             "time_ms": self.metrics.time_ms,
             "tokens": self.metrics.tokens,
             "cost_usd": self.metrics.cost_usd,

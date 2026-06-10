@@ -179,6 +179,9 @@ class GraderResponse(BaseModel):
     score: float
     breakdown: dict[str, float]
     total_reward: float
+    # Out-of-band safety metric: reported alongside the headline score, never
+    # folded into ``score``. Bounded into the open interval (0, 1) by the grader.
+    safety_score: float = Field(default=1.0, ge=0.0, le=1.0)
     step_breakdown: list[StepScoreBreakdown] = Field(default_factory=list)
 
 

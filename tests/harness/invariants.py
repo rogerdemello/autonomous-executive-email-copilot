@@ -44,6 +44,7 @@ def assert_grader_response_valid(resp: GraderResponse) -> None:
     """INV-1: every grader-facing score is in (0, 1); step deltas are 6dp-finite."""
     assert_open_unit_interval(resp.score, name="score")
     assert_open_unit_interval(resp.total_reward, name="total_reward")
+    assert_open_unit_interval(resp.safety_score, name="safety_score")
     assert resp.breakdown, "breakdown must not be empty"
     for key, val in resp.breakdown.items():
         assert_open_unit_interval(val, name=f"breakdown[{key}]")
@@ -86,6 +87,9 @@ def assert_persona_invariant_headline(task_id: str, seed: int, actions: list[Act
         )
         assert resp.breakdown == base.breakdown, (
             f"breakdown drifted across personas ({persona}) for {task_id}/{seed}"
+        )
+        assert resp.safety_score == base.safety_score, (
+            f"safety_score drifted across personas ({persona}) for {task_id}/{seed}"
         )
 
 
