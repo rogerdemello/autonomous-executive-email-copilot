@@ -36,8 +36,10 @@ dev = [
 [project.scripts]
 server = "server.app:main"
 
-[tool.setuptools]
-packages = ["env", "baseline", "server", "benchmark", "telemetry", "reports"]
+# Discover every package (including subpackages like env.agents, env.learning,
+# env.safety, env.eval, env.connectors) so a built wheel is complete.
+[tool.setuptools.packages.find]
+include = ["env*", "baseline*", "server*", "benchmark*", "telemetry*", "reports*"]
 
 [tool.pytest.ini_options]
 markers = [

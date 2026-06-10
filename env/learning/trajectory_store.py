@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Column, Float, Integer, String, Text, create_engine
+from sqlalchemy import Column, Float, Integer, String, Text, create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Database path
@@ -16,7 +16,26 @@ TRAJECTORY_DB_PATH = Path(__file__).parent.parent / "data" / "trajectories.db"
 TRAJECTORY_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 TRAJECTORY_DATABASE_URL = f"sqlite:///{TRAJECTORY_DB_PATH}"
-trajectory_engine = create_engine(TRAJECTORY_DATABASE_URL, echo=False)
+# A pooled, thread-safe engine: WAL lets readers and a writer proceed concurrently
+# (the few-shot store is read on the inference path while episodes are written),
+# and check_same_thread=False allows the pooled connection to be reused across the
+# app's worker threads. SQLite default driver pooling reuses the connection.
+trajectory_engine = create_engine(
+    TRAJECTORY_DATABASE_URL,
+    echo=False,
+    connect_args={"check_same_thread": False},
+)
+
+
+@event.listens_for(trajectory_engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, _connection_record):  # pragma: no cover - driver hook
+    """Enable WAL + NORMAL sync on every new SQLite connection for safe concurrency."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
+
+
 TrajectorySessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=trajectory_engine)
 TrajectoryBase = declarative_base()
 
