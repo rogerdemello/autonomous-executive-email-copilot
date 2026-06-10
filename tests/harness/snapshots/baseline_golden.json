@@ -1,0 +1,2432 @@
+{
+  "easy_classification|balanced|42": {
+    "breakdown": {
+      "classification_accuracy": 0.999999
+    },
+    "persona": "balanced",
+    "score": 0.999999,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "e4",
+        "reason": "Correct classification of email e4 as normal",
+        "score_delta": 0.199999,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "e2",
+        "reason": "Correct classification of email e2 as spam",
+        "score_delta": 0.2,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "e3",
+        "reason": "Correct classification of email e3 as normal",
+        "score_delta": 0.2,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "e5",
+        "reason": "Correct classification of email e5 as urgent",
+        "score_delta": 0.2,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "e1",
+        "reason": "Correct classification of email e1 as urgent",
+        "score_delta": 0.199999,
+        "step_number": 6
+      },
+      {
+        "action": "escalate",
+        "email_id": "e1",
+        "reason": "Escalated email e1",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "escalate",
+        "email_id": "e5",
+        "reason": "Escalated email e5",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "defer",
+        "email_id": "e4",
+        "reason": "Deferred email e4",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "defer",
+        "email_id": "e3",
+        "reason": "Deferred email e3",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.166666,
+        "step_number": 11
+      },
+      {
+        "action": "classify",
+        "email_id": "e6",
+        "reason": "Correct classification of email e6 as normal",
+        "score_delta": 0.166666,
+        "step_number": 12
+      },
+      {
+        "action": "defer",
+        "email_id": "e6",
+        "reason": "Deferred email e6",
+        "score_delta": 0.0,
+        "step_number": 13
+      }
+    ],
+    "task_id": "easy_classification",
+    "total_reward": 0.714777
+  },
+  "easy_classification|balanced|43": {
+    "breakdown": {
+      "classification_accuracy": 0.999999
+    },
+    "persona": "balanced",
+    "score": 0.999999,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "e2",
+        "reason": "Correct classification of email e2 as spam",
+        "score_delta": 0.199999,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "e5",
+        "reason": "Correct classification of email e5 as urgent",
+        "score_delta": 0.2,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "e4",
+        "reason": "Correct classification of email e4 as normal",
+        "score_delta": 0.2,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "e3",
+        "reason": "Correct classification of email e3 as normal",
+        "score_delta": 0.2,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "e1",
+        "reason": "Correct classification of email e1 as urgent",
+        "score_delta": 0.199999,
+        "step_number": 6
+      },
+      {
+        "action": "escalate",
+        "email_id": "e1",
+        "reason": "Escalated email e1",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "escalate",
+        "email_id": "e5",
+        "reason": "Escalated email e5",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "defer",
+        "email_id": "e4",
+        "reason": "Deferred email e4",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "defer",
+        "email_id": "e3",
+        "reason": "Deferred email e3",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.166666,
+        "step_number": 12
+      },
+      {
+        "action": "classify",
+        "email_id": "e6",
+        "reason": "Correct classification of email e6 as normal",
+        "score_delta": 0.166666,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "e6",
+        "reason": "Deferred email e6",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "easy_classification",
+    "total_reward": 0.714777
+  },
+  "easy_classification|chill_manager|42": {
+    "breakdown": {
+      "classification_accuracy": 0.999999
+    },
+    "persona": "chill_manager",
+    "score": 0.999999,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "e4",
+        "reason": "Correct classification of email e4 as normal",
+        "score_delta": 0.199999,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "e2",
+        "reason": "Correct classification of email e2 as spam",
+        "score_delta": 0.2,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "e3",
+        "reason": "Correct classification of email e3 as normal",
+        "score_delta": 0.2,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "e5",
+        "reason": "Correct classification of email e5 as urgent",
+        "score_delta": 0.2,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "e1",
+        "reason": "Correct classification of email e1 as urgent",
+        "score_delta": 0.199999,
+        "step_number": 6
+      },
+      {
+        "action": "escalate",
+        "email_id": "e1",
+        "reason": "Escalated email e1",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "escalate",
+        "email_id": "e5",
+        "reason": "Escalated email e5",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "defer",
+        "email_id": "e4",
+        "reason": "Deferred email e4",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "defer",
+        "email_id": "e3",
+        "reason": "Deferred email e3",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.166666,
+        "step_number": 11
+      },
+      {
+        "action": "classify",
+        "email_id": "e6",
+        "reason": "Correct classification of email e6 as normal",
+        "score_delta": 0.166666,
+        "step_number": 12
+      },
+      {
+        "action": "defer",
+        "email_id": "e6",
+        "reason": "Deferred email e6",
+        "score_delta": 0.0,
+        "step_number": 13
+      }
+    ],
+    "task_id": "easy_classification",
+    "total_reward": 0.718621
+  },
+  "easy_classification|chill_manager|43": {
+    "breakdown": {
+      "classification_accuracy": 0.999999
+    },
+    "persona": "chill_manager",
+    "score": 0.999999,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "e2",
+        "reason": "Correct classification of email e2 as spam",
+        "score_delta": 0.199999,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "e5",
+        "reason": "Correct classification of email e5 as urgent",
+        "score_delta": 0.2,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "e4",
+        "reason": "Correct classification of email e4 as normal",
+        "score_delta": 0.2,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "e3",
+        "reason": "Correct classification of email e3 as normal",
+        "score_delta": 0.2,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "e1",
+        "reason": "Correct classification of email e1 as urgent",
+        "score_delta": 0.199999,
+        "step_number": 6
+      },
+      {
+        "action": "escalate",
+        "email_id": "e1",
+        "reason": "Escalated email e1",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "escalate",
+        "email_id": "e5",
+        "reason": "Escalated email e5",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "defer",
+        "email_id": "e4",
+        "reason": "Deferred email e4",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "defer",
+        "email_id": "e3",
+        "reason": "Deferred email e3",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.166666,
+        "step_number": 12
+      },
+      {
+        "action": "classify",
+        "email_id": "e6",
+        "reason": "Correct classification of email e6 as normal",
+        "score_delta": 0.166666,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "e6",
+        "reason": "Deferred email e6",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "easy_classification",
+    "total_reward": 0.718621
+  },
+  "easy_classification|strict_ceo|42": {
+    "breakdown": {
+      "classification_accuracy": 0.999999
+    },
+    "persona": "strict_ceo",
+    "score": 0.999999,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "e4",
+        "reason": "Correct classification of email e4 as normal",
+        "score_delta": 0.199999,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "e2",
+        "reason": "Correct classification of email e2 as spam",
+        "score_delta": 0.2,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "e3",
+        "reason": "Correct classification of email e3 as normal",
+        "score_delta": 0.2,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "e5",
+        "reason": "Correct classification of email e5 as urgent",
+        "score_delta": 0.2,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "e1",
+        "reason": "Correct classification of email e1 as urgent",
+        "score_delta": 0.199999,
+        "step_number": 6
+      },
+      {
+        "action": "escalate",
+        "email_id": "e1",
+        "reason": "Escalated email e1",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "escalate",
+        "email_id": "e5",
+        "reason": "Escalated email e5",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "defer",
+        "email_id": "e4",
+        "reason": "Deferred email e4",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "defer",
+        "email_id": "e3",
+        "reason": "Deferred email e3",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.166666,
+        "step_number": 11
+      },
+      {
+        "action": "classify",
+        "email_id": "e6",
+        "reason": "Correct classification of email e6 as normal",
+        "score_delta": 0.166666,
+        "step_number": 12
+      },
+      {
+        "action": "defer",
+        "email_id": "e6",
+        "reason": "Deferred email e6",
+        "score_delta": 0.0,
+        "step_number": 13
+      }
+    ],
+    "task_id": "easy_classification",
+    "total_reward": 0.710857
+  },
+  "easy_classification|strict_ceo|43": {
+    "breakdown": {
+      "classification_accuracy": 0.999999
+    },
+    "persona": "strict_ceo",
+    "score": 0.999999,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "e2",
+        "reason": "Correct classification of email e2 as spam",
+        "score_delta": 0.199999,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "e5",
+        "reason": "Correct classification of email e5 as urgent",
+        "score_delta": 0.2,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "e4",
+        "reason": "Correct classification of email e4 as normal",
+        "score_delta": 0.2,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "e3",
+        "reason": "Correct classification of email e3 as normal",
+        "score_delta": 0.2,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "e1",
+        "reason": "Correct classification of email e1 as urgent",
+        "score_delta": 0.199999,
+        "step_number": 6
+      },
+      {
+        "action": "escalate",
+        "email_id": "e1",
+        "reason": "Escalated email e1",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "escalate",
+        "email_id": "e5",
+        "reason": "Escalated email e5",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "defer",
+        "email_id": "e4",
+        "reason": "Deferred email e4",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "defer",
+        "email_id": "e3",
+        "reason": "Deferred email e3",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.166666,
+        "step_number": 12
+      },
+      {
+        "action": "classify",
+        "email_id": "e6",
+        "reason": "Correct classification of email e6 as normal",
+        "score_delta": 0.166666,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "e6",
+        "reason": "Deferred email e6",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "easy_classification",
+    "total_reward": 0.710857
+  },
+  "hard_full_management|balanced|42": {
+    "breakdown": {
+      "action_correctness": 0.818182,
+      "classification_accuracy": 0.916667,
+      "prioritization": 0.928571,
+      "resolved_ratio": 0.818182,
+      "response_quality": 0.2
+    },
+    "persona": "balanced",
+    "score": 0.600455,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.93",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "h4",
+        "reason": "Correct classification of email h4 as normal",
+        "score_delta": 0.0375,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "h5",
+        "reason": "Wrong classification of email h5: expected something else",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "h7",
+        "reason": "Correct classification of email h7 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "h8",
+        "reason": "Correct classification of email h8 as normal",
+        "score_delta": 0.0375,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "h3",
+        "reason": "Correct classification of email h3 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "h6",
+        "reason": "Correct classification of email h6 as spam",
+        "score_delta": 0.0375,
+        "step_number": 7
+      },
+      {
+        "action": "classify",
+        "email_id": "h1",
+        "reason": "Correct classification of email h1 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 8
+      },
+      {
+        "action": "classify",
+        "email_id": "h2",
+        "reason": "Correct classification of email h2 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 9
+      },
+      {
+        "action": "escalate",
+        "email_id": "h2",
+        "reason": "Escalated email h2",
+        "score_delta": 0.008333,
+        "step_number": 10
+      },
+      {
+        "action": "classify",
+        "email_id": "i1",
+        "reason": "Correct classification of email i1 as urgent",
+        "score_delta": 0.033333,
+        "step_number": 11
+      },
+      {
+        "action": "reply",
+        "email_id": "h3",
+        "reason": "Reply to email h3 was incorrect or inappropriate",
+        "score_delta": 0.0375,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "h1",
+        "reason": "Escalated email h1",
+        "score_delta": 0.0375,
+        "step_number": 13
+      },
+      {
+        "action": "reply",
+        "email_id": "h7",
+        "reason": "Replied to email h7, quality: 1.00",
+        "score_delta": 0.094166,
+        "step_number": 14
+      },
+      {
+        "action": "classify",
+        "email_id": "int_3615",
+        "reason": "Correct classification of email int_3615 as normal",
+        "score_delta": 0.03,
+        "step_number": 15
+      },
+      {
+        "action": "escalate",
+        "email_id": "i1",
+        "reason": "Escalated email i1",
+        "score_delta": 0.033333,
+        "step_number": 16
+      },
+      {
+        "action": "defer",
+        "email_id": "int_3615",
+        "reason": "Deferred email int_3615",
+        "score_delta": 0.0,
+        "step_number": 17
+      },
+      {
+        "action": "reply",
+        "email_id": "h5",
+        "reason": "Reply to email h5 was incorrect or inappropriate",
+        "score_delta": -0.031212,
+        "step_number": 18
+      },
+      {
+        "action": "classify",
+        "email_id": "int_5333",
+        "reason": "Correct classification of email int_5333 as normal",
+        "score_delta": 0.027273,
+        "step_number": 19
+      },
+      {
+        "action": "defer",
+        "email_id": "int_5333",
+        "reason": "Deferred email int_5333",
+        "score_delta": 0.0,
+        "step_number": 20
+      },
+      {
+        "action": "defer",
+        "email_id": "h4",
+        "reason": "Deferred email h4",
+        "score_delta": 0.03,
+        "step_number": 21
+      },
+      {
+        "action": "defer",
+        "email_id": "h8",
+        "reason": "Deferred email h8",
+        "score_delta": 0.03,
+        "step_number": 22
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 23
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.67",
+        "score_delta": -0.044545,
+        "step_number": 24
+      },
+      {
+        "action": "classify",
+        "email_id": "i2",
+        "reason": "Correct classification of email i2 as normal",
+        "score_delta": 0.025,
+        "step_number": 25
+      },
+      {
+        "action": "defer",
+        "email_id": "i2",
+        "reason": "Deferred email i2",
+        "score_delta": 0.027273,
+        "step_number": 26
+      }
+    ],
+    "task_id": "hard_full_management",
+    "total_reward": 0.934336
+  },
+  "hard_full_management|balanced|43": {
+    "breakdown": {
+      "action_correctness": 0.999999,
+      "classification_accuracy": 0.9,
+      "prioritization": 0.928571,
+      "resolved_ratio": 0.999999,
+      "response_quality": 0.333333
+    },
+    "persona": "balanced",
+    "score": 0.703333,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.93",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "h7",
+        "reason": "Correct classification of email h7 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "h8",
+        "reason": "Correct classification of email h8 as normal",
+        "score_delta": 0.0375,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "h5",
+        "reason": "Wrong classification of email h5: expected something else",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "h4",
+        "reason": "Correct classification of email h4 as normal",
+        "score_delta": 0.0375,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "h2",
+        "reason": "Correct classification of email h2 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "h6",
+        "reason": "Correct classification of email h6 as spam",
+        "score_delta": 0.0375,
+        "step_number": 7
+      },
+      {
+        "action": "classify",
+        "email_id": "h3",
+        "reason": "Correct classification of email h3 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 8
+      },
+      {
+        "action": "classify",
+        "email_id": "h1",
+        "reason": "Correct classification of email h1 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 9
+      },
+      {
+        "action": "escalate",
+        "email_id": "h2",
+        "reason": "Escalated email h2",
+        "score_delta": 0.042857,
+        "step_number": 10
+      },
+      {
+        "action": "reply",
+        "email_id": "h3",
+        "reason": "Reply to email h3 was incorrect or inappropriate",
+        "score_delta": 0.002976,
+        "step_number": 11
+      },
+      {
+        "action": "classify",
+        "email_id": "i1",
+        "reason": "Correct classification of email i1 as urgent",
+        "score_delta": 0.033333,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "h1",
+        "reason": "Escalated email h1",
+        "score_delta": 0.0375,
+        "step_number": 13
+      },
+      {
+        "action": "reply",
+        "email_id": "h7",
+        "reason": "Replied to email h7, quality: 1.00",
+        "score_delta": 0.170833,
+        "step_number": 14
+      },
+      {
+        "action": "escalate",
+        "email_id": "i1",
+        "reason": "Escalated email i1",
+        "score_delta": 0.0375,
+        "step_number": 15
+      },
+      {
+        "action": "reply",
+        "email_id": "h5",
+        "reason": "Reply to email h5 was incorrect or inappropriate",
+        "score_delta": 0.0375,
+        "step_number": 16
+      },
+      {
+        "action": "defer",
+        "email_id": "h4",
+        "reason": "Deferred email h4",
+        "score_delta": 0.0375,
+        "step_number": 17
+      },
+      {
+        "action": "defer",
+        "email_id": "h8",
+        "reason": "Deferred email h8",
+        "score_delta": 0.0375,
+        "step_number": 18
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 19
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 20
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.06,
+        "step_number": 21
+      },
+      {
+        "action": "classify",
+        "email_id": "i2",
+        "reason": "Correct classification of email i2 as normal",
+        "score_delta": 0.03,
+        "step_number": 22
+      },
+      {
+        "action": "defer",
+        "email_id": "i2",
+        "reason": "Deferred email i2",
+        "score_delta": 0.033333,
+        "step_number": 23
+      }
+    ],
+    "task_id": "hard_full_management",
+    "total_reward": 0.928529
+  },
+  "hard_full_management|chill_manager|42": {
+    "breakdown": {
+      "action_correctness": 0.818182,
+      "classification_accuracy": 0.916667,
+      "prioritization": 0.928571,
+      "resolved_ratio": 0.818182,
+      "response_quality": 0.2
+    },
+    "persona": "chill_manager",
+    "score": 0.600455,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.93",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "h4",
+        "reason": "Correct classification of email h4 as normal",
+        "score_delta": 0.0375,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "h5",
+        "reason": "Wrong classification of email h5: expected something else",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "h7",
+        "reason": "Correct classification of email h7 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "h8",
+        "reason": "Correct classification of email h8 as normal",
+        "score_delta": 0.0375,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "h3",
+        "reason": "Correct classification of email h3 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "h6",
+        "reason": "Correct classification of email h6 as spam",
+        "score_delta": 0.0375,
+        "step_number": 7
+      },
+      {
+        "action": "classify",
+        "email_id": "h1",
+        "reason": "Correct classification of email h1 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 8
+      },
+      {
+        "action": "classify",
+        "email_id": "h2",
+        "reason": "Correct classification of email h2 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 9
+      },
+      {
+        "action": "escalate",
+        "email_id": "h2",
+        "reason": "Escalated email h2",
+        "score_delta": 0.008333,
+        "step_number": 10
+      },
+      {
+        "action": "classify",
+        "email_id": "i1",
+        "reason": "Correct classification of email i1 as urgent",
+        "score_delta": 0.033333,
+        "step_number": 11
+      },
+      {
+        "action": "reply",
+        "email_id": "h3",
+        "reason": "Reply to email h3 was incorrect or inappropriate",
+        "score_delta": 0.0375,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "h1",
+        "reason": "Escalated email h1",
+        "score_delta": 0.0375,
+        "step_number": 13
+      },
+      {
+        "action": "reply",
+        "email_id": "h7",
+        "reason": "Replied to email h7, quality: 1.00",
+        "score_delta": 0.094166,
+        "step_number": 14
+      },
+      {
+        "action": "classify",
+        "email_id": "int_3615",
+        "reason": "Correct classification of email int_3615 as normal",
+        "score_delta": 0.03,
+        "step_number": 15
+      },
+      {
+        "action": "escalate",
+        "email_id": "i1",
+        "reason": "Escalated email i1",
+        "score_delta": 0.033333,
+        "step_number": 16
+      },
+      {
+        "action": "defer",
+        "email_id": "int_3615",
+        "reason": "Deferred email int_3615",
+        "score_delta": 0.0,
+        "step_number": 17
+      },
+      {
+        "action": "reply",
+        "email_id": "h5",
+        "reason": "Reply to email h5 was incorrect or inappropriate",
+        "score_delta": -0.031212,
+        "step_number": 18
+      },
+      {
+        "action": "classify",
+        "email_id": "int_5333",
+        "reason": "Correct classification of email int_5333 as normal",
+        "score_delta": 0.027273,
+        "step_number": 19
+      },
+      {
+        "action": "defer",
+        "email_id": "int_5333",
+        "reason": "Deferred email int_5333",
+        "score_delta": 0.0,
+        "step_number": 20
+      },
+      {
+        "action": "defer",
+        "email_id": "h4",
+        "reason": "Deferred email h4",
+        "score_delta": 0.03,
+        "step_number": 21
+      },
+      {
+        "action": "defer",
+        "email_id": "h8",
+        "reason": "Deferred email h8",
+        "score_delta": 0.03,
+        "step_number": 22
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 23
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.67",
+        "score_delta": -0.044545,
+        "step_number": 24
+      },
+      {
+        "action": "classify",
+        "email_id": "i2",
+        "reason": "Correct classification of email i2 as normal",
+        "score_delta": 0.025,
+        "step_number": 25
+      },
+      {
+        "action": "defer",
+        "email_id": "i2",
+        "reason": "Deferred email i2",
+        "score_delta": 0.027273,
+        "step_number": 26
+      }
+    ],
+    "task_id": "hard_full_management",
+    "total_reward": 0.934602
+  },
+  "hard_full_management|chill_manager|43": {
+    "breakdown": {
+      "action_correctness": 0.999999,
+      "classification_accuracy": 0.9,
+      "prioritization": 0.928571,
+      "resolved_ratio": 0.999999,
+      "response_quality": 0.333333
+    },
+    "persona": "chill_manager",
+    "score": 0.703333,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.93",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "h7",
+        "reason": "Correct classification of email h7 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "h8",
+        "reason": "Correct classification of email h8 as normal",
+        "score_delta": 0.0375,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "h5",
+        "reason": "Wrong classification of email h5: expected something else",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "h4",
+        "reason": "Correct classification of email h4 as normal",
+        "score_delta": 0.0375,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "h2",
+        "reason": "Correct classification of email h2 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "h6",
+        "reason": "Correct classification of email h6 as spam",
+        "score_delta": 0.0375,
+        "step_number": 7
+      },
+      {
+        "action": "classify",
+        "email_id": "h3",
+        "reason": "Correct classification of email h3 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 8
+      },
+      {
+        "action": "classify",
+        "email_id": "h1",
+        "reason": "Correct classification of email h1 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 9
+      },
+      {
+        "action": "escalate",
+        "email_id": "h2",
+        "reason": "Escalated email h2",
+        "score_delta": 0.042857,
+        "step_number": 10
+      },
+      {
+        "action": "reply",
+        "email_id": "h3",
+        "reason": "Reply to email h3 was incorrect or inappropriate",
+        "score_delta": 0.002976,
+        "step_number": 11
+      },
+      {
+        "action": "classify",
+        "email_id": "i1",
+        "reason": "Correct classification of email i1 as urgent",
+        "score_delta": 0.033333,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "h1",
+        "reason": "Escalated email h1",
+        "score_delta": 0.0375,
+        "step_number": 13
+      },
+      {
+        "action": "reply",
+        "email_id": "h7",
+        "reason": "Replied to email h7, quality: 1.00",
+        "score_delta": 0.170833,
+        "step_number": 14
+      },
+      {
+        "action": "escalate",
+        "email_id": "i1",
+        "reason": "Escalated email i1",
+        "score_delta": 0.0375,
+        "step_number": 15
+      },
+      {
+        "action": "reply",
+        "email_id": "h5",
+        "reason": "Reply to email h5 was incorrect or inappropriate",
+        "score_delta": 0.0375,
+        "step_number": 16
+      },
+      {
+        "action": "defer",
+        "email_id": "h4",
+        "reason": "Deferred email h4",
+        "score_delta": 0.0375,
+        "step_number": 17
+      },
+      {
+        "action": "defer",
+        "email_id": "h8",
+        "reason": "Deferred email h8",
+        "score_delta": 0.0375,
+        "step_number": 18
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 19
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 20
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.06,
+        "step_number": 21
+      },
+      {
+        "action": "classify",
+        "email_id": "i2",
+        "reason": "Correct classification of email i2 as normal",
+        "score_delta": 0.03,
+        "step_number": 22
+      },
+      {
+        "action": "defer",
+        "email_id": "i2",
+        "reason": "Deferred email i2",
+        "score_delta": 0.033333,
+        "step_number": 23
+      }
+    ],
+    "task_id": "hard_full_management",
+    "total_reward": 0.928529
+  },
+  "hard_full_management|strict_ceo|42": {
+    "breakdown": {
+      "action_correctness": 0.818182,
+      "classification_accuracy": 0.916667,
+      "prioritization": 0.928571,
+      "resolved_ratio": 0.818182,
+      "response_quality": 0.2
+    },
+    "persona": "strict_ceo",
+    "score": 0.600455,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.93",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "h4",
+        "reason": "Correct classification of email h4 as normal",
+        "score_delta": 0.0375,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "h5",
+        "reason": "Wrong classification of email h5: expected something else",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "h7",
+        "reason": "Correct classification of email h7 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "h8",
+        "reason": "Correct classification of email h8 as normal",
+        "score_delta": 0.0375,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "h3",
+        "reason": "Correct classification of email h3 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "h6",
+        "reason": "Correct classification of email h6 as spam",
+        "score_delta": 0.0375,
+        "step_number": 7
+      },
+      {
+        "action": "classify",
+        "email_id": "h1",
+        "reason": "Correct classification of email h1 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 8
+      },
+      {
+        "action": "classify",
+        "email_id": "h2",
+        "reason": "Correct classification of email h2 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 9
+      },
+      {
+        "action": "escalate",
+        "email_id": "h2",
+        "reason": "Escalated email h2",
+        "score_delta": 0.008333,
+        "step_number": 10
+      },
+      {
+        "action": "classify",
+        "email_id": "i1",
+        "reason": "Correct classification of email i1 as urgent",
+        "score_delta": 0.033333,
+        "step_number": 11
+      },
+      {
+        "action": "reply",
+        "email_id": "h3",
+        "reason": "Reply to email h3 was incorrect or inappropriate",
+        "score_delta": 0.0375,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "h1",
+        "reason": "Escalated email h1",
+        "score_delta": 0.0375,
+        "step_number": 13
+      },
+      {
+        "action": "reply",
+        "email_id": "h7",
+        "reason": "Replied to email h7, quality: 1.00",
+        "score_delta": 0.094166,
+        "step_number": 14
+      },
+      {
+        "action": "classify",
+        "email_id": "int_3615",
+        "reason": "Correct classification of email int_3615 as normal",
+        "score_delta": 0.03,
+        "step_number": 15
+      },
+      {
+        "action": "escalate",
+        "email_id": "i1",
+        "reason": "Escalated email i1",
+        "score_delta": 0.033333,
+        "step_number": 16
+      },
+      {
+        "action": "defer",
+        "email_id": "int_3615",
+        "reason": "Deferred email int_3615",
+        "score_delta": 0.0,
+        "step_number": 17
+      },
+      {
+        "action": "reply",
+        "email_id": "h5",
+        "reason": "Reply to email h5 was incorrect or inappropriate",
+        "score_delta": -0.031212,
+        "step_number": 18
+      },
+      {
+        "action": "classify",
+        "email_id": "int_5333",
+        "reason": "Correct classification of email int_5333 as normal",
+        "score_delta": 0.027273,
+        "step_number": 19
+      },
+      {
+        "action": "defer",
+        "email_id": "int_5333",
+        "reason": "Deferred email int_5333",
+        "score_delta": 0.0,
+        "step_number": 20
+      },
+      {
+        "action": "defer",
+        "email_id": "h4",
+        "reason": "Deferred email h4",
+        "score_delta": 0.03,
+        "step_number": 21
+      },
+      {
+        "action": "defer",
+        "email_id": "h8",
+        "reason": "Deferred email h8",
+        "score_delta": 0.03,
+        "step_number": 22
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 23
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.67",
+        "score_delta": -0.044545,
+        "step_number": 24
+      },
+      {
+        "action": "classify",
+        "email_id": "i2",
+        "reason": "Correct classification of email i2 as normal",
+        "score_delta": 0.025,
+        "step_number": 25
+      },
+      {
+        "action": "defer",
+        "email_id": "i2",
+        "reason": "Deferred email i2",
+        "score_delta": 0.027273,
+        "step_number": 26
+      }
+    ],
+    "task_id": "hard_full_management",
+    "total_reward": 0.934067
+  },
+  "hard_full_management|strict_ceo|43": {
+    "breakdown": {
+      "action_correctness": 0.999999,
+      "classification_accuracy": 0.9,
+      "prioritization": 0.928571,
+      "resolved_ratio": 0.999999,
+      "response_quality": 0.333333
+    },
+    "persona": "strict_ceo",
+    "score": 0.703333,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.93",
+        "score_delta": 0.0,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "h7",
+        "reason": "Correct classification of email h7 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "h8",
+        "reason": "Correct classification of email h8 as normal",
+        "score_delta": 0.0375,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "h5",
+        "reason": "Wrong classification of email h5: expected something else",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "h4",
+        "reason": "Correct classification of email h4 as normal",
+        "score_delta": 0.0375,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "h2",
+        "reason": "Correct classification of email h2 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "h6",
+        "reason": "Correct classification of email h6 as spam",
+        "score_delta": 0.0375,
+        "step_number": 7
+      },
+      {
+        "action": "classify",
+        "email_id": "h3",
+        "reason": "Correct classification of email h3 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 8
+      },
+      {
+        "action": "classify",
+        "email_id": "h1",
+        "reason": "Correct classification of email h1 as urgent",
+        "score_delta": 0.0375,
+        "step_number": 9
+      },
+      {
+        "action": "escalate",
+        "email_id": "h2",
+        "reason": "Escalated email h2",
+        "score_delta": 0.042857,
+        "step_number": 10
+      },
+      {
+        "action": "reply",
+        "email_id": "h3",
+        "reason": "Reply to email h3 was incorrect or inappropriate",
+        "score_delta": 0.002976,
+        "step_number": 11
+      },
+      {
+        "action": "classify",
+        "email_id": "i1",
+        "reason": "Correct classification of email i1 as urgent",
+        "score_delta": 0.033333,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "h1",
+        "reason": "Escalated email h1",
+        "score_delta": 0.0375,
+        "step_number": 13
+      },
+      {
+        "action": "reply",
+        "email_id": "h7",
+        "reason": "Replied to email h7, quality: 1.00",
+        "score_delta": 0.170833,
+        "step_number": 14
+      },
+      {
+        "action": "escalate",
+        "email_id": "i1",
+        "reason": "Escalated email i1",
+        "score_delta": 0.0375,
+        "step_number": 15
+      },
+      {
+        "action": "reply",
+        "email_id": "h5",
+        "reason": "Reply to email h5 was incorrect or inappropriate",
+        "score_delta": 0.0375,
+        "step_number": 16
+      },
+      {
+        "action": "defer",
+        "email_id": "h4",
+        "reason": "Deferred email h4",
+        "score_delta": 0.0375,
+        "step_number": 17
+      },
+      {
+        "action": "defer",
+        "email_id": "h8",
+        "reason": "Deferred email h8",
+        "score_delta": 0.0375,
+        "step_number": 18
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 19
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": 0.0,
+        "step_number": 20
+      },
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 0.00",
+        "score_delta": -0.06,
+        "step_number": 21
+      },
+      {
+        "action": "classify",
+        "email_id": "i2",
+        "reason": "Correct classification of email i2 as normal",
+        "score_delta": 0.03,
+        "step_number": 22
+      },
+      {
+        "action": "defer",
+        "email_id": "i2",
+        "reason": "Deferred email i2",
+        "score_delta": 0.033333,
+        "step_number": 23
+      }
+    ],
+    "task_id": "hard_full_management",
+    "total_reward": 0.928529
+  },
+  "medium_prioritization|balanced|42": {
+    "breakdown": {
+      "prioritization": 0.999999,
+      "resolved_ratio": 0.999999
+    },
+    "persona": "balanced",
+    "score": 0.999999,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.999998,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "m4",
+        "reason": "Correct classification of email m4 as urgent",
+        "score_delta": 0.0,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "m2",
+        "reason": "Correct classification of email m2 as urgent",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "m3",
+        "reason": "Correct classification of email m3 as normal",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "m5",
+        "reason": "Correct classification of email m5 as spam",
+        "score_delta": 0.0,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "m1",
+        "reason": "Correct classification of email m1 as urgent",
+        "score_delta": 0.0,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "m6",
+        "reason": "Wrong classification of email m6: expected something else",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "reply",
+        "email_id": "m1",
+        "reason": "Reply to email m1 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "escalate",
+        "email_id": "m2",
+        "reason": "Escalated email m2",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "reply",
+        "email_id": "m4",
+        "reason": "Reply to email m4 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "classify",
+        "email_id": "m7",
+        "reason": "Correct classification of email m7 as urgent",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "escalate",
+        "email_id": "m7",
+        "reason": "Escalated email m7",
+        "score_delta": 0.0,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "m6",
+        "reason": "Escalated email m6",
+        "score_delta": 0.0,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "m3",
+        "reason": "Deferred email m3",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "medium_prioritization",
+    "total_reward": 0.869452
+  },
+  "medium_prioritization|balanced|43": {
+    "breakdown": {
+      "prioritization": 0.999999,
+      "resolved_ratio": 0.999999
+    },
+    "persona": "balanced",
+    "score": 0.999999,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.999998,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "m6",
+        "reason": "Wrong classification of email m6: expected something else",
+        "score_delta": 0.0,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "m5",
+        "reason": "Correct classification of email m5 as spam",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "m4",
+        "reason": "Correct classification of email m4 as urgent",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "m2",
+        "reason": "Correct classification of email m2 as urgent",
+        "score_delta": 0.0,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "m3",
+        "reason": "Correct classification of email m3 as normal",
+        "score_delta": 0.0,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "m1",
+        "reason": "Correct classification of email m1 as urgent",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "reply",
+        "email_id": "m1",
+        "reason": "Reply to email m1 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "escalate",
+        "email_id": "m2",
+        "reason": "Escalated email m2",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "classify",
+        "email_id": "m7",
+        "reason": "Correct classification of email m7 as urgent",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "escalate",
+        "email_id": "m7",
+        "reason": "Escalated email m7",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "reply",
+        "email_id": "m4",
+        "reason": "Reply to email m4 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "m6",
+        "reason": "Escalated email m6",
+        "score_delta": 0.0,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "m3",
+        "reason": "Deferred email m3",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "medium_prioritization",
+    "total_reward": 0.869452
+  },
+  "medium_prioritization|chill_manager|42": {
+    "breakdown": {
+      "prioritization": 0.999999,
+      "resolved_ratio": 0.999999
+    },
+    "persona": "chill_manager",
+    "score": 0.999999,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.999998,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "m4",
+        "reason": "Correct classification of email m4 as urgent",
+        "score_delta": 0.0,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "m2",
+        "reason": "Correct classification of email m2 as urgent",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "m3",
+        "reason": "Correct classification of email m3 as normal",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "m5",
+        "reason": "Correct classification of email m5 as spam",
+        "score_delta": 0.0,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "m1",
+        "reason": "Correct classification of email m1 as urgent",
+        "score_delta": 0.0,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "m6",
+        "reason": "Wrong classification of email m6: expected something else",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "reply",
+        "email_id": "m1",
+        "reason": "Reply to email m1 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "escalate",
+        "email_id": "m2",
+        "reason": "Escalated email m2",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "reply",
+        "email_id": "m4",
+        "reason": "Reply to email m4 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "classify",
+        "email_id": "m7",
+        "reason": "Correct classification of email m7 as urgent",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "escalate",
+        "email_id": "m7",
+        "reason": "Escalated email m7",
+        "score_delta": 0.0,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "m6",
+        "reason": "Escalated email m6",
+        "score_delta": 0.0,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "m3",
+        "reason": "Deferred email m3",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "medium_prioritization",
+    "total_reward": 0.869452
+  },
+  "medium_prioritization|chill_manager|43": {
+    "breakdown": {
+      "prioritization": 0.999999,
+      "resolved_ratio": 0.999999
+    },
+    "persona": "chill_manager",
+    "score": 0.999999,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.999998,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "m6",
+        "reason": "Wrong classification of email m6: expected something else",
+        "score_delta": 0.0,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "m5",
+        "reason": "Correct classification of email m5 as spam",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "m4",
+        "reason": "Correct classification of email m4 as urgent",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "m2",
+        "reason": "Correct classification of email m2 as urgent",
+        "score_delta": 0.0,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "m3",
+        "reason": "Correct classification of email m3 as normal",
+        "score_delta": 0.0,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "m1",
+        "reason": "Correct classification of email m1 as urgent",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "reply",
+        "email_id": "m1",
+        "reason": "Reply to email m1 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "escalate",
+        "email_id": "m2",
+        "reason": "Escalated email m2",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "classify",
+        "email_id": "m7",
+        "reason": "Correct classification of email m7 as urgent",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "escalate",
+        "email_id": "m7",
+        "reason": "Escalated email m7",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "reply",
+        "email_id": "m4",
+        "reason": "Reply to email m4 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "m6",
+        "reason": "Escalated email m6",
+        "score_delta": 0.0,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "m3",
+        "reason": "Deferred email m3",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "medium_prioritization",
+    "total_reward": 0.869452
+  },
+  "medium_prioritization|strict_ceo|42": {
+    "breakdown": {
+      "prioritization": 0.999999,
+      "resolved_ratio": 0.999999
+    },
+    "persona": "strict_ceo",
+    "score": 0.999999,
+    "seed": 42,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.999998,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "m4",
+        "reason": "Correct classification of email m4 as urgent",
+        "score_delta": 0.0,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "m2",
+        "reason": "Correct classification of email m2 as urgent",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "m3",
+        "reason": "Correct classification of email m3 as normal",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "m5",
+        "reason": "Correct classification of email m5 as spam",
+        "score_delta": 0.0,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "m1",
+        "reason": "Correct classification of email m1 as urgent",
+        "score_delta": 0.0,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "m6",
+        "reason": "Wrong classification of email m6: expected something else",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "reply",
+        "email_id": "m1",
+        "reason": "Reply to email m1 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "escalate",
+        "email_id": "m2",
+        "reason": "Escalated email m2",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "reply",
+        "email_id": "m4",
+        "reason": "Reply to email m4 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "classify",
+        "email_id": "m7",
+        "reason": "Correct classification of email m7 as urgent",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "escalate",
+        "email_id": "m7",
+        "reason": "Escalated email m7",
+        "score_delta": 0.0,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "m6",
+        "reason": "Escalated email m6",
+        "score_delta": 0.0,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "m3",
+        "reason": "Deferred email m3",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "medium_prioritization",
+    "total_reward": 0.869452
+  },
+  "medium_prioritization|strict_ceo|43": {
+    "breakdown": {
+      "prioritization": 0.999999,
+      "resolved_ratio": 0.999999
+    },
+    "persona": "strict_ceo",
+    "score": 0.999999,
+    "seed": 43,
+    "step_breakdown": [
+      {
+        "action": "prioritize",
+        "email_id": null,
+        "reason": "Prioritization action, similarity: 1.00",
+        "score_delta": 0.999998,
+        "step_number": 1
+      },
+      {
+        "action": "classify",
+        "email_id": "m6",
+        "reason": "Wrong classification of email m6: expected something else",
+        "score_delta": 0.0,
+        "step_number": 2
+      },
+      {
+        "action": "classify",
+        "email_id": "m5",
+        "reason": "Correct classification of email m5 as spam",
+        "score_delta": 0.0,
+        "step_number": 3
+      },
+      {
+        "action": "classify",
+        "email_id": "m4",
+        "reason": "Correct classification of email m4 as urgent",
+        "score_delta": 0.0,
+        "step_number": 4
+      },
+      {
+        "action": "classify",
+        "email_id": "m2",
+        "reason": "Correct classification of email m2 as urgent",
+        "score_delta": 0.0,
+        "step_number": 5
+      },
+      {
+        "action": "classify",
+        "email_id": "m3",
+        "reason": "Correct classification of email m3 as normal",
+        "score_delta": 0.0,
+        "step_number": 6
+      },
+      {
+        "action": "classify",
+        "email_id": "m1",
+        "reason": "Correct classification of email m1 as urgent",
+        "score_delta": 0.0,
+        "step_number": 7
+      },
+      {
+        "action": "reply",
+        "email_id": "m1",
+        "reason": "Reply to email m1 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 8
+      },
+      {
+        "action": "escalate",
+        "email_id": "m2",
+        "reason": "Escalated email m2",
+        "score_delta": 0.0,
+        "step_number": 9
+      },
+      {
+        "action": "classify",
+        "email_id": "m7",
+        "reason": "Correct classification of email m7 as urgent",
+        "score_delta": 0.0,
+        "step_number": 10
+      },
+      {
+        "action": "escalate",
+        "email_id": "m7",
+        "reason": "Escalated email m7",
+        "score_delta": 0.0,
+        "step_number": 11
+      },
+      {
+        "action": "reply",
+        "email_id": "m4",
+        "reason": "Reply to email m4 was incorrect or inappropriate",
+        "score_delta": 0.0,
+        "step_number": 12
+      },
+      {
+        "action": "escalate",
+        "email_id": "m6",
+        "reason": "Escalated email m6",
+        "score_delta": 0.0,
+        "step_number": 13
+      },
+      {
+        "action": "defer",
+        "email_id": "m3",
+        "reason": "Deferred email m3",
+        "score_delta": 0.0,
+        "step_number": 14
+      }
+    ],
+    "task_id": "medium_prioritization",
+    "total_reward": 0.869452
+  }
+}

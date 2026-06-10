@@ -48,6 +48,18 @@ jobs:
           files: coverage.xml
         continue-on-error: true  # don't fail CI when no token is configured
 
+  invariant-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Invariant harness (INV-1..5, property/fuzz, golden, determinism)
+        run: python -m pytest tests/harness -q
+
   typecheck:
     runs-on: ubuntu-latest
     continue-on-error: true  # informational until the codebase is fully typed

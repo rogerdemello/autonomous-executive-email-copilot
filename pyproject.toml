@@ -26,6 +26,7 @@ dependencies = [
 dev = [
   "pytest",
   "pytest-cov",
+  "hypothesis",
   "ruff",
   "mypy",
   "bandit",
@@ -37,6 +38,12 @@ server = "server.app:main"
 
 [tool.setuptools]
 packages = ["env", "baseline", "server", "benchmark", "telemetry", "reports"]
+
+[tool.pytest.ini_options]
+markers = [
+  "golden: golden-snapshot tests; rebaseline only via scripts/regen_golden.py",
+  "network: tests that require real network access; deselected in CI",
+]
 
 [tool.ruff]
 line-length = 100
