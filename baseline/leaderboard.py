@@ -7,42 +7,17 @@ from pathlib import Path
 from statistics import mean, stdev
 
 from baseline.run_baseline import run
+from benchmark.stats_util import ci95_margin, t_critical_95
 
-# t-distribution critical values for 95% CI (approximate)
-_T_CRITICAL = {
-    2: 12.706,
-    3: 4.303,
-    4: 3.182,
-    5: 2.776,
-    6: 2.571,
-    7: 2.447,
-    8: 2.365,
-    9: 2.306,
-    10: 2.262,
-    11: 2.228,
-    12: 2.201,
-    13: 2.179,
-    14: 2.160,
-    15: 2.145,
-}
-
-
-def _get_t_critical(df: int) -> float:
-    """Get t-critical value for 95% CI with given degrees of freedom."""
-    if df < 2:
-        return 12.706  # fallback for very small samples
-    if df in _T_CRITICAL:
-        return _T_CRITICAL[df]
-    # Approximate for larger df: use z-score as approximation
-    return 1.96
+# Kept for backward compatibility with any external callers/tests.
+_get_t_critical = t_critical_95
 
 
 def _calc_confidence_interval(scores: list[float]) -> tuple[float, float]:
     """Calculate mean ± 95% CI margin of error."""
     if len(scores) < 2:
         return 0.0, 0.0
-    se = stdev(scores) / (len(scores) ** 0.5)
-    margin = _get_t_critical(len(scores) - 1) * se
+    margin = ci95_margin(scores)
     return round(margin, 6), round(margin, 6)
 
 

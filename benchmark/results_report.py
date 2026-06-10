@@ -6,6 +6,7 @@ import os
 from statistics import mean, stdev
 
 from .runner import BenchmarkResult
+from .significance import compare_all_pairs
 
 # Columns shared by the aggregated rows, in stable display order.
 AGGREGATE_FIELDS = [
@@ -77,6 +78,7 @@ def aggregate_results(results: list[BenchmarkResult]) -> list[dict]:
 def _write_json(rows: list[dict], results: list[BenchmarkResult], path: str) -> None:
     payload = {
         "aggregates": rows,
+        "significance": compare_all_pairs(results),
         "results": [r.to_dict() for r in results],
     }
     with open(path, "w", encoding="utf-8") as handle:

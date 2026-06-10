@@ -84,6 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=100,
         help="Maximum steps per episode (default: %(default)s).",
     )
+    parser.add_argument(
+        "--record-history",
+        action="store_true",
+        help="Append a per-agent run summary (+deltas vs the prior run) to the history file.",
+    )
+    parser.add_argument(
+        "--history-path",
+        default="benchmark/leaderboard_history.jsonl",
+        help="History file for --record-history (default: %(default)s).",
+    )
     return parser
 
 
@@ -94,6 +104,8 @@ def run(
     agents: list[str],
     out_dir: str,
     max_steps: int = 100,
+    record_history: bool = False,
+    history_path: str = "benchmark/leaderboard_history.jsonl",
 ) -> list[BenchmarkResult]:
     """Run the selected agents and write artifacts to ``out_dir``."""
     runner = BenchmarkRunner(
@@ -112,6 +124,12 @@ def run(
     for name, path in artifacts.items():
         print(f"  {name}: {path}")
 
+    if record_history:
+        from benchmark.history import append_run
+
+        entry = append_run(history_path, results, label=",".join(agents))
+        print(f"  history: appended run to {history_path} (deltas: {entry['deltas']})")
+
     return results
 
 
@@ -125,6 +143,8 @@ def main(argv: list[str] | None = None) -> int:
         agents=args.agents,
         out_dir=args.out,
         max_steps=args.max_steps,
+        record_history=args.record_history,
+        history_path=args.history_path,
     )
     return 0
 
