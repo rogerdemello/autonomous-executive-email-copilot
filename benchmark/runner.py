@@ -6,6 +6,7 @@ from .agents import (
     BenchmarkMetrics,
     LLMAgent,
     MultiAgent,
+    ReflectiveAgent,
 )
 
 DEFAULT_TASKS = [
@@ -70,6 +71,7 @@ class BenchmarkRunner:
         self.baseline_agent = BaselineAgent()
         self.llm_agent = LLMAgent()
         self.multiagent = MultiAgent()
+        self.reflective = ReflectiveAgent()
 
     def run_all(self) -> list[BenchmarkResult]:
         results: list[BenchmarkResult] = []
@@ -110,6 +112,8 @@ class BenchmarkRunner:
             agent = self.llm_agent
         elif agent_name == "multiagent":
             agent = self.multiagent
+        elif agent_name == "reflective":
+            agent = self.reflective
         else:
             raise ValueError(f"Unknown agent: {agent_name}")
 

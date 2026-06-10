@@ -37,7 +37,7 @@ from benchmark.runner import (  # noqa: E402
 )
 
 # Agents that need no API key and run deterministically offline.
-OFFLINE_AGENTS = ("baseline", "multiagent")
+OFFLINE_AGENTS = ("baseline", "multiagent", "reflective")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,7 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--agents",
         nargs="+",
-        choices=("baseline", "multiagent", "llm"),
+        choices=("baseline", "multiagent", "reflective", "llm"),
         default=list(OFFLINE_AGENTS),
         help=(
             "Agents to run (default: baseline multiagent). The 'llm' agent needs "

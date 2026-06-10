@@ -151,6 +151,47 @@ class LLMAgent(BaseBenchmarkAgent):
         )
 
 
+class ReflectiveAgent(BaseBenchmarkAgent):
+    name: str = "reflective"
+
+    def run(
+        self,
+        task_id: str,
+        seed: int,
+        persona: str,
+        max_steps: int = 100,
+    ) -> BenchmarkMetrics:
+        from env.agents.reflector import ReflectiveAgent as _Reflector
+
+        env = ExecutiveEmailEnv(task_id=task_id, seed=seed, persona=persona)
+        observation = env.reset(task_id=task_id, seed=seed, persona=persona)
+        agent = _Reflector()
+        trace = []
+
+        start_time = time.time()
+
+        for _ in range(max(1, max_steps)):
+            action = agent.execute(observation)
+            if action is None:
+                break
+            trace.append(action)
+            result = env.step(action)
+            observation = result.observation
+            if result.done:
+                break
+
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        graded = evaluate_trajectory(task_id=task_id, seed=seed, actions=trace, persona=persona)
+
+        return BenchmarkMetrics(
+            score=graded.score,
+            time_ms=elapsed_ms,
+            tokens=0,
+            cost_usd=0.0,
+            safety_score=graded.safety_score,
+        )
+
+
 class MultiAgent(BaseBenchmarkAgent):
     name: str = "multiagent"
 
