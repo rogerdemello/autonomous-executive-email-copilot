@@ -1,9 +1,10 @@
-"""Validator parity tests - mimics submission validation exactly.
+"""Score and log-format contract tests.
 
-Tests verify:
-- Scores are in open interval (0.0, 1.0) - NOT inclusive
-- Inference log format is exact
-- [START], [STEP], [END] formats are correct
+These guard two stable contracts the rest of the stack relies on:
+- Scores are in the open interval (0.0, 1.0) - NOT inclusive - so downstream
+  consumers never have to special-case exact 0.0/1.0.
+- The `inference.py` CLI log format is exact: [START], [STEP], [END] lines
+  remain machine-parseable for tooling and reproducibility.
 """
 
 import re
@@ -166,9 +167,9 @@ class TestLogParsingIntegration:
 
 
 class TestAllTasksValidated:
-    """Test all 3 tasks with validator parity."""
+    """Test all 3 tasks with score contract."""
 
-    def test_easy_classification_validator_parity(self) -> None:
+    def test_easy_classification_score_contract(self) -> None:
         """Test easy_classification produces valid scores."""
         result = evaluate_trajectory(
             task_id="easy_classification",
@@ -179,7 +180,7 @@ class TestAllTasksValidated:
         assert 0.0 < result.score < 1.0
         assert result.score == round(result.score, 6)
 
-    def test_medium_prioritization_validator_parity(self) -> None:
+    def test_medium_prioritization_score_contract(self) -> None:
         """Test medium_prioritization produces valid scores."""
         result = evaluate_trajectory(
             task_id="medium_prioritization",
@@ -190,7 +191,7 @@ class TestAllTasksValidated:
         assert 0.0 < result.score < 1.0
         assert result.score == round(result.score, 6)
 
-    def test_hard_full_management_validator_parity(self) -> None:
+    def test_hard_full_management_score_contract(self) -> None:
         """Test hard_full_management produces valid scores."""
         result = evaluate_trajectory(
             task_id="hard_full_management",
@@ -201,7 +202,7 @@ class TestAllTasksValidated:
         assert 0.0 < result.score < 1.0
         assert result.score == round(result.score, 6)
 
-    def test_all_tasks_with_actions_validator_parity(self) -> None:
+    def test_all_tasks_with_actions_score_contract(self) -> None:
         """Test all tasks with actions produce valid scores."""
         for task in TASKS:
             actions = [
@@ -210,7 +211,7 @@ class TestAllTasksValidated:
             result = evaluate_trajectory(task_id=task, seed=42, actions=actions, persona="balanced")
             assert 0.0 < result.score < 1.0, f"Score {result.score} out of bounds for {task}"
 
-    def test_all_personas_validator_parity(self) -> None:
+    def test_all_personas_score_contract(self) -> None:
         """Test all personas produce valid scores."""
         personas = ["strict_ceo", "balanced", "chill_manager"]
         for persona in personas:

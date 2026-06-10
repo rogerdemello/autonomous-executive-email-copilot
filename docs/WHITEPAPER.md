@@ -12,8 +12,8 @@ inbox well: does it escalate the legal risk, reply to the high-value client befo
 deadline, defer the noise, and do so **reproducibly**? Most agent demos are
 non-deterministic, un-scored, and un-comparable.
 
-This project is the measurement layer. It is a **deterministic, OpenEnv-style
-environment** — a `reset → step → state` loop with bounded, validator-friendly scoring —
+This project is the measurement layer. It is a **deterministic, RL-style
+environment** — a `reset → step → state` loop with bounded, numerically stable scoring —
 plus the tooling to run policies against it, score them, and compare them. It is a
 benchmark first and a product second.
 
@@ -30,7 +30,7 @@ history, and mid-episode interruptions. An agent chooses among `classify`, `prio
 | `hard_full_management` | The realistic job: classify + act + draft + manage risk/time |
 
 Scores are mapped into the **open interval `(0,1)`** (`strict_unit_interval` + an `atan`
-reward squash) so they satisfy strict validators while preserving ordering. A given
+reward squash) so they stay numerically stable while preserving ordering. A given
 `(task, seed, persona)` always produces the same trajectory and score — determinism is a
 tested invariant, not an aspiration.
 
@@ -86,7 +86,7 @@ with 95% confidence intervals.
 
 ## 7. Beyond the benchmark
 
-The same environment is wrapped in a production-style stack — FastAPI + Streamlit + React,
+The same environment is wrapped in a production-style stack — FastAPI + React,
 human-in-the-loop approvals, opt-in auth / multi-tenancy / rate limiting, Prometheus
 metrics + Grafana panels, a reproducible Docker image, and CI that gates lint, types,
 security, coverage, the frontend build, and a container smoke test. The benchmark is the

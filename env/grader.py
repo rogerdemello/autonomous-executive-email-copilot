@@ -1,7 +1,8 @@
 """Trajectory grader.
 
-Scores are deliberately mapped into the **open** interval ``(0, 1)`` to satisfy
-strict OpenEnv validators that reject exact ``0.0``/``1.0``:
+Scores are deliberately mapped into the **open** interval ``(0, 1)`` so they stay
+numerically stable — downstream consumers never have to special-case exact
+``0.0``/``1.0``:
 
 - Task scores and breakdown metrics pass through ``strict_unit_interval`` which
   clips to ``[0, 1]`` then pulls the endpoints in by ``epsilon`` (1e-6).

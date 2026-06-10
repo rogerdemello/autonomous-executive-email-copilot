@@ -20,7 +20,7 @@ days.
 ## Scope notes
 
 This project is an evaluation environment and reference product. The API ships
-**open by default** so local development, tests, and the OpenEnv validator work
+**open by default** so local development, tests, and automated tooling work
 with zero configuration. Security controls are **opt-in** via environment
 variables (see [.env.example](.env.example)):
 

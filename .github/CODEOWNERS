@@ -17,7 +17,7 @@
 /telemetry/             @maintainer
 /server/                @maintainer
 
-# OpenEnv validator entrypoint — changes here affect validator parity.
+# CLI inference runner — changes here affect the score/log contract.
 /inference.py           @maintainer
 
 # Frontend dashboard.

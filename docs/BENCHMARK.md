@@ -101,9 +101,10 @@ for traceability, `env/tasks.py` lines 63-100.)
 
 ## 3. Scoring model
 
-All scores and breakdown metrics are bounded into the **open** interval `(0, 1)` to
-satisfy strict OpenEnv validators that reject exact `0.0`/`1.0`. The contract and
-its rationale are documented in the `env/grader.py` module docstring (lines 1-15).
+All scores and breakdown metrics are bounded into the **open** interval `(0, 1)` so
+they stay numerically stable — downstream consumers never have to special-case exact
+`0.0`/`1.0`. The contract and its rationale are documented in the `env/grader.py`
+module docstring (lines 1-15).
 
 ### 3.1 `strict_unit_interval`: the open-interval map
 
@@ -277,7 +278,7 @@ resolution per task — preferring `ClassifierAgent` on `easy_classification` /
 `medium_prioritization` (which no content specialist would otherwise produce). On
 `hard_full_management` it retains the original **risk-first** ordering, so genuine
 legal/security risk is still escalated. This threading does **not** change the env
-API or the validator-facing `Observation` schema (which still carries no `task_id`);
+API or the public `Observation` schema (which still carries no `task_id`);
 the task is passed to the coordinator out-of-band. A secondary fix gives the
 coordinator a memory of the `(action_type, email_id)` pairs it has already emitted so
 stateless specialists no longer re-propose the same email every step. Covered by

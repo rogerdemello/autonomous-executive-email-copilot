@@ -1,4 +1,4 @@
-"""Smoke tests for CLI, API, and UI demo paths (Task 14).
+"""Smoke tests for CLI, API, and dashboard demo paths.
 
 These tests verify:
 1. CLI AI run smoke passes
@@ -186,7 +186,7 @@ class TestAPIAISmoke(unittest.TestCase):
 
 
 class TestUIDemoSmoke(unittest.TestCase):
-    """Smoke tests for UI demo path (Streamlit -> API)."""
+    """Smoke tests for the dashboard demo path (UI -> API)."""
 
     def setUp(self):
         """Set up test client."""
@@ -195,14 +195,14 @@ class TestUIDemoSmoke(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     @patch("env.llm_agent.OpenAI")
     def test_ui_demo_api_path_smoke(self, mock_openai_class):
-        """Streamlit AI Demo -> API path should work."""
+        """Dashboard AI demo -> API path should work."""
         mock_response = MagicMock()
         mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
 
-        # Simulate what Streamlit AI Demo does
+        # Simulate what the dashboard AI demo does
         payload = {
             "task_id": "hard_full_management",
             "seed": 42,

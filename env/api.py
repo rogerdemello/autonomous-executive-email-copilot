@@ -100,7 +100,7 @@ app = FastAPI(
     title="Autonomous Executive Email Copilot",
     version=API_VERSION,
     description=(
-        "Deterministic, OpenEnv-style executive inbox simulation for evaluating "
+        "Deterministic, RL-style executive inbox simulation for evaluating "
         "agents that triage and manage high-stakes email. Endpoints are stable "
         "within a major version; breaking changes will be introduced under a "
         "versioned path. See /docs for the full schema."

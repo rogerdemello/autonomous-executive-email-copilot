@@ -37,7 +37,7 @@ cd dashboard && npm install && npm run dev
 - Match the style of the surrounding code; the pre-commit config (ruff for Python,
   eslint/prettier for TypeScript) is the source of truth.
 - Keep public API response shapes stable; breaking changes need API versioning.
-- Preserve OpenEnv validator parity: the `inference.py` log format
+- Preserve the score/log contract: the `inference.py` log format
   (`[START]/[STEP]/[END]`) and the open-interval `(0,1)` score contract.
 - The baseline policy must remain deterministic for a given `(task, seed, persona)`.
 

@@ -4,9 +4,9 @@ Autonomous Executive Email Copilot is a data-driven executive inbox simulation e
 
 - deterministic scenarios and grading
 - multiple decision policies (baseline, stress, LLM, hybrid planner/executor, multi-agent benchmark mode)
-- FastAPI runtime endpoints compatible with OpenEnv-style reset/step/state loops
-- Streamlit and React dashboards
-- benchmark, leaderboard, report generation, telemetry, and approval workflows
+- FastAPI runtime endpoints exposing an RL-style reset/step/state loop
+- a React dashboard
+- benchmark, comparison, report generation, telemetry, and approval workflows
 
 This README is a full, code-derived functionality reference.
 
@@ -33,7 +33,6 @@ This README is a full, code-derived functionality reference.
 
 - Full REST API for runtime, grading, baselines, leaderboard, episodes, approvals, feedback, learning stats, benchmark, reports, telemetry, alerts
 - Dashboard API + WebSocket push channel
-- Streamlit operations console
 - React dashboard app
 - SQLite-backed repositories for episodes/preferences/team settings and learning feedback
 - PDF episode reporting
@@ -48,7 +47,7 @@ This README is a full, code-derived functionality reference.
 3. Grader (`env/grader.py`)
 4. Policies/agents (`env/policy.py`, `env/llm_policy.py`, `env/llm_agent.py`, `env/agents/*`)
 5. API layer (`env/api.py`, `env/dashboard_api.py`)
-6. UI layer (`streamlit_app.py`, `dashboard/src/*`)
+6. UI layer (`dashboard/src/*`)
 7. Persistence and learning (`env/db.py`, `env/repositories.py`, `env/learning/*`)
 8. Telemetry and alerts (`telemetry/*`)
 9. Benchmark and reports (`benchmark/*`, `baseline/*`, `reports/*`)
@@ -73,7 +72,7 @@ No scenario payloads are hardcoded in environment logic.
 uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### OpenEnv-oriented server entrypoint
+### Container server entrypoint
 
 ```bash
 python -m server.app
@@ -85,11 +84,13 @@ Runs `uvicorn server.app:app --host 0.0.0.0 --port 7860`.
 
 `main.py` exports `app` from `env.api`.
 
-### Streamlit dashboard
+### React dashboard
 
 ```bash
-streamlit run streamlit_app.py
+cd dashboard && npm install && npm run dev
 ```
+
+In the container build the dashboard is compiled and served at `/dashboard/`.
 
 ### Baseline runner CLI
 
@@ -209,7 +210,7 @@ Important bounds behavior:
 - all scores and breakdown metrics are passed through `strict_unit_interval`, producing open interval values `(0, 1)`
 - `total_reward` in grader output is normalized through `0.5 + atan(total_reward) / pi`
 
-This is designed to satisfy strict validator expectations that reject exact 0 or 1.
+This keeps scores numerically stable: downstream consumers never have to special-case exact 0 or 1.
 
 ## 7) Policy and Agent Modes
 
@@ -338,31 +339,23 @@ Implemented features:
 
 - `GET /docs` (FastAPI OpenAPI UI)
 
-## 9) Dashboards and UI Functionality
+## 9) Dashboard and UI Functionality
 
-### Streamlit app (`streamlit_app.py`)
+### React dashboard (`dashboard/`)
 
-Tabs:
+Views (`dashboard/src/components/*`):
 
-- Overview
-- Tasks
-- Baseline
-- Leaderboard
-- Grader
-- AI Demo
+- Inbox
+- Timeline
 - Replay
 - Approval Queue
+- Team settings
+- User settings
 
-Implemented Streamlit capabilities:
-
-- API base URL configuration and health checks
-- local API auto-start when target is localhost and unavailable
-- baseline/stress runs
-- leaderboard generation with CI display and chart
-- custom trajectory grading
-- AI demo with compare mode (baseline vs LLM side-by-side)
-- episode replay visualization
-- approval queue approve/reject operations
+The dashboard talks to the FastAPI service via the shared API client
+(`dashboard/src/api.ts`, with timeout/retry/typed errors) and a live WebSocket
+(`useDashboardSocket`, ping/pong + reconnect). In the container build it is
+compiled and served at `/dashboard/`.
 
 ### React dashboard (`dashboard/src/*`)
 
@@ -502,19 +495,13 @@ Supports webhook POST dispatch for triggered alerts.
 
 - `APP_API_BASE_URL` (dashboard-to-app API URL)
 
-### OpenEnv-style manifest
-
-`openenv.yaml` declares runtime entrypoint, models, methods (`reset`, `step`, `state`), tasks, and endpoint list.
-
 ## 15) Complete Source Module Map
 
 ### Root runtime files
 
 - `main.py`: ASGI app export
 - `server/app.py`: uvicorn launcher on port 7860
-- `inference.py`: submission-style inference runner
-- `streamlit_app.py`: operator dashboard
-- `openenv.yaml`: environment manifest
+- `inference.py`: CLI inference runner (structured `[START]/[STEP]/[END]` logs)
 - `Dockerfile`: container build/runtime
 
 ### `env/` package
@@ -598,7 +585,7 @@ Supports webhook POST dispatch for triggered alerts.
 - `test_reports.py`: PDF/report endpoint behavior
 - `test_safety.py`: safety regex and blocking paths
 - `test_telemetry.py`: metrics and alert rules
-- `test_validator_parity.py`: validator parity for score/log format
+- `test_score_contract.py`: score/log-format contract checks
 
 ## 16) Local Setup
 
@@ -618,12 +605,6 @@ pip install -r requirements.txt
 
 ```bash
 uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Start Streamlit
-
-```bash
-streamlit run streamlit_app.py
 ```
 
 ### Start React dashboard (dev)
@@ -658,8 +639,8 @@ Container healthcheck probes `http://localhost:7860/health`.
 
 ## 18) CI and Deployment Files
 
-- `.github/workflows/ci.yml` defines test and docker build jobs
-- `DEPLOYMENT_GUIDE.md` contains Hugging Face Space deployment workflow
+- `.github/workflows/ci.yml` defines lint/test/typecheck/security/frontend/docker/inference jobs
+- `DEPLOYMENT_GUIDE.md` covers container and cloud deployment
 
 ## 19) Operational Notes and Current Constraints
 

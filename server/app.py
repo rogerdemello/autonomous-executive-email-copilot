@@ -9,7 +9,7 @@ __all__ = ["app", "main"]
 
 
 def main() -> None:
-    """CLI entrypoint used by OpenEnv multi-mode validation."""
+    """CLI entrypoint that launches the API server (used by the container)."""
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860)  # nosec B104 - container service binds all interfaces by design
 
 

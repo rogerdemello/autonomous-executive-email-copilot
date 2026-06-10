@@ -1,28 +1,17 @@
----
-title: Autonomous Executive Email Copilot
-emoji: "📧"
-colorFrom: blue
-colorTo: green
-sdk: docker
-python_version: "3.10"
-app_port: 7860
-pinned: false
----
-
 # Autonomous Executive Email Copilot
 
-![Tests](https://img.shields.io/badge/tests-239%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-77%25-green)
+![Tests](https://img.shields.io/badge/tests-285%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-80%25-green)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Build](https://img.shields.io/badge/docker-multi--stage-2496ED)
 
-> **A reproducible, deterministic benchmark *and* a production-style product for executive-inbox agents.** Reset/step/state like an RL environment, bounded validator-friendly scoring, baseline / hybrid / LLM / multi-agent policies, and a full ops stack (FastAPI + Streamlit + React, approvals, telemetry, alerts).
+> **A reproducible, deterministic benchmark *and* a production-style product for executive-inbox agents.** A Gym-style reset/step/state environment, bounded and numerically stable scoring, baseline / hybrid / LLM / multi-agent policies, and a full ops stack (FastAPI + React, approvals, telemetry, alerts).
 
-Autonomous Executive Email Copilot is a deterministic, OpenEnv-style executive inbox simulation for evaluating agents that triage and manage high-stakes email workloads. It models an executive mailbox with incoming messages, deadlines, business value, risk tags, thread history, and mid-episode interruptions. Agents interact with the environment through a standard reset/step/state loop, choose among classify, prioritize, reply, escalate, and defer actions, and are scored by task-specific graders that keep results bounded and validator-friendly.
+Autonomous Executive Email Copilot is a deterministic, RL-style executive inbox simulation for evaluating agents that triage and manage high-stakes email workloads. It models an executive mailbox with incoming messages, deadlines, business value, risk tags, thread history, and mid-episode interruptions. Agents interact with the environment through a standard reset/step/state loop, choose among classify, prioritize, reply, escalate, and defer actions, and are scored by task-specific graders that keep results bounded and numerically stable (open interval `(0,1)`).
 
-The project is built as a full experimentation stack rather than a single simulator. Scenario generation is driven by YAML task and scenario files, policies include heuristic baseline, stress-test corruption, LLM-backed decisioning, and hybrid planner/executor modes, and the surrounding tooling supports approvals, replay, leaderboard comparison, reports, telemetry, and alerts. The codebase also exposes two user interfaces: a Streamlit operations console and a React dashboard for inbox review, approvals, replay, and team settings.
+The project is built as a full experimentation stack rather than a single simulator. Scenario generation is driven by YAML task and scenario files; policies include a heuristic baseline, stress-test corruption, LLM-backed decisioning, and hybrid planner/executor modes; and the surrounding tooling supports approvals, replay, benchmark comparison, reports, telemetry, and alerts. A React dashboard provides inbox review, approvals, replay, and team settings on top of the FastAPI service.
 
 ## Documentation
 
@@ -38,10 +27,10 @@ The project is built as a full experimentation stack rather than a single simula
 
 - Simulate executive inbox workloads with deterministic seeds and personas.
 - Run baseline, stress, hybrid, and LLM-backed decision policies.
-- Score trajectories with bounded validator-friendly grading.
+- Score trajectories with bounded, numerically stable grading.
 - Compare results across tasks, personas, and seeds.
 - Collect approvals, preferences, feedback, replay artifacts, reports, and telemetry.
-- Operate via FastAPI, Streamlit, and a React dashboard.
+- Operate via a FastAPI service and a React dashboard.
 
 ## Supported Tasks
 
@@ -103,13 +92,7 @@ pip install -r requirements.txt
 uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 3) Run Streamlit Console (optional)
-
-```bash
-streamlit run streamlit_app.py
-```
-
-### 4) Run React Dashboard (optional)
+### 3) Run React Dashboard (optional)
 
 ```bash
 cd dashboard
@@ -117,7 +100,7 @@ npm install
 npm run dev
 ```
 
-### 5) Tests
+### 4) Tests
 
 ```bash
 python -m pytest -q
@@ -430,18 +413,17 @@ WebSocket pong frame:
 - `llm`: LLM-driven strategy and action synthesis with safety/approval gates.
 - `hybrid`: supported in CLI runner, not accepted by the `/baseline` API schema.
 
-## UIs
+## UI
 
-- Streamlit console in [streamlit_app.py](streamlit_app.py): overview, tasks, baseline, leaderboard, grader, AI demo, replay, approvals.
-- React dashboard in [dashboard/src/App.tsx](dashboard/src/App.tsx): inbox, timeline, replay, approvals, team settings, user settings.
+- React dashboard in [dashboard/src/App.tsx](dashboard/src/App.tsx): inbox, timeline, replay, approvals, team settings, user settings. Built in the Docker image and served at `/dashboard/`.
 
 ## Deployment Notes
 
 - API entrypoint export: [main.py](main.py)
 - Server launcher: [server/app.py](server/app.py)
-- OpenEnv manifest: [openenv.yaml](openenv.yaml)
 - Container build: [Dockerfile](Dockerfile)
 - CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- Deployment guide: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 Run container (multi-stage build also compiles the React dashboard, served at `/dashboard/`):
 
@@ -456,7 +438,7 @@ docker compose up --build
 
 All configuration is environment-driven (see [.env.example](.env.example), loaded
 via `env/config.py`). Security controls are **opt-in** so local dev, tests, and
-the OpenEnv validator work with zero setup:
+automated tooling work with zero setup:
 
 - `API_AUTH_TOKEN` — when set, mutating routes require `Authorization: Bearer <token>` or `X-API-Key`.
 - `CORS_ORIGINS` — comma-separated allowed origins (default `*`).
@@ -469,7 +451,7 @@ provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.m
 
 ## Testing Coverage
 
-Tests under [tests/](tests/) cover API contracts, determinism, grading bounds, approvals, LLM behavior, benchmark/report generation, telemetry, dashboard routes, and validator parity.
+Tests under [tests/](tests/) cover API contracts, determinism, grading bounds, approvals, LLM behavior, benchmark/report generation, telemetry, dashboard routes, and the score/log-format contracts.
 
 ## Important Constraints
 
