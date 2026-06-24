@@ -131,3 +131,20 @@ def test_leaderboard_endpoint_available() -> None:
     payload = response.json()
     assert payload["mode"] == "baseline"
     assert len(payload["rows"]) == 1
+
+
+def test_static_subroutes_not_shadowed_by_path_params() -> None:
+    # Regression: /approval/{request_id} and /episodes/{episode_id} must not
+    # shadow the static /approval/pending, /approval/history, /episodes/stats
+    # routes (FastAPI matches in declaration order).
+    pending = client.get("/approval/pending")
+    assert pending.status_code == 200
+    assert isinstance(pending.json(), list)
+
+    history = client.get("/approval/history")
+    assert history.status_code == 200
+    assert isinstance(history.json(), list)
+
+    stats = client.get("/episodes/stats")
+    assert stats.status_code == 200
+    assert isinstance(stats.json(), dict)

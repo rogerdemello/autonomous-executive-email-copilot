@@ -118,6 +118,15 @@ export function decisionStatus(status: string): LabelInfo {
   return { label: 'Needed attention', tone: 'danger' }
 }
 
+/* ---- Outcome verdict (backend: score 0..1) --------------------------- */
+
+export function scoreVerdict(score: number): LabelInfo {
+  if (score >= 0.75) return { label: 'Strong', tone: 'ok' }
+  if (score >= 0.5) return { label: 'Solid', tone: 'accent' }
+  if (score >= 0.3) return { label: 'Mixed', tone: 'warn' }
+  return { label: 'Needs work', tone: 'danger' }
+}
+
 /* ---- Importance (backend: business_value 0..1) ----------------------- */
 
 export function importanceInfo(value: number): LabelInfo {

@@ -539,14 +539,9 @@ def approval_reject(request_id: str, payload: ApprovalResponseInput) -> Approval
     return response
 
 
-@app.get("/approval/{request_id}", response_model=ApprovalRequest)
-def approval_status(request_id: str) -> ApprovalRequest:
-    request = _get_request_status(request_id)
-    if request is None:
-        raise HTTPException(status_code=404, detail=f"Approval request {request_id} not found")
-    return request
-
-
+# Static sub-paths MUST be declared before the parameterized /approval/{request_id}
+# route, otherwise FastAPI's first-match-wins routing captures "pending"/"history"
+# as a request_id and these endpoints 404.
 @app.get("/approval/pending", response_model=list[ApprovalRequest])
 def approval_pending() -> list[ApprovalRequest]:
     return _get_pending_requests()
@@ -555,6 +550,14 @@ def approval_pending() -> list[ApprovalRequest]:
 @app.get("/approval/history", response_model=list[ApprovalRequest])
 def approval_history(limit: int = 50) -> list[ApprovalRequest]:
     return get_request_history(limit=limit)
+
+
+@app.get("/approval/{request_id}", response_model=ApprovalRequest)
+def approval_status(request_id: str) -> ApprovalRequest:
+    request = _get_request_status(request_id)
+    if request is None:
+        raise HTTPException(status_code=404, detail=f"Approval request {request_id} not found")
+    return request
 
 
 # Episode endpoints
@@ -596,6 +599,13 @@ def list_episodes(
     return repo.list_episodes(filters=filters if filters else None, page=page, limit=limit)
 
 
+# /episodes/stats must precede /episodes/{episode_id} so "stats" is not captured
+# as an episode_id by the parameterized route.
+@app.get("/episodes/stats")
+def episode_stats() -> dict:
+    return repo.get_stats()
+
+
 @app.get("/episodes/{episode_id}")
 def get_episode(episode_id: str) -> dict:
     if not is_valid_identifier(episode_id):
@@ -604,11 +614,6 @@ def get_episode(episode_id: str) -> dict:
     if episode is None:
         raise HTTPException(status_code=404, detail=f"Episode {episode_id} not found")
     return episode.to_dict()
-
-
-@app.get("/episodes/stats")
-def episode_stats() -> dict:
-    return repo.get_stats()
 
 
 class UserPreferenceInput(BaseModel):
