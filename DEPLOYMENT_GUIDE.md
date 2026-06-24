@@ -51,17 +51,33 @@ deterministic agents; the LLM agent needs a provider.
 When exposing the API to an untrusted network, set `API_AUTH_TOKEN`,
 `CORS_ORIGINS`, and `RATE_LIMIT_PER_MINUTE`. See [SECURITY.md](SECURITY.md).
 
-## Platform notes
+## Deploy to Render
+
+A [`render.yaml`](render.yaml) Blueprint is included. The container binds the
+`$PORT` Render injects automatically (falling back to 7860 locally), so no port
+config is required.
+
+1. Push this repo to GitHub.
+2. In Render: **New → Blueprint**, select the repo. Render reads `render.yaml`
+   and provisions one Docker **web service** (FastAPI + the bundled dashboard).
+3. Set any secrets (provider keys, `API_AUTH_TOKEN`, `CORS_ORIGINS`) in the
+   service's **Environment** tab — they are declared `sync: false` so they live
+   in Render, not git.
+4. Render health-checks `/health` and serves the app at the assigned URL; the
+   dashboard is at `/dashboard/`.
+
+The default SQLite store sits on the container's ephemeral disk and resets on
+redeploy. For durable data, set `DATABASE_URL` to a Postgres URL (e.g. a Render
+Postgres instance).
+
+## Other platforms
 
 The image is a standard Linux container and runs on any container host:
 
-- **Cloud Run / App Runner / Fly.io / Render**: point the platform at the
-  `Dockerfile`, expose port 7860, and set the env vars above as secrets.
+- **Cloud Run / App Runner / Fly.io**: point the platform at the `Dockerfile`.
+  These hosts also inject `$PORT`, which the container honors.
 - **Kubernetes**: use the `/health/live` and `/health/ready` probes for liveness
   and readiness; mount provider keys as secrets.
-- **Hugging Face Spaces** (optional): Spaces can host the Docker image. Add a
-  Space metadata header to the README (`sdk: docker`, `app_port: 7860`) and push
-  the repo to the Space remote; configure provider keys as Space secrets.
 
 ## Observability
 

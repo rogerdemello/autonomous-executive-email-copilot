@@ -68,6 +68,18 @@ function bodyInit(method: string, body: unknown): RequestInit {
   }
 }
 
+/**
+ * Default API base when VITE_API_BASE is not set.
+ * - Vite dev server (`npm run dev`): the API runs separately on :8000.
+ * - Production build (served by the app itself in the Docker image, locally or
+ *   on Render/Cloud Run): the API is same-origin, so use the page origin.
+ */
+export function defaultApiBase(): string {
+  if (import.meta.env.DEV) return 'http://127.0.0.1:8000'
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'http://127.0.0.1:8000'
+}
+
 export function createApiClient(baseUrl: string): ApiClient {
   const base = baseUrl.replace(/\/+$/, '')
   return {

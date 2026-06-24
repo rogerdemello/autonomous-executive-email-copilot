@@ -1,0 +1,46 @@
+# Render Blueprint — deploys the multi-stage Dockerfile as a single web service
+# (FastAPI + the built React dashboard served at /dashboard). Render injects
+# $PORT, which the container binds automatically (see Dockerfile / server/app.py).
+#
+# Deploy: push to GitHub, then in Render → New → Blueprint and point it at this
+# repo. Set any secrets below in the Render dashboard (they are marked
+# `sync: false`, so they are never stored in git).
+#
+# Note: the default SQLite store lives on the container's ephemeral filesystem
+# and resets on redeploy/restart. For durable storage set DATABASE_URL to a
+# Postgres connection string (e.g. a Render Postgres instance).
+services:
+  - type: web
+    name: exec-email-copilot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # --- LLM provider (optional; deterministic agents need no key) ---
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: MODEL_NAME
+        sync: false
+      # --- Native Azure OpenAI (optional alternative provider) ---
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_API_VERSION
+        sync: false
+      - key: AZURE_OPENAI_DEPLOYMENT_NAME
+        sync: false
+      # --- Optional durable database (Postgres); SQLite if unset ---
+      - key: DATABASE_URL
+        sync: false
+      # --- Security hardening (recommended on a public URL) ---
+      - key: API_AUTH_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: RATE_LIMIT_PER_MINUTE
+        sync: false

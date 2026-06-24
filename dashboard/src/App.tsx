@@ -5,12 +5,12 @@ import Replay from './components/Replay'
 import ApprovalQueue from './components/ApprovalQueue'
 import Settings from './components/Settings'
 import Team from './components/Team'
-import { createApiClient } from './api'
+import { createApiClient, defaultApiBase } from './api'
 import { useDashboardSocket } from './useDashboardSocket'
 
 type Tab = 'inbox' | 'timeline' | 'replay' | 'approvals' | 'settings' | 'team'
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
+const API_BASE = import.meta.env.VITE_API_BASE || defaultApiBase()
 
 interface HealthStatus {
   status: string

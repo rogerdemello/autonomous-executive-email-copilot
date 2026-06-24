@@ -34,7 +34,9 @@ USER appuser
 
 EXPOSE 7860
 
+# Bind to $PORT when the host injects one (Render, Cloud Run, Fly.io, …),
+# falling back to 7860 for local `docker run`. Shell form so $PORT expands.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:7860/health', timeout=5).raise_for_status()"
+    CMD python -c "import os,httpx; httpx.get('http://localhost:%s/health' % os.environ.get('PORT','7860'), timeout=5).raise_for_status()"
 
-CMD ["uvicorn", "env.api:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD uvicorn env.api:app --host 0.0.0.0 --port ${PORT:-7860}

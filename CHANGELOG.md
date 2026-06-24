@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Render deployment**: a `render.yaml` Blueprint deploys the Docker image as a
+  single web service. The container now binds `$PORT` (Render/Cloud Run/Fly.io
+  inject it), falling back to 7860 locally.
+- One-click **"Let the copilot work"** flow in the dashboard Inbox: runs the
+  agent over the whole inbox and shows a plain-language result plus a per-email
+  outcome badge.
+
+### Fixed
+
+- **Route shadowing**: `/approval/pending`, `/approval/history`, and
+  `/episodes/stats` returned 404 because the parameterized `{request_id}` /
+  `{episode_id}` routes were declared first. Reordered the static routes ahead of
+  them; added a regression test.
+
+### Removed
+
+- **Hugging Face Spaces deployment**: removed the Space git remote, the README
+  Space metadata header, and the HF-Spaces deploy instructions. (The optional
+  `HF_TOKEN` LLM provider is unchanged.)
+
 ## [1.0.0]
 
 Repositioned from a competition entry into a standalone, world-class personal

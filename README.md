@@ -1,14 +1,3 @@
----
-title: Autonomous Executive Email Copilot
-emoji: "📧"
-colorFrom: blue
-colorTo: green
-sdk: docker
-python_version: "3.10"
-app_port: 7860
-pinned: false
----
-
 # Autonomous Executive Email Copilot
 
 ![Tests](https://img.shields.io/badge/tests-285%20passing-brightgreen)
@@ -433,6 +422,7 @@ WebSocket pong frame:
 - API entrypoint export: [main.py](main.py)
 - Server launcher: [server/app.py](server/app.py)
 - Container build: [Dockerfile](Dockerfile)
+- Render Blueprint: [render.yaml](render.yaml)
 - CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 - Deployment guide: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
@@ -444,6 +434,11 @@ docker run -p 7860:7860 exec-email-copilot
 # or
 docker compose up --build
 ```
+
+**Deploy on Render:** push to GitHub, then **New → Blueprint** and point Render
+at this repo — [`render.yaml`](render.yaml) provisions a single Docker web
+service. The container binds the `$PORT` Render injects (7860 locally). See
+[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for secrets and durable-storage notes.
 
 ## Security & Configuration
 
