@@ -1,3 +1,14 @@
+---
+title: Autonomous Executive Email Copilot
+emoji: "📧"
+colorFrom: blue
+colorTo: green
+sdk: docker
+python_version: "3.10"
+app_port: 7860
+pinned: false
+---
+
 # Autonomous Executive Email Copilot
 
 ![Tests](https://img.shields.io/badge/tests-285%20passing-brightgreen)
