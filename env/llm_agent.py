@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import re
 import time
 from typing import Any
 
@@ -21,6 +20,20 @@ from .models import (
     Observation,
     TokenUsage,
 )
+from .safety.guardrails import (
+    FORBIDDEN_ESCALATION_TARGETS,
+    PROMPT_INJECTION_PATTERNS,
+    RISKY_REPLY_PATTERNS,
+)
+from .safety.guardrails import detect_prompt_injection as _detect_prompt_injection
+from .safety.guardrails import detect_risky_content as _detect_risky_content
+from .safety.guardrails import is_forbidden_escalation as _is_forbidden_escalation
+
+__all__ = [
+    "FORBIDDEN_ESCALATION_TARGETS",
+    "PROMPT_INJECTION_PATTERNS",
+    "RISKY_REPLY_PATTERNS",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -28,55 +41,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_CACHE_TTL_SECONDS = 3600
 DEFAULT_CACHE_MAX_ENTRIES = 256
 DEFAULT_CONFIDENCE_THRESHOLD = 0.7
-
-# Forbidden escalation targets (illegal, harmful topics)
-FORBIDDEN_ESCALATION_TARGETS = {
-    "illegal",
-    "weapons",
-    "violence",
-    "hate",
-    "self_harm",
-    "self-harm",
-    "harmful",
-    "fraud",
-    "scam",
-    "illegal_activity",
-}
-
-# Prompt injection patterns to detect
-PROMPT_INJECTION_PATTERNS = [
-    r"ignore\s+(all\s+)?(previous|prior|instructions)",
-    r"disregard\s+(all\s+)?(previous|prior|instructions)",
-    r"forget\s+(everything|all\s+instructions)",
-    r"system\s*:\s*",
-    r"assistant\s*:\s*",
-    r"<\|system\|>",
-    r"<\|user\|>",
-    r"<\|assistant\|>",
-    r"you\s+are\s+now\s+(a|an)\s+",
-    r"roleplay\s+as\s+",
-    r"new\s+instructions?",
-    r"override\s+(your|the)\s+(instructions?|system)",
-    r"\\(system\\)",
-    r"\\[system\\]",
-    r"\bskip\b.*\binstruction",
-]
-
-# Risky content patterns for reply content
-RISKY_REPLY_PATTERNS = [
-    r"(?i)(violent|violence)\s+(threat|act|attack)",
-    r"(?i)(harm|kill|murder)\s+(someone|person|people|a|the|\w+)",
-    r"(?i)(illegal|unlawful)\s+(activity|act)",
-    r"(?i)weapon[s]?\s+(sales?|trafficking|manufacturing)",
-    r"(?i)(hate|racist|discriminat)\s+(speech|content|against)",
-    r"(?i)(self[\s-]?harm|suicide)\s+(method|way|plan|instruct)",
-    r"(?i)(fraud|scam|phishing)\s+(instruction|guide|how)",
-    r"(?i)bypass\s+(security|authentication|verification)",
-    r"(?i)exploit\s+(vulnerability|system|security)",
-]
-
-_PROMPT_INJECTION_REGEXES = [re.compile(p, re.IGNORECASE) for p in PROMPT_INJECTION_PATTERNS]
-_RISKY_REPLY_REGEXES = [re.compile(p, re.IGNORECASE) for p in RISKY_REPLY_PATTERNS]
 
 
 def _compute_observation_hash(observation: Observation) -> str:
@@ -119,41 +83,6 @@ def _calculate_cost(model: str, usage: TokenUsage) -> float:
     prompt_cost = (usage.prompt_tokens / 1_000_000) * pricing["prompt"]
     completion_cost = (usage.completion_tokens / 1_000_000) * pricing["completion"]
     return prompt_cost + completion_cost
-
-
-def _detect_prompt_injection(text: str) -> bool:
-    """Detect if text contains prompt injection patterns."""
-    if not text:
-        return False
-    for regex in _PROMPT_INJECTION_REGEXES:
-        if regex.search(text):
-            return True
-    return False
-
-
-def _detect_risky_content(text: str) -> bool:
-    """Detect if text contains risky/unsafe content patterns."""
-    if not text:
-        return False
-    for regex in _RISKY_REPLY_REGEXES:
-        if regex.search(text):
-            return True
-    return False
-
-
-def _is_forbidden_escalation(target: str | None) -> bool:
-    """Check if escalation target is forbidden."""
-    if not target:
-        return False
-    target_lower = target.lower().replace("_", " ")
-    return (
-        target_lower in FORBIDDEN_ESCALATION_TARGETS
-        or any(
-            target_lower == forbidden.replace("_", " ").replace("-", " ")
-            for forbidden in FORBIDDEN_ESCALATION_TARGETS
-        )
-        or any(forbidden in target_lower for forbidden in FORBIDDEN_ESCALATION_TARGETS)
-    )
 
 
 # Default configuration

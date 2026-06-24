@@ -100,7 +100,7 @@ app = FastAPI(
     title="Autonomous Executive Email Copilot",
     version=API_VERSION,
     description=(
-        "Deterministic, OpenEnv-style executive inbox simulation for evaluating "
+        "Deterministic, RL-style executive inbox simulation for evaluating "
         "agents that triage and manage high-stakes email. Endpoints are stable "
         "within a major version; breaking changes will be introduced under a "
         "versioned path. See /docs for the full schema."
@@ -115,6 +115,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class _V1PathRewriteMiddleware:
+    """Accept ``/v1/<path>`` as a back-compat alias for the unversioned routes.
+
+    The benchmark contract requires the unversioned ``/reset|/step|/state`` paths to
+    stay stable, so rather than move routes under ``/v1`` we strip a leading ``/v1``
+    from the request path before routing. ``/v1/reset`` and ``/reset`` therefore hit
+    the same handler and return identical responses.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http":
+            path = scope.get("path", "")
+            if path == "/v1" or path.startswith("/v1/"):
+                rewritten = path[len("/v1") :] or "/"
+                scope = dict(scope)
+                scope["path"] = rewritten
+                if scope.get("raw_path"):
+                    scope["raw_path"] = rewritten.encode("utf-8")
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_V1PathRewriteMiddleware)
 app.include_router(dashboard_router)
 runtime_env = ExecutiveEmailEnv()
 

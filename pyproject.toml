@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autonomous-executive-email-copilot"
-version = "0.1.0"
-description = "OpenEnv-style executive inbox simulation with typed API, graders, and baselines"
+version = "1.0.0"
+description = "Deterministic RL-style executive-inbox environment with a typed API, bounded graders, baselines, and a production ops stack"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -17,17 +17,35 @@ dependencies = [
   "pyyaml",
   "httpx",
   "scipy",
-  "pytest",
-  "streamlit",
+  "sqlalchemy",
+  "fpdf2",
   "openai",
-  "openenv-core>=0.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "hypothesis",
+  "ruff",
+  "mypy",
+  "bandit",
+  "pip-audit",
 ]
 
 [project.scripts]
 server = "server.app:main"
 
-[tool.setuptools]
-packages = ["env", "baseline", "server"]
+# Discover every package (including subpackages like env.agents, env.learning,
+# env.safety, env.eval, env.connectors) so a built wheel is complete.
+[tool.setuptools.packages.find]
+include = ["env*", "baseline*", "server*", "benchmark*", "telemetry*", "reports*"]
+
+[tool.pytest.ini_options]
+markers = [
+  "golden: golden-snapshot tests; rebaseline only via scripts/regen_golden.py",
+  "network: tests that require real network access; deselected in CI",
+]
 
 [tool.ruff]
 line-length = 100

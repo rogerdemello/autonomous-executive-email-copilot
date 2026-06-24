@@ -1,0 +1,83 @@
+/*
+ * Design tokens — "Warm professional ink".
+ *
+ * A deliberate, hand-authored palette: warm paper surfaces, ink text, a single
+ * muted-teal accent, and earthy clay/brick for warnings and risk. No default
+ * framework blues, no gradients anywhere. Every component reads from these
+ * variables — raw hex must never appear outside this file.
+ */
+
+:root {
+  /* Surfaces */
+  --surface-page: #fbfaf7; /* warm paper — app background */
+  --surface-raised: #ffffff; /* cards, panels */
+  --surface-sunken: #f2efe9; /* wells, hover rows, input fills */
+
+  /* Ink */
+  --ink: #1a1a18; /* primary text */
+  --ink-muted: #6b6b63; /* secondary text, captions */
+  --ink-faint: #97938a; /* placeholders, disabled */
+
+  /* Lines */
+  --border: #e7e3da; /* hairline borders */
+  --border-strong: #d8d2c5; /* dividers that need a touch more weight */
+
+  /* Accent — muted teal */
+  --accent: #2f6f6a;
+  --accent-strong: #255953; /* hover / pressed */
+  --accent-soft: #e3edec; /* tinted backgrounds, active nav fill */
+
+  /* Status — earthy, low-saturation */
+  --warn: #b7791f; /* amber / clay */
+  --warn-soft: #f6ecd9;
+  --danger: #9b3d3d; /* brick red */
+  --danger-soft: #f3e4e1;
+  --ok: #3e6b52; /* muted green */
+  --ok-soft: #e4ede5;
+
+  /* Derived status shades (hover / borders) */
+  --on-accent: #ffffff; /* text/icon on accent + status fills */
+  --danger-strong: #843333; /* danger button hover */
+  --danger-border: #e6c9c4; /* danger banner hairline */
+  --ok-border: #cfe0d2; /* success banner hairline */
+
+  /* Typography — deliberate non-default stacks (no web-font download). */
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --font-sans: system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  /* Type scale (~1.25 ratio) */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.9375rem; /* 15px */
+  --text-md: 1.0625rem; /* 17px */
+  --text-lg: 1.3125rem; /* 21px */
+  --text-xl: 1.625rem; /* 26px */
+  --text-2xl: 2rem; /* 32px */
+
+  --leading-body: 1.55;
+  --leading-tight: 1.25;
+
+  /* Spacing scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+
+  /* Shape — restrained radii, hairline borders over heavy shadows */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* One subtle shadow, reserved for raised/floating surfaces only */
+  --shadow-raised: 0 1px 2px rgba(26, 26, 24, 0.06), 0 4px 12px rgba(26, 26, 24, 0.05);
+
+  /* Layout */
+  --sidebar-width: 248px;
+  --content-max: 1080px;
+}

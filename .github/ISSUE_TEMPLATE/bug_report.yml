@@ -68,7 +68,7 @@ body:
         - "telemetry"
         - "server"
         - "dashboard (frontend)"
-        - "inference / OpenEnv validator"
+        - "inference / CLI runner"
         - "docs"
         - "other / not sure"
     validations:

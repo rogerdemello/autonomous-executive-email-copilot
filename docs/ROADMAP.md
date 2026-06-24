@@ -5,7 +5,7 @@
 **Guiding principle:** *Make every claim in the docs true and tested before adding anything new.* The project already has impressive surface area; world-class means the depth matches the surface.
 
 ## Invariants (must not break)
-- OpenEnv validator parity: `inference.py` log format (`[START]/[STEP]/[END]`) and the open-interval `(0,1)` score contract.
+- Score/log contract: `inference.py` log format (`[START]/[STEP]/[END]`) and the open-interval `(0,1)` score contract.
 - Deterministic baseline given `(task, seed, persona)`.
 - No breaking changes to existing API response shapes without versioning (`/v1`).
 
@@ -30,14 +30,14 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [x] Untrack generated CSVs; gitignore `*.db/sqlite`, `artifacts/`, `leaderboard*.csv`, `node_modules/`, `dashboard/dist/`. (Schema is created on startup via `migrate_db()`.)
 - [x] Add LICENSE (MIT) + license field, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, `.env.example`.
 - [x] Centralize config in `env/config.py` (pydantic-settings, fresh-read); replace scattered `os.getenv` in llm_agent/llm_policy; de-dup `normalize_openai_base_url`.
-- [x] Structured logging (`env/logging_config.py`) + request-id middleware (X-Request-ID). (Existing prints are intentional CLI/validator output.)
+- [x] Structured logging (`env/logging_config.py`) + request-id middleware (X-Request-ID). (Existing prints are intentional CLI output.)
 - [x] pre-commit: ruff lint+format + prettier (dashboard) + whitespace/EOF/yaml/toml. `ruff check` clean; repo formatted.
 - [ ] eslint for the dashboard is deferred to Phase 4 (frontend tooling) — the dashboard has no eslint config yet.
 
 > Test count: 165 passing (Phase 0 + new config/logging tests). Branch: `phase0-correctness`.
 
 ## Phase 2 — Security & API hardening ✅ COMPLETE (decisions: opt-in auth, HITL off by default)
-- [x] Opt-in token auth (`API_AUTH_TOKEN`): gates mutating methods via Bearer/X-API-Key; open by default so local/tests/validator are unaffected.
+- [x] Opt-in token auth (`API_AUTH_TOKEN`): gates mutating methods via Bearer/X-API-Key; open by default so local/tests/tooling are unaffected.
 - [x] CORS middleware (configurable `CORS_ORIGINS`, default `*`).
 - [x] Opt-in per-IP rate limiting (`RATE_LIMIT_PER_MINUTE`, default off -> 429).
 - [x] Input hardening: `episode_id` validation on replay/episodes/reports; bounded pagination (page>=1, limit<=100).
@@ -82,7 +82,7 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [x] `docs/ARCHITECTURE.md` (layers, request flow, components, invariants, design decisions) — covers the architecture-diagram + decision-record intent.
 - [x] Enriched OpenAPI metadata + `/version` endpoint; documented versioning policy.
 - [x] CI-verified quickstart (inference-smoke + docker smoke jobs).
-- [ ] Breaking `/v1` path move + per-endpoint OpenAPI examples — deferred (a `/v1`-only move conflicts with the validator's unversioned `/reset|/step|/state`; revisit with a back-compat alias).
+- [ ] Breaking `/v1` path move + per-endpoint OpenAPI examples — deferred (a `/v1`-only move conflicts with the unversioned `/reset|/step|/state` paths; revisit with a back-compat alias).
 
 ---
 

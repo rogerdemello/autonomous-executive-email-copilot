@@ -1,190 +1,84 @@
-# Hugging Face Space Deployment Guide
+# Deployment Guide
 
-## 📋 Pre-Deployment Checklist
+This project ships as a single container image: a multi-stage
+[`Dockerfile`](Dockerfile) that compiles the React dashboard, installs the
+Python runtime, runs as a non-root user, and serves the FastAPI app (with the
+bundled dashboard) on **port 7860**.
 
-| Item | Status | Notes |
-|------|--------|-------|
-| ✅ inference.py exists | Ready | In root directory |
-| ✅ openenv.yaml exists | Ready | In root directory |
-| ✅ Dockerfile exists | Ready | 11 lines, Python 3.12-slim |
-| ✅ 3 tasks with graders | Ready | easy/medium/hard |
-| ✅ All tests pass | Ready | 40/40 tests |
-| ✅ Runtime secrets documented | Ready | API_BASE_URL, MODEL_NAME, HF_TOKEN, APP_API_BASE_URL |
-
----
-
-## 🔧 Deployment Specs
-
-### Docker Configuration
-
-The container is built from the repository [`Dockerfile`](Dockerfile): a
-multi-stage build that compiles the React dashboard, installs Python deps, runs
-as a non-root user, and serves on **port 7860** (with a `/health` healthcheck).
+## Quick deploy (Docker)
 
 ```bash
 docker build -t exec-email-copilot .
 docker run -p 7860:7860 exec-email-copilot
-# or: docker compose up --build
+# or
+docker compose up --build
 ```
 
-The bundled dashboard is then available at `http://localhost:7860/dashboard/`.
+Then:
 
-### Resource Requirements
-- **Memory**: 8GB RAM (minimum)
-- **CPU**: 2 vCPU
-- **Timeout**: Inference must complete in <20 minutes
-- **Port**: 7860 (container) — local `uvicorn` dev runs on 8000 by convention
+- API: `http://localhost:7860/`
+- Health: `http://localhost:7860/health`
+- Docs: `http://localhost:7860/docs`
+- Dashboard: `http://localhost:7860/dashboard/`
 
-### Environment Variables (Required for HF Space)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `APP_API_BASE_URL` | Dashboard -> FastAPI URL | `http://127.0.0.1:8000` |
-| `API_BASE_URL` | LLM provider endpoint | `https://api.openai.com/v1` |
-| `MODEL_NAME` | Model ID | `gpt-4o-mini` |
-| `HF_TOKEN` | API key | `hf_...` |
-| `AZURE_API_VERSION` (optional) | Azure API version override | `2024-02-15-preview` |
+The container declares a `/health` healthcheck, so orchestrators (Docker,
+Kubernetes, ECS, Cloud Run, etc.) get readiness signals for free.
 
----
+## Resource sizing
 
-## 🚀 Deployment Steps
+| Resource | Recommended |
+|----------|-------------|
+| Memory   | 1–2 GB (more only if you run large benchmark sweeps) |
+| CPU      | 1–2 vCPU |
+| Port     | 7860 (container). Local `uvicorn` dev runs on 8000 by convention. |
 
-### Step 1: Prepare Your Repository
+## Configuration
+
+All configuration is environment-driven and read through `env/config.py`
+(see [.env.example](.env.example) for the full list). Nothing is required for the
+deterministic agents; the LLM agent needs a provider.
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `OPENAI_API_KEY` | LLM provider API key | `sk-...` |
+| `API_BASE_URL` | LLM provider endpoint (OpenAI-compatible) | `https://api.openai.com/v1` |
+| `MODEL_NAME` | Model id | `gpt-4o-mini` |
+| `AZURE_OPENAI_*` | Native Azure OpenAI settings (endpoint/key/version/deployment) | see `.env.example` |
+| `API_AUTH_TOKEN` | When set, mutating routes require a bearer token / `X-API-Key` | — |
+| `CORS_ORIGINS` | Allowed browser origins (default `*`) | `https://app.example.com` |
+| `RATE_LIMIT_PER_MINUTE` | Per-IP request cap (default `0` = off) | `120` |
+
+When exposing the API to an untrusted network, set `API_AUTH_TOKEN`,
+`CORS_ORIGINS`, and `RATE_LIMIT_PER_MINUTE`. See [SECURITY.md](SECURITY.md).
+
+## Platform notes
+
+The image is a standard Linux container and runs on any container host:
+
+- **Cloud Run / App Runner / Fly.io / Render**: point the platform at the
+  `Dockerfile`, expose port 7860, and set the env vars above as secrets.
+- **Kubernetes**: use the `/health/live` and `/health/ready` probes for liveness
+  and readiness; mount provider keys as secrets.
+- **Hugging Face Spaces** (optional): Spaces can host the Docker image. Add a
+  Space metadata header to the README (`sdk: docker`, `app_port: 7860`) and push
+  the repo to the Space remote; configure provider keys as Space secrets.
+
+## Observability
+
+A Prometheus/Grafana stack is provided under [telemetry/](telemetry/). Bring it
+up alongside the app with:
 
 ```bash
-# Ensure these files exist in root:
-ls -la inference.py openenv.yaml Dockerfile README.md requirements.txt
+docker compose -f telemetry/docker-compose.observability.yml up
 ```
 
-### Step 2: Create Hugging Face Space
+Metrics are exposed at `/metrics`; see the ops [runbook](docs/RUNBOOK.md).
 
-1. Go to https://huggingface.co/spaces
-2. Click **"Create new Space"**
-3. Fill in:
-   - **Owner**: Your username
-   - **Space name**: `email-copilot-env` (or your choice)
-   - **License**: MIT
-   - **Visibility**: Public (or Private)
-   - **SDK**: Streamlit
-   - **Hardware**: CPU (2 vCPU, 8GB RAM)
-
-### Step 3: Add Secrets (Environment Variables)
-
-In your HF Space settings, add these secrets:
-
-| Secret | Value |
-|--------|-------|
-| `APP_API_BASE_URL` | `http://127.0.0.1:8000` |
-| `API_BASE_URL` | `https://api.openai.com/v1` (or Azure/OpenAI endpoint) |
-| `MODEL_NAME` | `gpt-4o-mini` |
-| `HF_TOKEN` | Your OpenAI/HF API key |
-
-**Important**: The inference script expects these exact variable names.
-
-### Step 4: Push to Hugging Face
+## Pre-deploy checklist
 
 ```bash
-# Option A: Using git directly
-git add .
-git commit -m "Add OpenEnv submission files"
-git push
-
-# Option B: Using Hugging Face CLI
-huggingface-cli upload-space email-copilot-env . --token HF_TOKEN
+ruff check . && ruff format --check .     # lint/format
+python -m pytest -q                        # tests
+docker build -t exec-email-copilot .       # image builds
+python inference.py --task easy_classification --max-steps 20   # CLI runner (no key needed)
 ```
-
-### Step 5: Wait for Deployment
-
-- HF will build the Docker container
-- This takes 2-5 minutes typically
-- Check the "Build logs" tab for progress
-
-### Step 6: Verify Deployment
-
-Test your Space:
-
-1. Open the Space URL and confirm the Overview tab shows API online.
-2. In the sidebar, confirm API Base URL is `http://127.0.0.1:8000`.
-3. Click **Check API Health**.
-4. Open docs at `http://127.0.0.1:8000/docs`.
-
----
-
-## 📝 inference.py Requirements
-
-Your inference.py must:
-1. Be in **root** directory (not subfolder)
-2. Use environment variables: `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`
-3. Output EXACT logging format:
-   ```
-   [START] task=X env=Y model=Z
-   [STEP] step=N action=A reward=R done=D error=E
-   [END] success=S steps=T score=Sc rewards=Rl
-   ```
-
----
-
-## 🔍 Troubleshooting
-
-### Build Fails
-- Check Dockerfile syntax
-- Ensure requirements.txt is valid
-- Check build logs in HF Space
-
-### /health Returns 404 or Connection Refused
-- Verify `APP_API_BASE_URL` is set to `http://127.0.0.1:8000`
-- Do not set dashboard API URL to Azure/OpenAI provider URL
-- Check Space runtime logs for FastAPI auto-start failures
-
-### API Errors
-- Verify HF_TOKEN is set in Space secrets
-- Check API_BASE_URL is correct
-- Ensure MODEL_NAME is valid
-
----
-
-## 📦 Expected File Structure
-
-```
-email-copilot-env/
-├── inference.py        # MUST be in root
-├── openenv.yaml        # MUST be in root
-├── Dockerfile          # MUST be in root
-├── README.md
-├── requirements.txt
-├── env/
-│   ├── api.py
-│   ├── environment.py
-│   ├── models.py
-│   ├── llm_agent.py
-│   ├── grader.py
-│   └── ...
-└── data/
-    ├── tasks.yaml
-    └── scenarios/
-```
-
----
-
-## ✅ Final Validation Commands
-
-Before submitting, run locally:
-
-```bash
-# 1. Test inference.py (requires API key)
-export API_BASE_URL="https://api.openai.com/v1"
-export MODEL_NAME="gpt-4o-mini"
-export HF_TOKEN="sk-..."
-python inference.py
-
-# 2. Test API locally
-uvicorn env.api:app --host 0.0.0.0 --port 8000
-
-# 3. Test health and tasks
-curl http://localhost:8000/health
-curl http://localhost:8000/tasks
-
-# 4. Run all tests
-python -m pytest -q
-```
-
-All must pass for submission to be valid.

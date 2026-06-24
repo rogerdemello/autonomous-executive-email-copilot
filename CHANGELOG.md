@@ -7,10 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0]
+
+Repositioned from a competition entry into a standalone, world-class personal
+project. Behavior of the environment, graders, and API is unchanged.
+
 ### Added
 
 - **Real Azure OpenAI `gpt-4o` benchmark results** published in the README and
   `docs/BENCHMARK.md` (3×3×3 grid; LLM 0.17 / 1.00 / 0.62 on easy / medium / hard).
+- A `[project.optional-dependencies] dev` group in `pyproject.toml` (pytest,
+  pytest-cov, ruff, mypy, bandit, pip-audit); CI installs `.[dev]`.
+
+### Changed
+
+- Removed all competition/hackathon framing: dropped the Hugging Face Space
+  README header, the OpenEnv manifest (`openenv.yaml`), the dead `openenv-core`
+  dependency, and reworded "OpenEnv validator parity" to the **score/log
+  contract** throughout the docs.
+- **Consolidated the UI to the React dashboard**; removed the duplicate Streamlit
+  console (`streamlit_app.py`) and the `streamlit` dependency.
+- **Cleaned up dependency management**: a single runtime `requirements.txt`,
+  dev tools in `pyproject` extras, and removed the stale `requirements.lock`.
+- Renamed `tests/test_validator_parity.py` → `tests/test_score_contract.py`.
 
 ### Fixed
 
@@ -22,8 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2026-06-03
 
-First tagged release of the "global-level" build-out. Evaluation correctness and
-reproducibility, a flagship OSS surface, and production-grade infrastructure.
+First tagged release: evaluation correctness and reproducibility, an open-source
+surface, and production-grade infrastructure.
 
 ### Added
 
@@ -54,5 +73,6 @@ reproducibility, a flagship OSS surface, and production-grade infrastructure.
 - **Azure OpenAI authentication**: inject the `api-key` header for Azure hosts (Azure rejects
   `Authorization: Bearer` for resource keys), so Azure-hosted deployments authenticate correctly.
 
-[Unreleased]: https://github.com/rogerdemello/autonomous-executive-email-copilot/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rogerdemello/autonomous-executive-email-copilot/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/rogerdemello/autonomous-executive-email-copilot/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/rogerdemello/autonomous-executive-email-copilot/releases/tag/v0.1.0

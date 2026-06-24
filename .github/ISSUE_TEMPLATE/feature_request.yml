@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for proposing an improvement. Please describe the problem first,
         then the solution you have in mind. Proposals that keep the project's
-        invariants intact (OpenEnv validator parity, deterministic baseline,
+        invariants intact (score/log contract, deterministic baseline,
         stable API response shapes) are easiest to land.
   - type: checkboxes
     id: preflight
@@ -51,7 +51,7 @@ body:
         - "telemetry"
         - "server"
         - "dashboard (frontend)"
-        - "inference / OpenEnv validator"
+        - "inference / CLI runner"
         - "docs"
         - "other"
     validations:
@@ -63,7 +63,7 @@ body:
       description: Check any that this proposal could affect (see CONTRIBUTING.md).
       options:
         - label: Changes API response shapes (would need versioning).
-        - label: Affects OpenEnv validator parity (log format or `(0,1)` score contract).
+        - label: Affects the score/log contract (log format or `(0,1)` score contract).
         - label: Affects baseline determinism for a given `(task, seed, persona)`.
         - label: Introduces a new task id (note — the grader only knows the three existing ids).
   - type: textarea

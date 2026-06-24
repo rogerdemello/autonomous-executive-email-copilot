@@ -37,7 +37,7 @@ from benchmark.runner import (  # noqa: E402
 )
 
 # Agents that need no API key and run deterministically offline.
-OFFLINE_AGENTS = ("baseline", "multiagent")
+OFFLINE_AGENTS = ("baseline", "multiagent", "reflective")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,7 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--agents",
         nargs="+",
-        choices=("baseline", "multiagent", "llm"),
+        choices=("baseline", "multiagent", "reflective", "llm"),
         default=list(OFFLINE_AGENTS),
         help=(
             "Agents to run (default: baseline multiagent). The 'llm' agent needs "
@@ -84,6 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=100,
         help="Maximum steps per episode (default: %(default)s).",
     )
+    parser.add_argument(
+        "--record-history",
+        action="store_true",
+        help="Append a per-agent run summary (+deltas vs the prior run) to the history file.",
+    )
+    parser.add_argument(
+        "--history-path",
+        default="benchmark/leaderboard_history.jsonl",
+        help="History file for --record-history (default: %(default)s).",
+    )
     return parser
 
 
@@ -94,8 +104,20 @@ def run(
     agents: list[str],
     out_dir: str,
     max_steps: int = 100,
+    record_history: bool = False,
+    history_path: str = "benchmark/leaderboard_history.jsonl",
 ) -> list[BenchmarkResult]:
     """Run the selected agents and write artifacts to ``out_dir``."""
+    # The benchmark is sim-only by construction: refuse to run if a real-inbox
+    # connector is enabled, so real mail can never contaminate benchmark results.
+    from env.connectors import email_connector_enabled
+
+    if email_connector_enabled():
+        raise RuntimeError(
+            "EMAIL_CONNECTOR_ENABLED is set; the benchmark is sim-only and refuses to "
+            "run with a real-inbox connector enabled. Unset it to run the benchmark."
+        )
+
     runner = BenchmarkRunner(
         tasks=tasks,
         personas=personas,
@@ -112,6 +134,12 @@ def run(
     for name, path in artifacts.items():
         print(f"  {name}: {path}")
 
+    if record_history:
+        from benchmark.history import append_run
+
+        entry = append_run(history_path, results, label=",".join(agents))
+        print(f"  history: appended run to {history_path} (deltas: {entry['deltas']})")
+
     return results
 
 
@@ -125,6 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         agents=args.agents,
         out_dir=args.out,
         max_steps=args.max_steps,
+        record_history=args.record_history,
+        history_path=args.history_path,
     )
     return 0
 

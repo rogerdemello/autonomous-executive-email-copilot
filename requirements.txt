@@ -1,4 +1,3 @@
-fpdf2
 fastapi
 uvicorn
 pydantic
@@ -6,8 +5,6 @@ pydantic-settings
 pyyaml
 httpx
 scipy
-pytest
-pytest-cov
-streamlit
-openai
 sqlalchemy
+fpdf2
+openai

@@ -22,7 +22,7 @@ gates the same checks on every push and pull request.
 - [ ] **Lint:** `ruff check .` and `ruff format --check .` are clean.
 - [ ] **Tests:** `python -m pytest -q` passes (the suite stays green).
 - [ ] **No new deprecation warnings:** `python -m pytest -q -W error::DeprecationWarning`.
-- [ ] **Coverage gate:** total coverage stays at or above the 70% threshold enforced by CI.
+- [ ] **Coverage gate:** total coverage stays at or above the 78% threshold enforced by CI.
 - [ ] **Types (mypy):** `mypy env --ignore-missing-imports --no-strict-optional` — informational, but no new errors introduced.
 - [ ] **Security (informational):** no new `bandit` findings on changed code; `pip-audit` reviewed if dependencies changed.
 - [ ] **Frontend (if `dashboard/` changed):** `npm run lint`, `npm run format:check`, `npm test`, `npx tsc --noEmit`, and `npm run build` all pass.
@@ -34,7 +34,7 @@ gates the same checks on every push and pull request.
 
 Confirm this PR preserves the project invariants (see CONTRIBUTING.md):
 
-- [ ] OpenEnv validator parity is intact: `inference.py` log format (`[START]/[STEP]/[END]`) and the open-interval `(0,1)` score contract.
+- [ ] Score/log contract is intact: `inference.py` log format (`[START]/[STEP]/[END]`) and the open-interval `(0,1)` score contract.
 - [ ] The baseline policy remains deterministic for a given `(task, seed, persona)`.
 - [ ] No existing API response shapes changed without versioning.
 - [ ] No new task ids introduced (the grader only supports `easy_classification`, `medium_prioritization`, `hard_full_management`).

@@ -11,7 +11,7 @@ A concise map of how the system fits together. For exhaustive detail see
    clients ---> |  FastAPI app (env/api.py)                       |
    (curl,       |  gateway middleware: request-id, rate limit,     |
     dashboard,  |  auth, telemetry  +  global JSON error handler   |
-    validator)  +------------------+------------------------------+
+    tooling)    +------------------+------------------------------+
                                    |
         +--------------------------+--------------------------+
         |              |               |              |        |
@@ -40,18 +40,18 @@ A concise map of how the system fits together. For exhaustive detail see
 |------|-----------|----------------|
 | Runtime API | `env/api.py`, `env/dashboard_api.py` | REST + WebSocket surface |
 | Simulation | `env/environment.py`, `env/tasks.py`, `env/data_loader.py` | Deterministic inbox state machine + scenarios |
-| Scoring | `env/grader.py`, `env/utils.py` | Bounded, monotonic, validator-friendly scores |
+| Scoring | `env/grader.py`, `env/utils.py` | Bounded, monotonic, numerically stable scores |
 | Decisioning | `env/policy.py`, `env/llm_policy.py`, `env/llm_agent.py`, `env/agents/` | Baseline, hybrid planner/executor, LLM, multi-agent |
 | Persistence | `env/db.py`, `env/repositories.py`, `env/learning/` | SQLite episodes/preferences + learning store |
 | Cross-cutting | `env/config.py`, `env/logging_config.py`, `env/security.py` | Settings, structured logging, auth/rate-limit |
 | Observability | `telemetry/` | Prometheus metrics, alert rules |
 | Tooling | `baseline/`, `benchmark/`, `reports/` | CLI runners, benchmark matrix, PDF reports |
-| UI | `streamlit_app.py`, `dashboard/` | Streamlit console, React dashboard |
+| UI | `dashboard/` | React dashboard (built into the image, served at `/dashboard/`) |
 
 ## Invariants
 
-- **Validator parity**: `inference.py` log format (`[START]/[STEP]/[END]`) and the
-  open-interval `(0,1)` score contract are stable.
+- **Score/log contract**: `inference.py` log format (`[START]/[STEP]/[END]`) and the
+  open-interval `(0,1)` score contract are stable so tooling can parse runs reliably.
 - **Determinism**: a given `(task, seed, persona)` always produces the same
   baseline trajectory and score (guarded by `tests/test_grading_rigor.py`).
 - **Config is centralized** in `env/config.py`; security and logging are opt-in
@@ -60,7 +60,8 @@ A concise map of how the system fits together. For exhaustive detail see
 ## Notable design decisions
 
 - **Open-interval scoring** (`strict_unit_interval` + `atan` reward squash):
-  bounds scores into `(0,1)` while preserving order, to satisfy strict validators.
+  bounds scores into `(0,1)` while preserving order, so downstream consumers never
+  have to special-case exact `0.0`/`1.0`.
 - **Opt-in security**: the API runs open by default (frictionless local/eval use);
   auth, CORS limits, and rate limiting activate only when configured.
 - **HITL approval is opt-in** (`REQUIRE_APPROVAL`): the raw agent acts directly;

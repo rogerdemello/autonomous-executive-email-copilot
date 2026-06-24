@@ -2,7 +2,7 @@
 
 The API is open by default. Auth and rate limiting activate only when their
 corresponding settings are configured (``API_AUTH_TOKEN`` / ``RATE_LIMIT_PER_MINUTE``),
-so local development, tests, and the OpenEnv validator are unaffected unless an
+so local development, tests, and automated tooling are unaffected unless an
 operator turns them on.
 """
 
