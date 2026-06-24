@@ -41,6 +41,6 @@ services:
       - key: API_AUTH_TOKEN
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: https://exec-email-copilot.onrender.com
       - key: RATE_LIMIT_PER_MINUTE
         sync: false
