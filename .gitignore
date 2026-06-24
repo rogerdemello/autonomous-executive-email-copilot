@@ -39,6 +39,9 @@ playwright-output/
 
 # Databases (runtime state, not source)
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 

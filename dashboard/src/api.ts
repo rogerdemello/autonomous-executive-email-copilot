@@ -57,6 +57,15 @@ async function request<T>(url: string, init: RequestInit, opts: RequestOptions =
 export interface ApiClient {
   get<T>(path: string, opts?: RequestOptions): Promise<T>
   post<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+}
+
+function bodyInit(method: string, body: unknown): RequestInit {
+  return {
+    method,
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  }
 }
 
 export function createApiClient(baseUrl: string): ApiClient {
@@ -65,14 +74,8 @@ export function createApiClient(baseUrl: string): ApiClient {
     get: <T>(path: string, opts?: RequestOptions) =>
       request<T>(`${base}${path}`, { method: 'GET' }, { retries: 2, ...opts }),
     post: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
-      request<T>(
-        `${base}${path}`,
-        {
-          method: 'POST',
-          headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-          body: body !== undefined ? JSON.stringify(body) : undefined,
-        },
-        opts,
-      ),
+      request<T>(`${base}${path}`, bodyInit('POST', body), opts),
+    put: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
+      request<T>(`${base}${path}`, bodyInit('PUT', body), opts),
   }
 }

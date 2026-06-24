@@ -1,4 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { createApiClient } from '../api'
+import Card from './ui/Card'
+import Badge from './ui/Badge'
+import Banner from './ui/Banner'
+import Button from './ui/Button'
+import StatRow from './ui/StatTile'
+import EmptyState from './ui/EmptyState'
+import { actionInfo } from '../labels'
 
 interface ApprovalRequest {
   id: string
@@ -20,27 +28,21 @@ function ApprovalQueue({ apiBase }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
 
+  const client = useMemo(() => createApiClient(apiBase), [apiBase])
+
   const loadPending = async () => {
     try {
-      const res = await fetch(`${apiBase}/approval/pending`)
-      if (res.ok) {
-        const data = await res.json()
-        setPending(data)
-      }
+      setPending(await client.get<ApprovalRequest[]>('/approval/pending'))
     } catch (e) {
-      console.error('Failed to load pending:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load pending approvals')
     }
   }
 
   const loadHistory = async (limit = 20) => {
     try {
-      const res = await fetch(`${apiBase}/approval/history?limit=${limit}`)
-      if (res.ok) {
-        const data = await res.json()
-        setHistory(data)
-      }
+      setHistory(await client.get<ApprovalRequest[]>(`/approval/history?limit=${limit}`))
     } catch (e) {
-      console.error('Failed to load history:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load history')
     }
   }
 
@@ -48,63 +50,38 @@ function ApprovalQueue({ apiBase }: Props) {
     loadPending()
     loadHistory()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [apiBase])
 
-  const handleApprove = async (requestId: string) => {
+  const decide = async (requestId: string, verb: 'approve' | 'reject') => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${apiBase}/approval/${requestId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approver_id: 'admin', comment: 'Approved via dashboard' }),
+      await client.post(`/approval/${requestId}/${verb}`, {
+        approver_id: 'admin',
+        comment: `${verb === 'approve' ? 'Approved' : 'Rejected'} via dashboard`,
       })
-      if (!res.ok) throw new Error('Failed to approve')
-      await loadPending()
-      await loadHistory()
+      await Promise.all([loadPending(), loadHistory()])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to approve')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleReject = async (requestId: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`${apiBase}/approval/${requestId}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approver_id: 'admin', comment: 'Rejected via dashboard' }),
-      })
-      if (!res.ok) throw new Error('Failed to reject')
-      await loadPending()
-      await loadHistory()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to reject')
+      setError(e instanceof Error ? e.message : `Failed to ${verb}`)
     } finally {
       setLoading(false)
     }
   }
 
   const refresh = () => {
+    setError(null)
     loadPending()
     loadHistory()
   }
 
   return (
     <div>
-      <div className="metrics">
-        <div className="metric">
-          <div className="metric-value">{pending.length}</div>
-          <div className="metric-label">Pending</div>
-        </div>
-        <div className="metric">
-          <div className="metric-value">{history.filter((h) => h.id).length}</div>
-          <div className="metric-label">History</div>
-        </div>
-      </div>
+      <StatRow
+        stats={[
+          { label: 'Waiting on you', value: pending.length, tone: pending.length ? 'warn' : 'ok' },
+          { label: 'Recently decided', value: history.length },
+        ]}
+      />
 
       <div className="tabs" role="tablist" aria-label="Approval views">
         <button
@@ -117,7 +94,7 @@ function ApprovalQueue({ apiBase }: Props) {
           className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
           onClick={() => setActiveTab('pending')}
         >
-          Pending ({pending.length})
+          Waiting ({pending.length})
         </button>
         <button
           type="button"
@@ -131,101 +108,96 @@ function ApprovalQueue({ apiBase }: Props) {
         >
           History
         </button>
-        <button type="button" className="btn" onClick={refresh} style={{ marginLeft: 'auto' }}>
+        <Button variant="ghost" size="sm" onClick={refresh} style={{ marginLeft: 'auto' }}>
           Refresh
-        </button>
+        </Button>
       </div>
 
-      {error && (
-        <div
-          className="card"
-          role="alert"
-          style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <Banner kind="error">{error}</Banner>}
 
-      <div className="card">
-        {activeTab === 'pending' && (
+      <Card ariaLabel={activeTab === 'pending' ? 'Pending approvals' : 'Approval history'}>
+        {activeTab === 'pending' ? (
           <div role="tabpanel" id="approval-panel-pending" aria-labelledby="approval-tab-pending">
-            <h3 style={{ marginBottom: '1rem' }}>Pending Approvals</h3>
             {pending.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }}>No pending approvals</p>
+              <EmptyState
+                title="Nothing waiting"
+                hint="The copilot has no actions pending your sign-off."
+              />
             ) : (
               <ul className="approval-list" aria-label="Pending approvals">
-                {pending.map((req) => (
-                  <li key={req.id} className="approval-item">
-                    <div>
-                      <strong>ID:</strong> {req.id}
-                    </div>
-                    <div>
-                      <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
-                      {req.email_id}
-                    </div>
-                    {req.content && (
-                      <div>
-                        <strong>Content:</strong> {req.content.slice(0, 100)}...
+                {pending.map((req) => {
+                  const action = actionInfo(req.action_type)
+                  return (
+                    <li key={req.id} className="approval-item">
+                      <div className="approval-item__head">
+                        <strong>The copilot wants to {action.label.toLowerCase()}</strong>
+                        <Badge tone={action.tone}>{action.label}</Badge>
                       </div>
-                    )}
-                    {req.escalate_to && (
-                      <div>
-                        <strong>Escalate to:</strong> {req.escalate_to}
+                      <div className="approval-item__body">
+                        <p>
+                          <span className="muted">Email</span> {req.email_id}
+                        </p>
+                        {req.escalate_to && (
+                          <p>
+                            <span className="muted">Send to</span> {req.escalate_to}
+                          </p>
+                        )}
+                        {req.content && (
+                          <p>
+                            <span className="muted">Draft</span> “{req.content.slice(0, 140)}
+                            {req.content.length > 140 ? '…' : ''}”
+                          </p>
+                        )}
                       </div>
-                    )}
-                    <div className="approval-actions">
-                      <button
-                        type="button"
-                        className="approve"
-                        onClick={() => handleApprove(req.id)}
-                        disabled={loading}
-                        aria-label={`Approve request ${req.id}`}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        className="reject"
-                        onClick={() => handleReject(req.id)}
-                        disabled={loading}
-                        aria-label={`Reject request ${req.id}`}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                      <div className="approval-actions">
+                        <Button
+                          variant="primary"
+                          onClick={() => decide(req.id, 'approve')}
+                          disabled={loading}
+                          aria-label={`Approve: ${action.label} ${req.email_id}`}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => decide(req.id, 'reject')}
+                          disabled={loading}
+                          aria-label={`Reject: ${action.label} ${req.email_id}`}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
-        )}
-
-        {activeTab === 'history' && (
+        ) : (
           <div role="tabpanel" id="approval-panel-history" aria-labelledby="approval-tab-history">
-            <h3 style={{ marginBottom: '1rem' }}>Approval History</h3>
             {history.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }}>No approval history</p>
+              <EmptyState title="No history yet" hint="Decisions you make will be listed here." />
             ) : (
               <ul className="approval-list" aria-label="Approval history">
-                {history.map((req, idx) => (
-                  <li key={idx} className="approval-item" style={{ opacity: 0.7 }}>
-                    <div>
-                      <strong>ID:</strong> {req.id}
-                    </div>
-                    <div>
-                      <strong>Action:</strong> {req.action_type} | <strong>Email:</strong>{' '}
-                      {req.email_id}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Requested at: {new Date(req.requested_at * 1000).toLocaleString()}
-                    </div>
-                  </li>
-                ))}
+                {history.map((req, idx) => {
+                  const action = actionInfo(req.action_type)
+                  return (
+                    <li key={req.id || idx} className="approval-item is-history">
+                      <div className="approval-item__head">
+                        <strong>{action.label}</strong>
+                        <Badge tone="neutral">{req.email_id}</Badge>
+                      </div>
+                      <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                        {new Date(req.requested_at * 1000).toLocaleString()}
+                      </p>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

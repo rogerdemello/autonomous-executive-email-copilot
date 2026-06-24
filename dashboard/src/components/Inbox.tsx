@@ -1,5 +1,21 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createApiClient } from '../api'
+import Card from './ui/Card'
+import Badge from './ui/Badge'
+import Banner from './ui/Banner'
+import Button from './ui/Button'
+import StatRow from './ui/StatTile'
+import EmptyState from './ui/EmptyState'
+import ScenarioPicker from './ScenarioPicker'
+import {
+  styleLabel,
+  riskLevelTone,
+  riskInfo,
+  priorityInfo,
+  importanceInfo,
+  senderRoleLabel,
+  deadlineLabel,
+} from '../labels'
 
 interface Email {
   id: string
@@ -41,11 +57,7 @@ function Inbox({ apiBase }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const data = await client.post<Observation>('/reset', {
-        task_id: taskId,
-        seed,
-        persona,
-      })
+      const data = await client.post<Observation>('/reset', { task_id: taskId, seed, persona })
       setObs(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
@@ -72,106 +84,80 @@ function Inbox({ apiBase }: Props) {
     }
   }
 
-  const getPriorityClass = (hint: string) => {
-    if (hint === 'urgent') return 'urgent'
-    if (hint === 'high') return 'high'
-    return ''
-  }
+  const rowClass = (hint: string) =>
+    hint === 'urgent' ? 'is-urgent' : hint === 'high' ? 'is-high' : ''
 
   return (
     <div>
-      <div className="metrics">
-        <div className="metric">
-          <div className="metric-value">{obs?.emails.length || 0}</div>
-          <div className="metric-label">Emails</div>
-        </div>
-        <div className="metric">
-          <div className="metric-value">{obs?.time_remaining || 0}</div>
-          <div className="metric-label">Minutes Left</div>
-        </div>
-        <div className="metric">
-          <div className="metric-value">{obs?.risk_level || 'N/A'}</div>
-          <div className="metric-label">Risk Level</div>
-        </div>
-        <div className="metric">
-          <div className="metric-value">{obs?.persona || 'N/A'}</div>
-          <div className="metric-label">Persona</div>
-        </div>
-      </div>
+      <StatRow
+        stats={[
+          { label: 'Emails', value: obs?.emails.length ?? 0 },
+          { label: 'Time left', value: `${obs?.time_remaining ?? 0} min` },
+          {
+            label: 'Overall risk',
+            value: obs ? obs.risk_level : '—',
+            tone: obs ? riskLevelTone(obs.risk_level) : 'neutral',
+          },
+          { label: 'Style', value: obs ? styleLabel(obs.persona) : '—' },
+        ]}
+      />
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="form-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <select
-            value={taskId}
-            onChange={(e) => setTaskId(e.target.value)}
-            style={{ width: 'auto' }}
-            aria-label="Task"
-          >
-            <option value="easy_classification">easy_classification</option>
-            <option value="medium_prioritization">medium_prioritization</option>
-            <option value="hard_full_management">hard_full_management</option>
-          </select>
-          <select
-            value={persona}
-            onChange={(e) => setPersona(e.target.value)}
-            style={{ width: 'auto' }}
-            aria-label="Persona"
-          >
-            <option value="strict_ceo">strict_ceo</option>
-            <option value="balanced">balanced</option>
-            <option value="chill_manager">chill_manager</option>
-          </select>
-          <input
-            type="number"
-            value={seed}
-            onChange={(e) => setSeed(parseInt(e.target.value) || 42)}
-            style={{ width: '80px' }}
-            placeholder="Seed"
-            aria-label="Seed"
-          />
-          <button className="btn btn-primary" onClick={loadInbox} disabled={loading}>
-            {loading ? 'Loading...' : 'New Episode'}
-          </button>
-          <button className="btn" onClick={refreshInbox} disabled={loading}>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div
-          className="card"
-          role="alert"
-          style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b' }}
+      <Card title="Start a session" ariaLabel="Session controls">
+        <ScenarioPicker
+          taskId={taskId}
+          persona={persona}
+          seed={seed}
+          onTaskId={setTaskId}
+          onPersona={setPersona}
+          onSeed={setSeed}
         >
-          {error}
-        </div>
-      )}
+          <Button variant="primary" onClick={loadInbox} disabled={loading}>
+            {loading ? 'Loading…' : 'New session'}
+          </Button>
+          <Button variant="secondary" onClick={refreshInbox} disabled={loading || !obs}>
+            Refresh
+          </Button>
+        </ScenarioPicker>
+      </Card>
 
-      <section className="card" aria-label="Inbox">
-        <h3 style={{ marginBottom: '1rem' }}>Inbox</h3>
-        {obs?.emails.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No emails in inbox</p>
+      {error && <Banner kind="error">{error}</Banner>}
+
+      <Card title="Inbox" ariaLabel="Inbox">
+        {obs && obs.emails.length === 0 ? (
+          <EmptyState title="Inbox zero" hint="Nothing waiting in this session." />
         ) : (
           <ul className="email-list" aria-label="Emails">
-            {obs?.emails.map((email) => (
-              <li key={email.id} className={`email-item ${getPriorityClass(email.priority_hint)}`}>
-                <div className="email-sender">
-                  {email.sender}{' '}
-                  <span style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>
-                    ({email.sender_role})
-                  </span>
-                </div>
-                <div className="email-subject">{email.subject}</div>
-                <div className="email-meta">
-                  Priority: {email.priority_hint} | Deadline: {email.deadline_minutes}m | Value:{' '}
-                  {email.business_value} | Risk: {email.risk_tag}
-                </div>
-              </li>
-            ))}
+            {obs?.emails.map((email) => {
+              const priority = priorityInfo(email.priority_hint)
+              const risk = riskInfo(email.risk_tag)
+              const importance = importanceInfo(email.business_value)
+              return (
+                <li key={email.id} className={`email-item ${rowClass(email.priority_hint)}`}>
+                  <div className="email-row">
+                    <span className="email-sender">
+                      {email.sender}{' '}
+                      <span className="email-sender__role">
+                        · {senderRoleLabel(email.sender_role)}
+                      </span>
+                    </span>
+                    <span className="muted">{deadlineLabel(email.deadline_minutes)}</span>
+                  </div>
+                  <div className="email-subject">{email.subject}</div>
+                  <div className="email-meta">
+                    <Badge tone={priority.tone} dot>
+                      {priority.label}
+                    </Badge>
+                    <Badge tone={importance.tone}>{importance.label}</Badge>
+                    {email.risk_tag !== 'none' && (
+                      <Badge tone={risk.tone}>Risk: {risk.label}</Badge>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
-      </section>
+      </Card>
     </div>
   )
 }

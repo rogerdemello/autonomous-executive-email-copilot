@@ -16,6 +16,23 @@ interface HealthStatus {
   status: string
 }
 
+interface TabDef {
+  id: Tab
+  label: string
+  lede: string
+}
+
+// Business-friendly nav. The Inbox label is kept verbatim so the default
+// landing screen reads naturally; the rest are reframed from RL/benchmark terms.
+const TABS: TabDef[] = [
+  { id: 'inbox', label: 'Inbox', lede: 'What the copilot is working on right now' },
+  { id: 'timeline', label: 'Activity', lede: 'A step-by-step log of what the copilot did' },
+  { id: 'replay', label: 'Replay', lede: 'Step back through a past session' },
+  { id: 'approvals', label: 'Approvals', lede: 'Actions waiting for your sign-off' },
+  { id: 'team', label: 'Team', lede: 'Who handles escalations, and what needs approval' },
+  { id: 'settings', label: 'Preferences', lede: 'Defaults and notifications' },
+]
+
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('inbox')
   const [apiBase, setApiBase] = useState(API_BASE)
@@ -44,26 +61,24 @@ function App() {
     return () => clearInterval(interval)
   }, [checkHealth])
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'inbox', label: 'Inbox' },
-    { id: 'timeline', label: 'Timeline' },
-    { id: 'replay', label: 'Replay' },
-    { id: 'approvals', label: 'Approvals' },
-    { id: 'team', label: 'Team' },
-    { id: 'settings', label: 'Settings' },
-  ]
-
-  const connectionLabel = live ? 'Live' : connected ? 'Connected' : 'Disconnected'
-  const activeLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard'
+  const connectionLabel = live ? 'Live' : connected ? 'Connected' : 'Offline'
+  const active = TABS.find((t) => t.id === activeTab) ?? TABS[0]
 
   return (
     <div className="app">
       <header className="sidebar">
-        <h1>Email Copilot</h1>
-        <p className="subtitle">Dashboard</p>
+        <div className="brand">
+          <div className="brand__mark">
+            <span className="brand__glyph" aria-hidden="true">
+              E
+            </span>
+            <h1>Email Copilot</h1>
+          </div>
+          <p className="brand__subtitle">Executive assistant</p>
+        </div>
         <nav aria-label="Primary">
           <ul className="nav-list" role="tablist" aria-orientation="vertical">
-            {tabs.map((tab) => {
+            {TABS.map((tab) => {
               const selected = activeTab === tab.id
               return (
                 <li key={tab.id} role="presentation">
@@ -86,14 +101,14 @@ function App() {
         </nav>
         <div className="connection-panel">
           <label className="connection-label" htmlFor="api-base">
-            API Base URL
+            Connected service
           </label>
           <input
             id="api-base"
             type="text"
             value={apiBase}
             onChange={(e) => setApiBase(e.target.value)}
-            placeholder="API Base URL"
+            placeholder="Service address"
           />
           <div
             className={`connection-status ${connected ? 'is-connected' : 'is-disconnected'}`}
@@ -106,22 +121,27 @@ function App() {
         </div>
       </header>
       <main className="main" id="main-content">
-        <div className="header">
-          <h2>{activeLabel}</h2>
-          {health && <span className="status-badge status-success">API: {health.status}</span>}
-        </div>
-        <div
-          role="tabpanel"
-          id={`panel-${activeTab}`}
-          aria-labelledby={`tab-${activeTab}`}
-          tabIndex={0}
-        >
-          {activeTab === 'inbox' && <Inbox apiBase={apiBase} />}
-          {activeTab === 'timeline' && <Timeline apiBase={apiBase} />}
-          {activeTab === 'replay' && <Replay apiBase={apiBase} />}
-          {activeTab === 'approvals' && <ApprovalQueue apiBase={apiBase} />}
-          {activeTab === 'settings' && <Settings apiBase={apiBase} />}
-          {activeTab === 'team' && <Team apiBase={apiBase} />}
+        <div className="main__inner">
+          <div className="header">
+            <div>
+              <h2 className="header__title">{active.label}</h2>
+              <p className="header__lede">{active.lede}</p>
+            </div>
+            {health && <span className="badge badge--ok">Service {health.status}</span>}
+          </div>
+          <div
+            role="tabpanel"
+            id={`panel-${activeTab}`}
+            aria-labelledby={`tab-${activeTab}`}
+            tabIndex={0}
+          >
+            {activeTab === 'inbox' && <Inbox apiBase={apiBase} />}
+            {activeTab === 'timeline' && <Timeline apiBase={apiBase} />}
+            {activeTab === 'replay' && <Replay apiBase={apiBase} />}
+            {activeTab === 'approvals' && <ApprovalQueue apiBase={apiBase} />}
+            {activeTab === 'settings' && <Settings apiBase={apiBase} />}
+            {activeTab === 'team' && <Team apiBase={apiBase} />}
+          </div>
         </div>
       </main>
     </div>

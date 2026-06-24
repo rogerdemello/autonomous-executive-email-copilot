@@ -1,110 +1,97 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { createApiClient } from '../api'
+import Card from './ui/Card'
+import Banner from './ui/Banner'
+import Button from './ui/Button'
+import { actionInfo } from '../labels'
 
+interface ApprovalRule {
+  action_type: string
+  requires_approval: boolean
+}
+interface EscalationTarget {
+  target: string
+  description: string
+}
 interface TeamSettings {
   team_id: string
-  approval_rules: Array<{ action_type: string; requires_approval: boolean }>
-  escalation_targets: Array<{ target: string; description: string }>
+  approval_rules: ApprovalRule[]
+  escalation_targets: EscalationTarget[]
 }
 
 interface Props {
   apiBase: string
 }
 
+const TEAM_ID = 'default_team'
+const ACTION_TYPES = ['classify', 'reply', 'escalate', 'defer', 'prioritize']
+
 function Team({ apiBase }: Props) {
-  const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null)
+  const [settings, setSettings] = useState<TeamSettings | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [teamId] = useState('default_team')
+
+  const client = useMemo(() => createApiClient(apiBase), [apiBase])
 
   useEffect(() => {
-    loadTeamSettings()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadTeamSettings = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`${apiBase}/preferences/team/${teamId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setTeamSettings(data)
+    const load = async () => {
+      setLoading(true)
+      try {
+        setSettings(await client.get<TeamSettings>(`/preferences/team/${TEAM_ID}`))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load team settings')
+      } finally {
+        setLoading(false)
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load team settings')
-    } finally {
-      setLoading(false)
     }
-  }
+    load()
+  }, [client])
 
-  const addApprovalRule = () => {
-    if (teamSettings) {
-      setTeamSettings({
-        ...teamSettings,
-        approval_rules: [
-          ...teamSettings.approval_rules,
-          { action_type: 'reply', requires_approval: false },
-        ],
-      })
-    }
-  }
+  const update = (patch: Partial<TeamSettings>) => setSettings((s) => (s ? { ...s, ...patch } : s))
 
-  const removeApprovalRule = (index: number) => {
-    if (teamSettings) {
-      const newRules = [...teamSettings.approval_rules]
-      newRules.splice(index, 1)
-      setTeamSettings({ ...teamSettings, approval_rules: newRules })
-    }
-  }
+  const addRule = () =>
+    settings &&
+    update({
+      approval_rules: [
+        ...settings.approval_rules,
+        { action_type: 'reply', requires_approval: true },
+      ],
+    })
+  const removeRule = (idx: number) =>
+    settings && update({ approval_rules: settings.approval_rules.filter((_, i) => i !== idx) })
+  const setRule = (idx: number, patch: Partial<ApprovalRule>) =>
+    settings &&
+    update({
+      approval_rules: settings.approval_rules.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
+    })
 
-  const updateApprovalRule = (index: number, field: string, value: string | boolean) => {
-    if (teamSettings) {
-      const newRules = [...teamSettings.approval_rules]
-      newRules[index] = { ...newRules[index], [field]: value }
-      setTeamSettings({ ...teamSettings, approval_rules: newRules })
-    }
-  }
+  const addTarget = () =>
+    settings &&
+    update({
+      escalation_targets: [...settings.escalation_targets, { target: '', description: '' }],
+    })
+  const removeTarget = (idx: number) =>
+    settings &&
+    update({ escalation_targets: settings.escalation_targets.filter((_, i) => i !== idx) })
+  const setTarget = (idx: number, patch: Partial<EscalationTarget>) =>
+    settings &&
+    update({
+      escalation_targets: settings.escalation_targets.map((t, i) =>
+        i === idx ? { ...t, ...patch } : t,
+      ),
+    })
 
-  const addEscalationTarget = () => {
-    if (teamSettings) {
-      setTeamSettings({
-        ...teamSettings,
-        escalation_targets: [...teamSettings.escalation_targets, { target: '', description: '' }],
-      })
-    }
-  }
-
-  const removeEscalationTarget = (index: number) => {
-    if (teamSettings) {
-      const newTargets = [...teamSettings.escalation_targets]
-      newTargets.splice(index, 1)
-      setTeamSettings({ ...teamSettings, escalation_targets: newTargets })
-    }
-  }
-
-  const updateEscalationTarget = (index: number, field: string, value: string) => {
-    if (teamSettings) {
-      const newTargets = [...teamSettings.escalation_targets]
-      newTargets[index] = { ...newTargets[index], [field]: value }
-      setTeamSettings({ ...teamSettings, escalation_targets: newTargets })
-    }
-  }
-
-  const saveTeamSettings = async () => {
+  const save = async () => {
     setSaving(true)
     setError(null)
     setSuccess(false)
     try {
-      const res = await fetch(`${apiBase}/preferences/team/${teamId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          approval_rules: teamSettings?.approval_rules || [],
-          escalation_targets: teamSettings?.escalation_targets || [],
-        }),
+      await client.put(`/preferences/team/${TEAM_ID}`, {
+        approval_rules: settings?.approval_rules || [],
+        escalation_targets: settings?.escalation_targets || [],
       })
-      if (!res.ok) throw new Error('Failed to save team settings')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (e) {
@@ -114,116 +101,110 @@ function Team({ apiBase }: Props) {
     }
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <p className="muted">Loading…</p>
+      </Card>
+    )
+  }
+  if (!settings) {
+    return (
+      <Card>
+        <p className="muted">No team settings available.</p>
+      </Card>
+    )
+  }
+
   return (
-    <div>
-      <div className="card">
-        <div className="settings-section">
-          <h3>Team Settings</h3>
-          {loading ? (
-            <p>Loading...</p>
-          ) : teamSettings ? (
-            <>
-              <div className="form-group">
-                <label htmlFor="team-id">Team ID</label>
-                <input id="team-id" type="text" value={teamId} disabled />
-              </div>
-
-              <h4 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Approval Rules</h4>
-              {teamSettings.approval_rules.map((rule, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <select
-                    value={rule.action_type}
-                    onChange={(e) => updateApprovalRule(idx, 'action_type', e.target.value)}
-                    aria-label={`Approval rule ${idx + 1} action type`}
-                  >
-                    <option value="classify">classify</option>
-                    <option value="reply">reply</option>
-                    <option value="escalate">escalate</option>
-                    <option value="defer">defer</option>
-                    <option value="prioritize">prioritize</option>
-                  </select>
-                  <select
-                    value={rule.requires_approval ? 'true' : 'false'}
-                    onChange={(e) =>
-                      updateApprovalRule(idx, 'requires_approval', e.target.value === 'true')
-                    }
-                    aria-label={`Approval rule ${idx + 1} approval requirement`}
-                  >
-                    <option value="true">Requires Approval</option>
-                    <option value="false">Auto-approve</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => removeApprovalRule(idx)}
-                    aria-label={`Remove approval rule ${idx + 1}`}
-                  >
-                    Remove
-                  </button>
-                </div>
+    <Card>
+      <div className="section">
+        <h3>What needs your approval</h3>
+        <p className="about" style={{ marginBottom: 'var(--space-4)' }}>
+          Choose which actions the copilot may take on its own, and which should wait for sign-off.
+        </p>
+        {settings.approval_rules.map((rule, idx) => (
+          <div className="row" key={idx}>
+            <select
+              className="select"
+              value={rule.action_type}
+              onChange={(e) => setRule(idx, { action_type: e.target.value })}
+              aria-label={`Rule ${idx + 1}: action`}
+            >
+              {ACTION_TYPES.map((a) => (
+                <option key={a} value={a}>
+                  {actionInfo(a).label}
+                </option>
               ))}
-              <button type="button" className="btn" onClick={addApprovalRule}>
-                Add Rule
-              </button>
-
-              <h4 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Escalation Targets</h4>
-              {teamSettings.escalation_targets.map((target, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <input
-                    type="text"
-                    value={target.target}
-                    onChange={(e) => updateEscalationTarget(idx, 'target', e.target.value)}
-                    placeholder="Target name"
-                    style={{ flex: 1 }}
-                    aria-label={`Escalation target ${idx + 1} name`}
-                  />
-                  <input
-                    type="text"
-                    value={target.description}
-                    onChange={(e) => updateEscalationTarget(idx, 'description', e.target.value)}
-                    placeholder="Description"
-                    style={{ flex: 2 }}
-                    aria-label={`Escalation target ${idx + 1} description`}
-                  />
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => removeEscalationTarget(idx)}
-                    aria-label={`Remove escalation target ${idx + 1}`}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button type="button" className="btn" onClick={addEscalationTarget}>
-                Add Target
-              </button>
-
-              {error && (
-                <div role="alert" style={{ color: 'var(--danger)', marginTop: '1rem' }}>
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div role="status" style={{ color: 'var(--success)', marginTop: '1rem' }}>
-                  Team settings saved!
-                </div>
-              )}
-              <button
-                className="btn btn-primary"
-                onClick={saveTeamSettings}
-                disabled={saving}
-                style={{ marginTop: '1rem' }}
-              >
-                {saving ? 'Saving...' : 'Save Team Settings'}
-              </button>
-            </>
-          ) : (
-            <p>No team settings loaded</p>
-          )}
-        </div>
+            </select>
+            <select
+              className="select"
+              value={rule.requires_approval ? 'true' : 'false'}
+              onChange={(e) => setRule(idx, { requires_approval: e.target.value === 'true' })}
+              aria-label={`Rule ${idx + 1}: handling`}
+            >
+              <option value="true">Wait for approval</option>
+              <option value="false">Handle automatically</option>
+            </select>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeRule(idx)}
+              aria-label={`Remove rule ${idx + 1}`}
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <Button variant="secondary" size="sm" onClick={addRule}>
+          Add rule
+        </Button>
       </div>
-    </div>
+
+      <div className="section">
+        <h3>Escalation contacts</h3>
+        <p className="about" style={{ marginBottom: 'var(--space-4)' }}>
+          People or teams the copilot can hand sensitive email to.
+        </p>
+        {settings.escalation_targets.map((target, idx) => (
+          <div className="row" key={idx}>
+            <input
+              className="input"
+              type="text"
+              value={target.target}
+              onChange={(e) => setTarget(idx, { target: e.target.value })}
+              placeholder="Name or team"
+              aria-label={`Contact ${idx + 1}: name`}
+            />
+            <input
+              className="input"
+              type="text"
+              value={target.description}
+              onChange={(e) => setTarget(idx, { description: e.target.value })}
+              placeholder="What they handle"
+              aria-label={`Contact ${idx + 1}: description`}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeTarget(idx)}
+              aria-label={`Remove contact ${idx + 1}`}
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <Button variant="secondary" size="sm" onClick={addTarget}>
+          Add contact
+        </Button>
+      </div>
+
+      {error && <Banner kind="error">{error}</Banner>}
+      {success && <Banner kind="success">Team settings saved.</Banner>}
+      <Button variant="primary" onClick={save} disabled={saving}>
+        {saving ? 'Saving…' : 'Save team settings'}
+      </Button>
+    </Card>
   )
 }
 
