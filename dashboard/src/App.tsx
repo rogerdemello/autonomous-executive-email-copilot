@@ -5,8 +5,10 @@ import Replay from './components/Replay'
 import ApprovalQueue from './components/ApprovalQueue'
 import Settings from './components/Settings'
 import Team from './components/Team'
-import { createApiClient, defaultApiBase } from './api'
+import { createApiClient, defaultApiBase, setAuthToken } from './api'
 import { useDashboardSocket } from './useDashboardSocket'
+
+const TOKEN_STORAGE_KEY = 'apiToken'
 
 type Tab = 'inbox' | 'timeline' | 'replay' | 'approvals' | 'settings' | 'team'
 
@@ -36,8 +38,21 @@ const TABS: TabDef[] = [
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('inbox')
   const [apiBase, setApiBase] = useState(API_BASE)
+  const [apiToken, setApiToken] = useState(
+    () => (typeof localStorage !== 'undefined' && localStorage.getItem(TOKEN_STORAGE_KEY)) || '',
+  )
   const [health, setHealth] = useState<HealthStatus | null>(null)
   const [healthy, setHealthy] = useState(false)
+
+  // Mirror the token into the API client (sent on requests) and persist it so a
+  // reload keeps the dashboard authenticated. Only needed when the API has
+  // API_AUTH_TOKEN set; harmless otherwise.
+  useEffect(() => {
+    setAuthToken(apiToken)
+    if (typeof localStorage === 'undefined') return
+    if (apiToken) localStorage.setItem(TOKEN_STORAGE_KEY, apiToken)
+    else localStorage.removeItem(TOKEN_STORAGE_KEY)
+  }, [apiToken])
 
   // Live connection via WebSocket (falls back to the periodic health check).
   const { connected: live } = useDashboardSocket(apiBase)
@@ -109,6 +124,17 @@ function App() {
             value={apiBase}
             onChange={(e) => setApiBase(e.target.value)}
             placeholder="Service address"
+          />
+          <label className="connection-label" htmlFor="api-token">
+            Access token
+          </label>
+          <input
+            id="api-token"
+            type="password"
+            value={apiToken}
+            onChange={(e) => setApiToken(e.target.value)}
+            placeholder="Only if the API requires one"
+            autoComplete="off"
           />
           <div
             className={`connection-status ${connected ? 'is-connected' : 'is-disconnected'}`}

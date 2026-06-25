@@ -60,10 +60,28 @@ export interface ApiClient {
   put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
 }
 
+// App-global bearer token, read at request time so existing (memoized) clients
+// pick up changes without rebuilding. Set via setAuthToken().
+let authToken: string | undefined
+
+/** Set (or clear, with an empty value) the bearer token sent on requests. */
+export function setAuthToken(token: string | undefined): void {
+  authToken = token && token.trim() ? token.trim() : undefined
+}
+
+function buildHeaders(json: boolean): HeadersInit | undefined {
+  const headers: Record<string, string> = {}
+  if (json) headers['Content-Type'] = 'application/json'
+  // Sent only when a token is configured; mutating routes require it when the
+  // API has API_AUTH_TOKEN set. Safe routes ignore it.
+  if (authToken) headers.Authorization = `Bearer ${authToken}`
+  return Object.keys(headers).length ? headers : undefined
+}
+
 function bodyInit(method: string, body: unknown): RequestInit {
   return {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    headers: buildHeaders(body !== undefined),
     body: body !== undefined ? JSON.stringify(body) : undefined,
   }
 }
@@ -84,7 +102,14 @@ export function createApiClient(baseUrl: string): ApiClient {
   const base = baseUrl.replace(/\/+$/, '')
   return {
     get: <T>(path: string, opts?: RequestOptions) =>
-      request<T>(`${base}${path}`, { method: 'GET' }, { retries: 2, ...opts }),
+      request<T>(
+        `${base}${path}`,
+        { method: 'GET', headers: buildHeaders(false) },
+        {
+          retries: 2,
+          ...opts,
+        },
+      ),
     post: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
       request<T>(`${base}${path}`, bodyInit('POST', body), opts),
     put: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
