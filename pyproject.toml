@@ -9,28 +9,35 @@ description = "Deterministic RL-style executive-inbox environment with a typed A
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
+# Pinned to the CI-verified set (kept in sync with requirements.txt). CI installs
+# from here (`pip install -e ".[dev]"`), so leaving these unpinned is what let a
+# Starlette release silently break the build. starlette is pinned explicitly even
+# though it is transitive via fastapi. Bump deliberately and re-run the suite.
 dependencies = [
-  "fastapi",
-  "uvicorn",
-  "pydantic",
-  "pydantic-settings",
-  "pyyaml",
-  "httpx",
-  "scipy",
-  "sqlalchemy",
-  "fpdf2",
-  "openai",
+  "fastapi==0.138.0",
+  "starlette==1.3.1",
+  "uvicorn==0.49.0",
+  "pydantic==2.13.4",
+  "pydantic-settings==2.14.2",
+  "pyyaml==6.0.3",
+  "httpx==0.28.1",
+  "scipy==1.18.0",
+  "sqlalchemy==2.0.51",
+  "fpdf2==2.8.7",
+  "openai==2.44.0",
 ]
 
 [project.optional-dependencies]
+# Pinned to the CI-verified set so a tooling release (e.g. a new ruff rule)
+# can't fail the build without a deliberate bump.
 dev = [
-  "pytest",
-  "pytest-cov",
-  "hypothesis",
-  "ruff",
-  "mypy",
-  "bandit",
-  "pip-audit",
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "hypothesis==6.155.7",
+  "ruff==0.15.19",
+  "mypy==2.1.0",
+  "bandit==1.9.4",
+  "pip-audit==2.10.1",
 ]
 
 [project.scripts]
@@ -45,6 +52,11 @@ include = ["env*", "baseline*", "server*", "benchmark*", "telemetry*", "reports*
 markers = [
   "golden: golden-snapshot tests; rebaseline only via scripts/regen_golden.py",
   "network: tests that require real network access; deselected in CI",
+]
+filterwarnings = [
+  # Starlette 1.3's TestClient warns that httpx will be replaced by httpx2; the
+  # current httpx works fine. Silence this one known, harmless deprecation.
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning",
 ]
 
 [tool.ruff]
