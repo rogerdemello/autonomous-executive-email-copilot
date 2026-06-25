@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -248,9 +248,15 @@ if dashboard_dist.exists():
     app.mount("/dashboard", StaticFiles(directory=str(dashboard_dist), html=True), name="dashboard")
 
 
-@app.get("/", response_class=HTMLResponse)
-def root() -> str:
-    return """
+@app.get("/", include_in_schema=False)
+def root() -> Response:
+    # When the dashboard build is present (the deployed/container case), the app's
+    # starting page is the dashboard. Otherwise (API-only / no build) fall back to
+    # a small landing page that points at the API surface.
+    if dashboard_dist.exists():
+        return RedirectResponse(url="/dashboard/", status_code=307)
+    return HTMLResponse(
+        """
 <!doctype html>
 <html lang=\"en\">
     <head>
@@ -267,9 +273,10 @@ def root() -> str:
     </head>
     <body>
         <h1>Autonomous Executive Email Copilot</h1>
-        <div class=\"muted\">Server is running.</div>
+        <div class=\"muted\">Server is running. The dashboard build is not present.</div>
         <p>Available endpoints:</p>
         <ul>
+            <li><a href=\"/dashboard/\">/dashboard/</a> - operations dashboard (when built)</li>
             <li><a href=\"/docs\">/docs</a> - interactive API docs</li>
             <li><a href=\"/health\">/health</a> - health check</li>
             <li><a href=\"/tasks\">/tasks</a> - task metadata and schemas</li>
@@ -280,6 +287,7 @@ def root() -> str:
     </body>
 </html>
 """
+    )
 
 
 @app.get("/favicon.ico", include_in_schema=False)

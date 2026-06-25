@@ -14,6 +14,14 @@ import pytest
 
 from env import config
 
+# Disable .env loading at conftest IMPORT time as well. The FastAPI app
+# (``env.api``) reads settings such as ``CORS_ORIGINS`` when it is first imported
+# — which happens at test-module collection, before the autouse fixture below can
+# run. pytest imports this conftest before any test module, so setting the config
+# here guarantees the app is built from a clean environment, not a developer's
+# on-disk .env (e.g. a restricted CORS_ORIGINS would otherwise leak in).
+config.Settings.model_config["env_file"] = None
+
 
 @pytest.fixture(autouse=True)
 def _isolate_dotenv(monkeypatch):
