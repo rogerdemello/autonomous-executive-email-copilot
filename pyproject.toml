@@ -21,7 +21,7 @@ dependencies = [
   "pydantic-settings==2.14.2",
   "pyyaml==6.0.3",
   "httpx==0.28.1",
-  "scipy==1.18.0",
+  "scipy==1.15.3",  # 1.16+ needs py3.11, 1.18 needs py3.12; 1.15.3 supports the 3.10-3.12 matrix
   "sqlalchemy==2.0.51",
   "fpdf2==2.8.7",
   "openai==2.44.0",
