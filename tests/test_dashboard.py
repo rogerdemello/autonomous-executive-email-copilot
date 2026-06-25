@@ -45,17 +45,25 @@ def test_dashboard_reset_endpoint():
 
 
 def test_dashboard_router_included():
-    routes = [route.path for route in app.routes]
-    assert any("/dashboard/health" in r for r in routes)
-    assert any("/dashboard/state" in r for r in routes)
-    assert any("/dashboard/reset" in r for r in routes)
-    assert any("/ws/dashboard" in r for r in routes)
+    # Version-agnostic: verify the dashboard routes respond rather than
+    # introspecting app.routes. Starlette changed include_router internals
+    # (1.3+) so included routes nest under an _IncludedRouter with no .path.
+    assert client.get("/dashboard/health").status_code == 200
+    assert client.get("/dashboard/state").status_code == 200
+    assert client.post("/dashboard/reset").status_code == 200
+    with client.websocket_connect("/ws/dashboard") as ws:
+        ws.send_json({"type": "ping"})
+        assert ws.receive_json() == {"type": "pong"}
 
 
 def test_dashboard_static_mount():
-    routes = [route.path for route in app.routes]
-    dashboard_routes = [r for r in routes if "/dashboard" in r and r != "/dashboard/"]
-    assert len(dashboard_routes) >= 0
+    # The dashboard SPA is mounted only when its build exists (the Docker image
+    # or a local `npm run build`). The CI test job doesn't build it, so guard on
+    # the dist being present.
+    from env.api import dashboard_dist
+
+    if dashboard_dist.exists():
+        assert client.get("/dashboard/").status_code == 200
 
 
 def test_dashboard_default_task_reset():
