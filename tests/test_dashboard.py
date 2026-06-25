@@ -66,6 +66,20 @@ def test_dashboard_static_mount():
         assert client.get("/dashboard/").status_code == 200
 
 
+def test_root_serves_dashboard_when_built():
+    # When the dashboard build is present, GET and HEAD / both redirect to the
+    # dashboard (the app's landing page); otherwise / falls back to the info page.
+    from env.api import dashboard_dist
+
+    for method in ("GET", "HEAD"):
+        resp = client.request(method, "/", follow_redirects=False)
+        if dashboard_dist.exists():
+            assert resp.status_code == 307
+            assert resp.headers["location"] == "/dashboard/"
+        else:
+            assert resp.status_code == 200
+
+
 def test_dashboard_default_task_reset():
     response = client.post("/dashboard/reset")
     assert response.status_code == 200

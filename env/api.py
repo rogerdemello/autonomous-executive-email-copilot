@@ -94,7 +94,9 @@ async def lifespan(_app: FastAPI):
     logger.info("Shutting down Autonomous Executive Email Copilot API")
 
 
-API_VERSION = "0.1.0"
+# Single-source the API version from the package (env/__init__.py, which tracks
+# pyproject's version) so /version and the OpenAPI version never drift.
+from env import __version__ as API_VERSION  # noqa: E402
 
 app = FastAPI(
     title="Autonomous Executive Email Copilot",
@@ -248,7 +250,7 @@ if dashboard_dist.exists():
     app.mount("/dashboard", StaticFiles(directory=str(dashboard_dist), html=True), name="dashboard")
 
 
-@app.get("/", include_in_schema=False)
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def root() -> Response:
     # When the dashboard build is present (the deployed/container case), the app's
     # starting page is the dashboard. Otherwise (API-only / no build) fall back to

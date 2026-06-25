@@ -10,11 +10,14 @@ client = TestClient(app)
 
 
 def test_version_endpoint():
+    from env import __version__
+
     resp = client.get("/version")
     assert resp.status_code == 200
     body = resp.json()
     assert body["name"] == "autonomous-executive-email-copilot"
-    assert body["version"]
+    # Single-sourced from the package version (env/__init__.py / pyproject).
+    assert body["version"] == __version__
 
 
 def test_liveness_is_cheap_and_ok():

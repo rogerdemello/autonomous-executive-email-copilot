@@ -1,10 +1,16 @@
-fastapi
-uvicorn
-pydantic
-pydantic-settings
-pyyaml
-httpx
-scipy
-sqlalchemy
-fpdf2
-openai
+# Runtime dependencies, pinned for reproducible builds. These exact versions are
+# the set CI verified green (run 28148266884). Unpinned deps previously let a
+# Starlette release (1.3) silently break CI with no code change, so direct deps
+# AND starlette (transitive via fastapi, the culprit) are pinned explicitly.
+# Bump deliberately and re-run the suite.
+fastapi==0.138.0
+starlette==1.3.1
+uvicorn==0.49.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+pyyaml==6.0.3
+httpx==0.28.1
+scipy==1.18.0
+sqlalchemy==2.0.51
+fpdf2==2.8.7
+openai==2.44.0
