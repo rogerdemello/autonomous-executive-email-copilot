@@ -1,7 +1,7 @@
 # Autonomous Executive Email Copilot
 
-![Tests](https://img.shields.io/badge/tests-285%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-80%25-green)
+![Tests](https://img.shields.io/badge/tests-387%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-83%25-green)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -457,7 +457,7 @@ provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.m
 
 ## Testing Coverage
 
-Tests under [tests/](tests/) cover API contracts, determinism, grading bounds, approvals, LLM behavior, benchmark/report generation, telemetry, dashboard routes, and the score/log-format contracts.
+**387 tests pass at 83% coverage.** Tests under [tests/](tests/) cover API contracts, determinism, grading bounds, approvals, LLM behavior, benchmark/report generation, telemetry, dashboard routes, and the score/log-format contracts — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
 
 ## Important Constraints
 
