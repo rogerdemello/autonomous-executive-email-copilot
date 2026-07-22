@@ -7,6 +7,18 @@ from unittest.mock import MagicMock, patch
 from baseline.run_baseline import run
 
 
+def _make_mock_openai_response(content: str):
+    """Build a MagicMock that looks like an OpenAI chat completion response."""
+    from unittest.mock import MagicMock
+
+    usage = MagicMock(prompt_tokens=50, completion_tokens=30, total_tokens=80)
+    msg = MagicMock(content=content)
+    msg.tool_calls = None
+    choice = MagicMock(message=msg, finish_reason="stop")
+    resp = MagicMock(choices=[choice], model="gpt-4o-mini", usage=usage)
+    return resp
+
+
 class TestBaselineDeterminism(unittest.TestCase):
     """Verify baseline deterministic behavior remains unchanged."""
 
@@ -67,13 +79,13 @@ class TestAIModePersonaVariants(unittest.TestCase):
         return content
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_ai_mode_strict_ceo(self, mock_openai_class) -> None:
         """AI mode should work with strict_ceo persona."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=self._mock_llm_response()))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            self._mock_llm_response()
+        )
         mock_openai_class.return_value = mock_client
 
         result = run(
@@ -93,13 +105,13 @@ class TestAIModePersonaVariants(unittest.TestCase):
         self.assertEqual(len(result["decision_traces"]), result["steps"])
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_ai_mode_balanced(self, mock_openai_class) -> None:
         """AI mode should work with balanced persona."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=self._mock_llm_response()))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            self._mock_llm_response()
+        )
         mock_openai_class.return_value = mock_client
 
         result = run(
@@ -118,13 +130,13 @@ class TestAIModePersonaVariants(unittest.TestCase):
         self.assertEqual(result["persona"], "balanced")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_ai_mode_chill_manager(self, mock_openai_class) -> None:
         """AI mode should work with chill_manager persona."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=self._mock_llm_response()))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            self._mock_llm_response()
+        )
         mock_openai_class.return_value = mock_client
 
         result = run(
@@ -163,14 +175,14 @@ class TestAIAndBaselineOutputShape(unittest.TestCase):
         return content
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_output_shape_comparable(self, mock_openai_class) -> None:
         """AI and baseline should have similar output structure."""
         # Mock LLM for AI mode
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=self._mock_llm_response()))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            self._mock_llm_response()
+        )
         mock_openai_class.return_value = mock_client
 
         baseline_result = run(
@@ -217,15 +229,15 @@ class TestAIAndBaselineOutputShape(unittest.TestCase):
         self.assertLessEqual(ai_result["score"], 1.0)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_grader_bounds_for_ai_mode(self, mock_openai_class) -> None:
         """AI mode scores should be within valid bounds."""
         personas = ["strict_ceo", "balanced", "chill_manager"]
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=self._mock_llm_response()))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            self._mock_llm_response()
+        )
         mock_openai_class.return_value = mock_client
 
         for persona in personas:
@@ -265,16 +277,16 @@ class TestRegressionAcrossPersonas(unittest.TestCase):
         return content
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_all_tasks_work_with_all_personas(self, mock_openai_class) -> None:
         """AI mode should work with all task/persona combinations."""
         tasks = ["easy_classification", "medium_prioritization", "hard_full_management"]
         personas = ["strict_ceo", "balanced", "chill_manager"]
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=self._mock_llm_response()))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            self._mock_llm_response()
+        )
         mock_openai_class.return_value = mock_client
 
         for task in tasks:
@@ -292,19 +304,13 @@ class TestRegressionAcrossPersonas(unittest.TestCase):
                 self.assertIn("decision_traces", result)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_decision_traces_populated(self, mock_openai_class) -> None:
         """Decision traces should be populated correctly."""
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(
-                message=MagicMock(
-                    content='{"action_type": "reply", "email_id": "e1", "content": "Done", "priority_order": ["e1"], "escalate_to": null, "label": null}'
-                )
-            )
-        ]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            '{"action_type": "reply", "email_id": "e1", "content": "Done", "priority_order": ["e1"], "escalate_to": null, "label": null}'
+        )
         mock_openai_class.return_value = mock_client
 
         result = run(

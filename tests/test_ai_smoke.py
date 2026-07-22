@@ -34,15 +34,24 @@ def _mock_llm_response(action_type: str = "reply", email_id: str = "e1"):
     return content
 
 
+def _make_mock_openai_response(content: str):
+    """Build a MagicMock that looks like an OpenAI chat completion response."""
+    usage = MagicMock(prompt_tokens=50, completion_tokens=30, total_tokens=80)
+    msg = MagicMock(content=content)
+    msg.tool_calls = None
+    choice = MagicMock(message=msg, finish_reason="stop")
+    resp = MagicMock(choices=[choice], model="gpt-4o-mini", usage=usage)
+    return resp
+
+
 class TestCLIAISmoke(unittest.TestCase):
     """Smoke tests for CLI AI runner."""
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_cli_ai_run_smoke(self, mock_openai_class):
         """CLI AI run should complete without error."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
+        mock_response = _make_mock_openai_response(_mock_llm_response())
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -76,11 +85,10 @@ class TestCLIAISmoke(unittest.TestCase):
             self.assertIn("reason", trace)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_cli_ai_run_with_all_personas(self, mock_openai_class):
         """CLI AI run should work with all personas."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
+        mock_response = _make_mock_openai_response(_mock_llm_response())
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -105,11 +113,10 @@ class TestAPIAISmoke(unittest.TestCase):
         self.client = TestClient(app)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_api_ai_run_smoke(self, mock_openai_class):
         """API /baseline with mode=llm should work."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
+        mock_response = _make_mock_openai_response(_mock_llm_response())
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -140,11 +147,10 @@ class TestAPIAISmoke(unittest.TestCase):
         self.assertLessEqual(data["score"], 1.0)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_api_ai_run_with_compare_mode(self, mock_openai_class):
         """API should handle compare mode (llm + baseline)."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
+        mock_response = _make_mock_openai_response(_mock_llm_response())
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -193,11 +199,10 @@ class TestUIDemoSmoke(unittest.TestCase):
         self.client = TestClient(app)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_ui_demo_api_path_smoke(self, mock_openai_class):
         """Dashboard AI demo -> API path should work."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
+        mock_response = _make_mock_openai_response(_mock_llm_response())
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -233,11 +238,10 @@ class TestUIDemoSmoke(unittest.TestCase):
                 self.assertIn("action_type", trace["action"])
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_ui_demo_preset_config(self, mock_openai_class):
         """Test UI demo preset configuration works."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=_mock_llm_response()))]
+        mock_response = _make_mock_openai_response(_mock_llm_response())
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
@@ -290,7 +294,7 @@ class TestFallbackScenarioSmoke(unittest.TestCase):
         llm_module._default_agent = None
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_fallback_on_timeout_cli(self, mock_openai_class):
         """CLI should handle LLM timeout gracefully."""
         mock_client = MagicMock()
@@ -319,7 +323,7 @@ class TestFallbackScenarioSmoke(unittest.TestCase):
         )
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_fallback_on_provider_error_cli(self, mock_openai_class):
         """CLI should handle provider errors gracefully."""
         mock_client = MagicMock()
@@ -338,7 +342,7 @@ class TestFallbackScenarioSmoke(unittest.TestCase):
         self.assertGreater(len(result["decision_traces"]), 0)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_fallback_on_api(self, mock_openai_class):
         """API should handle LLM errors gracefully."""
         mock_client = MagicMock()
@@ -371,11 +375,10 @@ class TestFallbackScenarioSmoke(unittest.TestCase):
         )
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_malformed_response_fallback(self, mock_openai_class):
         """Should handle malformed LLM responses gracefully."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content="not valid json"))]
+        mock_response = _make_mock_openai_response("not valid json")
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client

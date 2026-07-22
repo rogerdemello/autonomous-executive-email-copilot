@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from enum import Enum
 from typing import Any
 
-from openai import OpenAI
-
-from env.config import chat_client_kwargs, get_settings
+from env.config import get_settings
 from env.models import (
     Action,
     Observation,
 )
+from env.providers import LLMProvider
+from env.providers.openai_provider import OpenAIProvider
+
+logger = logging.getLogger(__name__)
 
 
 def llm_provider_available() -> bool:
@@ -149,28 +152,33 @@ class Planner:
         self._model = model
         self._temperature = temperature
         self._timeout_seconds = timeout_seconds
-        self._client: OpenAI | None = None
+        self._provider: LLMProvider | None = None
         self._current_strategy: Strategy | None = None
 
-    def _get_client(self) -> OpenAI:
-        """Lazy initialization of OpenAI/Azure client."""
-        if self._client is None:
-            kwargs, model = chat_client_kwargs(self._timeout_seconds)
-            self._client = OpenAI(**kwargs)
-            if model != self._model:
-                self._model = model
-        return self._client
+    def _get_provider(self) -> LLMProvider:
+        """Lazily resolve the configured LLM provider (see LLMAgent._get_provider).
 
-    def plan(self, observation: Observation) -> tuple[Strategy, dict[str, Any]]:
+        Keeps the auto-detected, circuit-breaker-wrapped provider so the planner
+        works with any configured backend; only falls back to a bare OpenAI client
+        when no provider is configured at all.
         """
-        Analyze inbox and output strategic plan.
+        if self._provider is None:
+            from env.providers import auto_detect_provider
 
-        Returns:
-            tuple of (Strategy, metadata including reasoning, confidence, etc.)
-        """
-        start_time = time.time()
+            try:
+                self._provider = auto_detect_provider()
+            except ValueError:
+                self._provider = OpenAIProvider(
+                    model=self._model,
+                    temperature=self._temperature,
+                    timeout_seconds=self._timeout_seconds,
+                )
+        return self._provider
 
-        # Check for critical emails that need immediate escalation
+    def _run_deterministic_checks(
+        self, observation: Observation
+    ) -> tuple[Strategy | None, dict[str, Any] | None]:
+        """Run pre-LLM deterministic checks that can short-circuit planning."""
         for email in observation.emails:
             if email.risk_tag in {"legal", "security"}:
                 return Strategy.ESCALATE_CRITICAL, {
@@ -179,7 +187,6 @@ class Planner:
                     "key_emails": [email.id],
                 }
 
-        # Check if time is running low and there are urgent emails
         if observation.time_remaining < 30:
             urgent_emails = [e for e in observation.emails if e.priority_hint == "high"]
             if urgent_emails:
@@ -189,25 +196,29 @@ class Planner:
                     "key_emails": [e.id for e in urgent_emails],
                 }
 
-        # No provider key configured: skip the LLM entirely and let the strong
-        # deterministic executor/baseline carry the trajectory.
-        if not llm_provider_available():
+        return None, None
+
+    def _call_llm_strategy(
+        self, observation: Observation, start_time: float
+    ) -> tuple[Strategy, dict[str, Any]]:
+        """Call LLM for strategy planning (sync)."""
+        try:
+            provider = self._get_provider()
+        except ValueError:
             return self._fallback_strategy()
 
-        # Call LLM for strategy
         try:
-            client = self._get_client()
-            response = client.chat.completions.create(
-                model=self._model,
+            response = provider.generate(
                 messages=[
                     {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
                     {"role": "user", "content": _build_planner_prompt(observation)},
                 ],
+                model=self._model,
                 temperature=self._temperature,
                 response_format={"type": "json_object"},
             )
 
-            content = response.choices[0].message.content
+            content = response.content
             if not content:
                 return self._fallback_strategy()
 
@@ -233,6 +244,78 @@ class Planner:
         except Exception:
             return self._fallback_strategy()
 
+    async def _acall_llm_strategy(
+        self, observation: Observation, start_time: float
+    ) -> tuple[Strategy, dict[str, Any]]:
+        """Call LLM for strategy planning (async)."""
+        try:
+            provider = self._get_provider()
+        except ValueError:
+            return self._fallback_strategy()
+
+        try:
+            response = await provider.agenerate(
+                messages=[
+                    {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_planner_prompt(observation)},
+                ],
+                model=self._model,
+                temperature=self._temperature,
+                response_format={"type": "json_object"},
+            )
+
+            content = response.content
+            if not content:
+                return self._fallback_strategy()
+
+            strategy_dict = _parse_strategy_response(content)
+            if strategy_dict is None:
+                return self._fallback_strategy()
+
+            strategy = _validate_strategy(strategy_dict)
+            if strategy is None:
+                return self._fallback_strategy()
+
+            self._current_strategy = strategy
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            return strategy, {
+                "reasoning": strategy_dict.get("reasoning", "LLM strategy decision"),
+                "confidence": strategy_dict.get("confidence", 0.5),
+                "key_emails": strategy_dict.get("key_emails", []),
+                "latency_ms": latency_ms,
+                "model_name": self._model,
+            }
+
+        except Exception:
+            return self._fallback_strategy()
+
+    def plan(self, observation: Observation) -> tuple[Strategy, dict[str, Any]]:
+        """Analyze inbox and output strategic plan (sync)."""
+        start_time = time.time()
+
+        strategy, metadata = self._run_deterministic_checks(observation)
+        if strategy is not None:
+            return strategy, metadata
+
+        if not llm_provider_available():
+            return self._fallback_strategy()
+
+        return self._call_llm_strategy(observation, start_time)
+
+    async def aplan(self, observation: Observation) -> tuple[Strategy, dict[str, Any]]:
+        """Analyze inbox and output strategic plan (async)."""
+        start_time = time.time()
+
+        strategy, metadata = self._run_deterministic_checks(observation)
+        if strategy is not None:
+            return strategy, metadata
+
+        if not llm_provider_available():
+            return self._fallback_strategy()
+
+        return await self._acall_llm_strategy(observation, start_time)
+
     def _fallback_strategy(self) -> tuple[Strategy, dict[str, Any]]:
         """Fallback strategy when LLM fails."""
         return Strategy.PRIORITIZE_URGENT, {
@@ -255,11 +338,19 @@ _default_planner: Planner | None = None
 
 
 def get_strategy(observation: Observation) -> tuple[Strategy, dict[str, Any]]:
-    """Get strategic plan from default planner."""
+    """Get strategic plan from default planner (sync)."""
     global _default_planner
     if _default_planner is None:
         _default_planner = Planner()
     return _default_planner.plan(observation)
+
+
+async def aget_strategy(observation: Observation) -> tuple[Strategy, dict[str, Any]]:
+    """Get strategic plan from default planner (async)."""
+    global _default_planner
+    if _default_planner is None:
+        _default_planner = Planner()
+    return await _default_planner.aplan(observation)
 
 
 def reset_planner() -> None:

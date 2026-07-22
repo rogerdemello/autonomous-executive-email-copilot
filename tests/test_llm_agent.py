@@ -21,6 +21,18 @@ def _isolate_llm_cache():
     _response_cache.clear()
 
 
+def _make_mock_openai_response(content: str):
+    """Build a MagicMock that looks like an OpenAI chat completion response."""
+    from unittest.mock import MagicMock
+
+    usage = MagicMock(prompt_tokens=50, completion_tokens=30, total_tokens=80)
+    msg = MagicMock(content=content)
+    msg.tool_calls = None
+    choice = MagicMock(message=msg, finish_reason="stop")
+    resp = MagicMock(choices=[choice], model="gpt-4o-mini", usage=usage)
+    return resp
+
+
 def _make_observation() -> Observation:
     return Observation(
         emails=[
@@ -60,18 +72,12 @@ def _make_observation() -> Observation:
 
 class TestLLMAgentValidDecision(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_valid_decision_returns_success(self, mock_openai_class):
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(
-                message=MagicMock(
-                    content='{"action_type": "reply", "email_id": "e1", "content": "On it!"}'
-                )
-            )
-        ]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            '{"action_type": "reply", "email_id": "e1", "content": "On it!"}'
+        )
         mock_openai_class.return_value = mock_client
 
         agent = LLMAgent()
@@ -88,20 +94,14 @@ class TestLLMAgentApprovalGating(unittest.TestCase):
     """reply/escalate are deferred behind approval only when require_approval is on."""
 
     def _reply_mock(self, mock_openai_class):
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(
-                message=MagicMock(
-                    content='{"action_type": "reply", "email_id": "e1", "content": "On it!"}'
-                )
-            )
-        ]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            '{"action_type": "reply", "email_id": "e1", "content": "On it!"}'
+        )
         mock_openai_class.return_value = mock_client
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_approval_off_returns_reply(self, mock_openai_class):
         self._reply_mock(mock_openai_class)
         agent = LLMAgent(require_approval=False)
@@ -112,7 +112,7 @@ class TestLLMAgentApprovalGating(unittest.TestCase):
         self.assertEqual(response.action.action_type, "reply")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_approval_on_defers_pending_request(self, mock_openai_class):
         self._reply_mock(mock_openai_class)
         agent = LLMAgent(require_approval=True)
@@ -129,21 +129,15 @@ class TestLLMAgentApprovalGating(unittest.TestCase):
 
 class TestLLMAgentCaching(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_identical_observation_hits_cache(self, mock_openai_class):
         from env.llm_agent import _response_cache
 
         _response_cache.clear()
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(
-                message=MagicMock(
-                    content='{"action_type": "reply", "email_id": "e1", "content": "On it!", "confidence": 0.95}'
-                )
-            )
-        ]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            '{"action_type": "reply", "email_id": "e1", "content": "On it!", "confidence": 0.95}'
+        )
         mock_openai_class.return_value = mock_client
 
         agent = LLMAgent(require_approval=False)
@@ -166,7 +160,7 @@ class TestLLMAgentCaching(unittest.TestCase):
 
 class TestLLMAgentTimeout(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_timeout_returns_fallback_timeout(self, mock_openai_class):
         mock_client = MagicMock()
         mock_client.chat.completions.create.side_effect = TimeoutError("Request timed out")
@@ -184,12 +178,12 @@ class TestLLMAgentTimeout(unittest.TestCase):
 
 class TestLLMAgentMalformedJSON(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_malformed_json_returns_fallback_parse_error(self, mock_openai_class):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content="not valid json {broken"))]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            "not valid json {broken"
+        )
         mock_openai_class.return_value = mock_client
 
         agent = LLMAgent()
@@ -203,14 +197,12 @@ class TestLLMAgentMalformedJSON(unittest.TestCase):
 
 class TestLLMAgentUnsupportedAction(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_unsupported_action_returns_fallback_validation_error(self, mock_openai_class):
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(message=MagicMock(content='{"action_type": "delete", "email_id": "e1"}'))
-        ]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            '{"action_type": "delete", "email_id": "e1"}'
+        )
         mock_openai_class.return_value = mock_client
 
         agent = LLMAgent()
@@ -224,7 +216,7 @@ class TestLLMAgentUnsupportedAction(unittest.TestCase):
 
 class TestLLMAgentProviderError(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_provider_error_returns_provider_error(self, mock_openai_class):
         mock_client = MagicMock()
         mock_client.chat.completions.create.side_effect = Exception("API rate limit exceeded")
@@ -241,7 +233,7 @@ class TestLLMAgentProviderError(unittest.TestCase):
 
 class TestLLMAgentGuardrails(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_first_action_prioritizes(self, mock_openai_class):
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
@@ -256,7 +248,7 @@ class TestLLMAgentGuardrails(unittest.TestCase):
         self.assertEqual(len(response.action.priority_order), 2)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_legal_risk_auto_escalates(self, mock_openai_class):
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client

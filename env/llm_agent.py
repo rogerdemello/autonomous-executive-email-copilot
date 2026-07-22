@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 import time
 from typing import Any
 
-from openai import OpenAI
-
 from .approval import get_approval_store
-from .config import chat_client_kwargs, get_settings
+from .config import get_settings
 from .models import (
     Action,
     AIDecisionTrace,
@@ -20,6 +19,8 @@ from .models import (
     Observation,
     TokenUsage,
 )
+from .providers import LLMProvider, LLMResponse, ProviderCapability, calculate_cost
+from .providers.openai_provider import OpenAIProvider
 from .safety.guardrails import (
     FORBIDDEN_ESCALATION_TARGETS,
     PROMPT_INJECTION_PATTERNS,
@@ -28,6 +29,7 @@ from .safety.guardrails import (
 from .safety.guardrails import detect_prompt_injection as _detect_prompt_injection
 from .safety.guardrails import detect_risky_content as _detect_risky_content
 from .safety.guardrails import is_forbidden_escalation as _is_forbidden_escalation
+from .tools import TOOL_DEFINITIONS, extract_action_from_tool_calls
 
 __all__ = [
     "FORBIDDEN_ESCALATION_TARGETS",
@@ -78,31 +80,34 @@ def _cache_response(
     _response_cache[obs_hash] = (response, time.time())
 
 
-def _calculate_cost(model: str, usage: TokenUsage) -> float:
-    pricing = MODEL_PRICING.get(model, {"prompt": 0.0, "completion": 0.0})
-    prompt_cost = (usage.prompt_tokens / 1_000_000) * pricing["prompt"]
-    completion_cost = (usage.completion_tokens / 1_000_000) * pricing["completion"]
-    return prompt_cost + completion_cost
-
-
 # Default configuration
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_LARGER_MODEL = "gpt-4o"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT_SECONDS = 30.0
-DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
-
-# Model pricing (USD per 1M tokens)
-MODEL_PRICING = {
-    "gpt-4o-mini": {"prompt": 0.15, "completion": 0.60},
-    "gpt-4o": {"prompt": 2.50, "completion": 10.00},
-}
 
 _response_cache: dict[str, tuple[AIResponse, float]] = {}
+_cache_lock = asyncio.Lock()
 
 
 def _clear_cache() -> None:
     _response_cache.clear()
+
+
+async def _aget_cached_response(
+    observation: Observation, ttl: int = DEFAULT_CACHE_TTL_SECONDS
+) -> AIResponse | None:
+    async with _cache_lock:
+        return _get_cached_response(observation, ttl)
+
+
+async def _acache_response(
+    observation: Observation,
+    response: AIResponse,
+    max_entries: int = DEFAULT_CACHE_MAX_ENTRIES,
+) -> None:
+    async with _cache_lock:
+        _cache_response(observation, response, max_entries)
 
 
 # System prompt for AI Chief of Staff
@@ -115,27 +120,12 @@ Your role is to make optimal email management decisions based on:
 - Risk level
 - Persona preferences (strict_ceo/balanced/chill_manager)
 
-Available actions:
-1. CLASSIFY: Label email as spam, normal, or urgent
-2. PRIORITIZE: Order emails by importance
-3. REPLY: Send a response to an email
-4. ESCALATE: Forward to legal_team or chief_of_staff
-5. DEFER: Mark for later processing
-
-Guidelines:
+Use the available tools to take the appropriate action. Guidelines:
 - For high-value, high-urgency emails → reply immediately
 - For legal/security risks → escalate immediately
 - For low-value spam → classify and skip
 - For unknown senders → defer initially
 - Match reply tone to sender role (client: professional, internal: concise, vendor: brief)
-
-Output your decision as JSON with these fields:
-- action_type: "classify" | "reply" | "defer" | "escalate" | "prioritize"
-- email_id: (optional) the email ID to act on
-- label: (optional) "spam" | "normal" | "urgent" (for classify)
-- content: (optional) reply text (for reply)
-- priority_order: (optional) list of email IDs in order (for prioritize)
-- escalate_to: (optional) "legal_team" | "chief_of_staff" (for escalate)
 """
 
 
@@ -300,7 +290,7 @@ class LLMAgent:
         self._model = model
         self._temperature = temperature
         self._timeout_seconds = timeout_seconds
-        self._client: OpenAI | None = None
+        self._provider: LLMProvider | None = None
         self._did_prioritize = False
         # Emails already acted on this episode. The environment keeps listing every
         # email (handled or not), so without progress tracking the agent re-acts on
@@ -313,34 +303,225 @@ class LLMAgent:
             require_approval = get_settings().require_approval
         self._require_approval = require_approval
 
-    def _get_client(self) -> OpenAI:
-        """Lazy initialization of OpenAI/Azure client."""
-        if self._client is None:
-            kwargs, model = chat_client_kwargs(self._timeout_seconds)
-            self._client = OpenAI(**kwargs)
-            # Prefer the configured model name over the constructor default.
-            if model != self._model:
-                self._model = model
-        return self._client
+    def _get_provider(self) -> LLMProvider:
+        """Lazily resolve the configured LLM provider.
 
-    def get_action(self, observation: Observation) -> AIResponse:
+        Uses the provider registry's auto-detection, which honors ``LLM_PROVIDER``
+        / the available credential (OpenAI, Azure, Anthropic, Gemini, Ollama) and
+        wraps the result in a circuit breaker. We keep that wrapped provider —
+        every provider exposes the same ``generate``/``agenerate`` surface, so the
+        agent is provider-agnostic. Only if auto-detection finds no configured
+        provider do we fall back to a bare OpenAI client, so the failure surfaces
+        downstream as a clear auth error rather than a config error here.
         """
-        Get action from LLM based on current observation.
+        if self._provider is None:
+            from .providers import auto_detect_provider
 
-        Applies guardrails:
-        - First action always prioritizes (improves Kendall tau scoring)
-        - Auto-escalates legal/security risk emails immediately
+            try:
+                self._provider = auto_detect_provider()
+            except ValueError:
+                self._provider = OpenAIProvider(
+                    model=self._model,
+                    temperature=self._temperature,
+                    timeout_seconds=self._timeout_seconds,
+                )
+        return self._provider
 
-        Returns fallback on any failure:
-        - timeout → fallback_timeout
-        - parse error → fallback_parse_error
-        - validation error → fallback_validation_error
-        - provider error → provider_error
+    def _call_llm_with_fallback(
+        self,
+        provider: LLMProvider,
+        observation: Observation,
+        small_model: str,
+        large_model: str,
+        confidence_threshold: float,
+        use_tools: bool,
+        start_time: float,
+    ) -> tuple[LLMResponse | None, Action | None, float, str, str, str]:
+        """Call the LLM with tool or JSON path, with dynamic model fallback.
+
+        Returns (llm_response, action, confidence, reason, model_used, error_status).
+        error_status is one of "fallback_timeout", "provider_error", "" on success.
+        """
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_user_prompt(observation)},
+        ]
+        current_model = small_model
+        retry_with_larger = False
+        llm_response = None
+        reason = "LLM decision"
+
+        while True:
+            # Step 1: Call the LLM (network call, can timeout)
+            try:
+                gen_kwargs: dict[str, Any] = {
+                    "messages": messages,
+                    "model": current_model,
+                    "temperature": self._temperature,
+                }
+                if use_tools:
+                    gen_kwargs["tools"] = TOOL_DEFINITIONS
+                    gen_kwargs["response_format"] = None
+                else:
+                    gen_kwargs["response_format"] = {"type": "json_object"}
+                    gen_kwargs["tools"] = None
+
+                llm_response = provider.generate(**gen_kwargs)
+
+            except Exception as e:
+                error_str = str(e).lower()
+                if "timeout" in error_str or "timed out" in error_str:
+                    return None, None, 0.0, "", current_model, "fallback_timeout"
+                if current_model == small_model and not retry_with_larger:
+                    retry_with_larger = True
+                    current_model = large_model
+                    continue
+                return None, None, 0.0, "", current_model, "provider_error"
+
+            # Step 2: Parse the response (local, no network)
+            action = None
+            confidence = 0.0
+            error_status = ""
+            if use_tools and llm_response.tool_calls:
+                action, metadata = extract_action_from_tool_calls(llm_response.tool_calls)
+                if action:
+                    confidence = metadata.get("confidence", 0.9)
+                    reason = metadata.get("reason", f"Tool call: {action.action_type}")
+                else:
+                    error_status = "fallback_validation_error"
+            elif llm_response.content:
+                action_dict = _parse_llm_response(llm_response.content)
+                if action_dict is None:
+                    error_status = "fallback_parse_error"
+                else:
+                    action = _validate_action(action_dict)
+                    if action:
+                        confidence = action_dict.get("confidence", 0.5)
+                        reason = action_dict.get("reason", "LLM decision")
+                    else:
+                        error_status = "fallback_validation_error"
+            else:
+                error_status = "fallback_parse_error"
+
+            if action is None:
+                # Parse/validation failure — retry with larger model if available
+                if current_model == small_model and not retry_with_larger:
+                    retry_with_larger = True
+                    current_model = large_model
+                    continue
+                return None, None, 0.0, "", current_model, error_status or "fallback_parse_error"
+
+            # Check if confidence is too low and we should retry with larger model
+            if (
+                current_model == small_model
+                and confidence < confidence_threshold
+                and not retry_with_larger
+            ):
+                retry_with_larger = True
+                current_model = large_model
+                continue
+
+            return llm_response, action, confidence, reason, current_model, ""
+
+    async def _acall_llm_with_fallback(
+        self,
+        provider: LLMProvider,
+        observation: Observation,
+        small_model: str,
+        large_model: str,
+        confidence_threshold: float,
+        use_tools: bool,
+        start_time: float,
+    ) -> tuple[LLMResponse | None, Action | None, float, str, str, str]:
+        """Async version of _call_llm_with_fallback using await provider.agenerate()."""
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_user_prompt(observation)},
+        ]
+        current_model = small_model
+        retry_with_larger = False
+        llm_response = None
+        reason = "LLM decision"
+
+        while True:
+            try:
+                gen_kwargs: dict[str, Any] = {
+                    "messages": messages,
+                    "model": current_model,
+                    "temperature": self._temperature,
+                }
+                if use_tools:
+                    gen_kwargs["tools"] = TOOL_DEFINITIONS
+                    gen_kwargs["response_format"] = None
+                else:
+                    gen_kwargs["response_format"] = {"type": "json_object"}
+                    gen_kwargs["tools"] = None
+
+                llm_response = await provider.agenerate(**gen_kwargs)
+
+            except Exception as e:
+                error_str = str(e).lower()
+                if "timeout" in error_str or "timed out" in error_str:
+                    return None, None, 0.0, "", current_model, "fallback_timeout"
+                if current_model == small_model and not retry_with_larger:
+                    retry_with_larger = True
+                    current_model = large_model
+                    continue
+                return None, None, 0.0, "", current_model, "provider_error"
+
+            action = None
+            confidence = 0.0
+            error_status = ""
+            if use_tools and llm_response.tool_calls:
+                action, metadata = extract_action_from_tool_calls(llm_response.tool_calls)
+                if action:
+                    confidence = metadata.get("confidence", 0.9)
+                    reason = metadata.get("reason", f"Tool call: {action.action_type}")
+                else:
+                    error_status = "fallback_validation_error"
+            elif llm_response.content:
+                action_dict = _parse_llm_response(llm_response.content)
+                if action_dict is None:
+                    error_status = "fallback_parse_error"
+                else:
+                    action = _validate_action(action_dict)
+                    if action:
+                        confidence = action_dict.get("confidence", 0.5)
+                        reason = action_dict.get("reason", "LLM decision")
+                    else:
+                        error_status = "fallback_validation_error"
+            else:
+                error_status = "fallback_parse_error"
+
+            if action is None:
+                if current_model == small_model and not retry_with_larger:
+                    retry_with_larger = True
+                    current_model = large_model
+                    continue
+                return None, None, 0.0, "", current_model, error_status or "fallback_parse_error"
+
+            if (
+                current_model == small_model
+                and confidence < confidence_threshold
+                and not retry_with_larger
+            ):
+                retry_with_larger = True
+                current_model = large_model
+                continue
+
+            return llm_response, action, confidence, reason, current_model, ""
+
+    def _pre_process(
+        self, observation: Observation, start_time: float
+    ) -> tuple[AIResponse | None, Observation | None, bool]:
+        """Run guardrail pre-checks before the LLM call.
+
+        Returns (immediate_response, modified_observation, is_first_action).
+        If immediate_response is not None, return it directly.
         """
         is_first_action = not self._did_prioritize
-        start_time = time.time()
 
-        # Guardrail: Check if first action (return prioritize)
+        # Guardrail: First action always prioritizes
         if is_first_action:
             ranked = sorted(
                 observation.emails,
@@ -352,168 +533,98 @@ class LLMAgent:
                 reverse=True,
             )
             self._did_prioritize = True
-
-            return AIResponse(
-                action=Action(
-                    action_type="prioritize",
-                    priority_order=[email.id for email in ranked],
-                ),
-                trace=AIDecisionTrace(
-                    reason="First action: prioritize emails by priority_hint, business_value, and deadline",
-                    confidence=1.0,
-                    alternatives_considered=[],
-                    why_not="",
-                    latency_ms=int((time.time() - start_time) * 1000),
-                    model_name=self._model,
-                    status="success",
-                ),
-            )
-
-        # Work the inbox one email at a time: hide already-handled emails so the
-        # agent advances instead of re-deciding on the same email every step.
-        pending_emails = [e for e in observation.emails if e.id not in self._handled_ids]
-        if not pending_emails:
-            return AIResponse(
-                action=Action(action_type="defer", email_id=None),
-                trace=AIDecisionTrace(
-                    reason="All emails handled this episode",
-                    confidence=1.0,
-                    alternatives_considered=[],
-                    why_not="",
-                    latency_ms=int((time.time() - start_time) * 1000),
-                    model_name=self._model,
-                    status="success",
-                ),
-            )
-        observation = observation.model_copy(update={"emails": pending_emails})
-
-        # Guardrail: Auto-escalate legal/security risk emails (once each).
-        for email in observation.emails:
-            if email.risk_tag in {"legal", "security"}:
-                target = "legal_team" if email.risk_tag == "legal" else "chief_of_staff"
-                self._handled_ids.add(email.id)
-                return AIResponse(
+            return (
+                AIResponse(
                     action=Action(
-                        action_type="escalate",
-                        email_id=email.id,
-                        escalate_to=target,
+                        action_type="prioritize",
+                        priority_order=[email.id for email in ranked],
                     ),
                     trace=AIDecisionTrace(
-                        reason=f"Auto-escalate: {email.risk_tag} risk detected on email from {email.sender}",
+                        reason="First action: prioritize emails by priority_hint, business_value, and deadline",
                         confidence=1.0,
-                        alternatives_considered=["reply", "defer", "classify"],
-                        why_not="Legal/security risks must be escalated per policy",
+                        alternatives_considered=[],
+                        why_not="",
                         latency_ms=int((time.time() - start_time) * 1000),
                         model_name=self._model,
                         status="success",
                     ),
+                ),
+                None,
+                is_first_action,
+            )
+
+        # Filter handled emails
+        pending_emails = [e for e in observation.emails if e.id not in self._handled_ids]
+        if not pending_emails:
+            return (
+                AIResponse(
+                    action=Action(action_type="defer", email_id=None),
+                    trace=AIDecisionTrace(
+                        reason="All emails handled this episode",
+                        confidence=1.0,
+                        alternatives_considered=[],
+                        why_not="",
+                        latency_ms=int((time.time() - start_time) * 1000),
+                        model_name=self._model,
+                        status="success",
+                    ),
+                ),
+                None,
+                is_first_action,
+            )
+        modified_obs = observation.model_copy(update={"emails": pending_emails})
+
+        # Guardrail: Auto-escalate legal/security risk emails
+        for email in modified_obs.emails:
+            if email.risk_tag in {"legal", "security"}:
+                target = "legal_team" if email.risk_tag == "legal" else "chief_of_staff"
+                self._handled_ids.add(email.id)
+                return (
+                    AIResponse(
+                        action=Action(
+                            action_type="escalate",
+                            email_id=email.id,
+                            escalate_to=target,
+                        ),
+                        trace=AIDecisionTrace(
+                            reason=f"Auto-escalate: {email.risk_tag} risk detected on email from {email.sender}",
+                            confidence=1.0,
+                            alternatives_considered=["reply", "defer", "classify"],
+                            why_not="Legal/security risks must be escalated per policy",
+                            latency_ms=int((time.time() - start_time) * 1000),
+                            model_name=self._model,
+                            status="success",
+                        ),
+                    ),
+                    None,
+                    is_first_action,
                 )
 
-        # Try cache first. Skip when approval is required so a cached response
-        # can never short-circuit the human-approval gate below.
-        if not self._require_approval:
-            cached = _get_cached_response(observation)
-            if cached:
-                if cached.action and cached.action.email_id:
-                    self._handled_ids.add(cached.action.email_id)
-                logger.info("Cache hit - returning immediately (latency <1ms)")
-                return cached
+        return None, modified_obs, is_first_action
 
-        # Dynamic model selection: small model first, larger fallback
-        settings = get_settings()
-        small_model = settings.model_name
-        large_model = settings.larger_model
-        confidence_threshold = settings.confidence_threshold
-        current_model = small_model
+    def _build_ai_response(
+        self,
+        action: Action,
+        llm_response: LLMResponse | None,
+        confidence: float,
+        reason: str,
+        model_used: str,
+        small_model: str,
+        start_time: float,
+        observation: Observation,
+        is_first_action: bool,
+    ) -> AIResponse:
+        """Build final AIResponse, run safety/approval checks, cache result."""
+        # Apply remaining guardrails
+        action = _apply_guardrails(observation, action, is_first_action)
 
-        # Call LLM with dynamic model selection. No provider configured (or a bad
-        # endpoint) surfaces here as a ValueError -> graceful provider_error fallback.
-        try:
-            client = self._get_client()
-        except ValueError:
-            return self._fallback_response("provider_error", start_time)
-        retry_with_larger = False
+        # Safety check
+        safe_action, safety_reason = self.safety_check(action, observation)
+        if safe_action is None:
+            return self._fallback_response(f"safety_{safety_reason}", start_time)
+        action = safe_action
 
-        while True:
-            try:
-                response = client.chat.completions.create(
-                    model=current_model,
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": _build_user_prompt(observation)},
-                    ],
-                    temperature=self._temperature,
-                    response_format={"type": "json_object"},
-                )
-
-                content = response.choices[0].message.content
-                break
-
-            except Exception as e:
-                error_str = str(e).lower()
-                if "timeout" in error_str or "timed out" in error_str:
-                    return self._fallback_response("fallback_timeout", start_time)
-                # Retry once with larger model if small model fails
-                if current_model == small_model and not retry_with_larger:
-                    current_model = large_model
-                    retry_with_larger = True
-                    continue
-                return self._fallback_response("provider_error", start_time)
-
-        if not content:
-            return self._fallback_response("fallback_parse_error", start_time)
-
-        action_dict = _parse_llm_response(content)
-        if action_dict is None:
-            return self._fallback_response("fallback_parse_error", start_time)
-
-        action = _validate_action(action_dict)
-        if action is None:
-            return self._fallback_response("fallback_validation_error", start_time)
-
-        # Check confidence and fallback to larger model if needed
-        confidence = action_dict.get("confidence", 0.5)
-        if (
-            current_model == small_model
-            and confidence < confidence_threshold
-            and not retry_with_larger
-        ):
-            retry_with_larger = True
-            current_model = large_model
-            try:
-                response = client.chat.completions.create(
-                    model=current_model,
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": _build_user_prompt(observation)},
-                    ],
-                    temperature=self._temperature,
-                    response_format={"type": "json_object"},
-                )
-                content = response.choices[0].message.content
-                if not content:
-                    return self._fallback_response("fallback_parse_error", start_time)
-                action_dict = _parse_llm_response(content)
-                if action_dict is None:
-                    return self._fallback_response("fallback_parse_error", start_time)
-                action = _validate_action(action_dict)
-                if action is None:
-                    return self._fallback_response("fallback_validation_error", start_time)
-                confidence = action_dict.get("confidence", 0.5)
-            except Exception as exc:
-                logger.warning("Larger-model confidence retry failed: %s", exc)
-
-        # Apply remaining guardrails to LLM response
-        if action:
-            action = _apply_guardrails(observation, action, is_first_action)
-
-        # Apply safety check
-        if action:
-            safe_action, safety_reason = self.safety_check(action, observation)
-            if safe_action is None:
-                return self._fallback_response(f"safety_{safety_reason}", start_time)
-            action = safe_action
-
+        # Approval gating
         if self._require_approval and action and action.action_type in {"escalate", "reply"}:
             if action.email_id:
                 store = get_approval_store()
@@ -547,31 +658,21 @@ class LLMAgent:
         if action and action.action_type == "prioritize":
             self._did_prioritize = True
 
-        # Track token usage and calculate cost
-        usage = response.usage
-        token_usage = TokenUsage(
-            prompt_tokens=usage.prompt_tokens if usage else 0,
-            completion_tokens=usage.completion_tokens if usage else 0,
-            total_tokens=usage.total_tokens if usage else 0,
-        )
-        cost_usd = _calculate_cost(current_model, token_usage)
-
+        # Token tracking
+        usage = llm_response.usage if llm_response else None
+        token_usage = usage or TokenUsage()
+        cost_usd = calculate_cost(model_used, token_usage)
         latency_ms = int((time.time() - start_time) * 1000)
-
-        if action is None:
-            return self._fallback_response("fallback_validation_error", start_time)
 
         ai_response = AIResponse(
             action=action,
             trace=AIDecisionTrace(
-                reason=action_dict.get("reason", "LLM decision") if action_dict else "LLM decision",
+                reason=reason,
                 confidence=confidence,
-                alternatives_considered=action_dict.get("alternatives_considered", [])
-                if action_dict
-                else [],
-                why_not=action_dict.get("why_not", "") if action_dict else "",
+                alternatives_considered=[],
+                why_not="",
                 latency_ms=latency_ms,
-                model_name=current_model,
+                model_name=model_used,
                 status="success",
                 token_usage=token_usage,
                 cost_usd=cost_usd,
@@ -579,13 +680,13 @@ class LLMAgent:
         )
 
         logger.info(
-            f"API call: model={current_model}, tokens={token_usage.total_tokens}, cost=${cost_usd:.4f}"
+            f"API call: model={model_used}, tokens={token_usage.total_tokens}, cost=${cost_usd:.4f}"
         )
         logger.info(
-            f"Savings: small model tokens would have cost ~${_calculate_cost(small_model, token_usage):.4f}"
+            f"Savings: small model tokens would have cost ~${calculate_cost(small_model, token_usage):.4f}"
         )
 
-        # Record LLM observability (telemetry must never break the agent).
+        # Telemetry (best-effort)
         try:
             from telemetry.metrics import record_llm_usage
 
@@ -594,14 +695,139 @@ class LLMAgent:
                 cost_usd=cost_usd,
                 prompt_tokens=token_usage.prompt_tokens,
                 completion_tokens=token_usage.completion_tokens,
-                model=current_model,
+                model=model_used,
             )
-        except Exception:  # noqa: BLE001 - telemetry is best-effort
+        except Exception:
             logger.debug("record_llm_usage failed", exc_info=True)
 
         if action.email_id:
             self._handled_ids.add(action.email_id)
-        _cache_response(observation, ai_response)
+
+        return ai_response
+
+    def get_action(self, observation: Observation) -> AIResponse:
+        """Get action from LLM (sync entry point)."""
+        start_time = time.time()
+        immediate, modified_obs, is_first = self._pre_process(observation, start_time)
+        if immediate is not None:
+            return immediate
+
+        obs = modified_obs
+
+        # Try cache
+        if not self._require_approval:
+            cached = _get_cached_response(obs)
+            if cached:
+                if cached.action and cached.action.email_id:
+                    self._handled_ids.add(cached.action.email_id)
+                logger.info("Cache hit - returning immediately (latency <1ms)")
+                return cached
+
+        # Provider + LLM call
+        try:
+            provider = self._get_provider()
+        except ValueError as exc:
+            logger.warning("Provider not available: %s", exc)
+            return self._fallback_response("provider_error", start_time)
+
+        settings = get_settings()
+        small_model = settings.model_name
+        use_tools = provider.supports(ProviderCapability.TOOLS) or provider.supports(
+            ProviderCapability.FUNCTION_CALLING
+        )
+
+        llm_response, action, confidence, reason, model_used, error_status = (
+            self._call_llm_with_fallback(
+                provider=provider,
+                observation=obs,
+                small_model=small_model,
+                large_model=settings.larger_model,
+                confidence_threshold=settings.confidence_threshold,
+                use_tools=use_tools,
+                start_time=start_time,
+            )
+        )
+        if action is None:
+            return self._fallback_response(error_status or "fallback_parse_error", start_time)
+
+        ai_response = self._build_ai_response(
+            action=action,
+            llm_response=llm_response,
+            confidence=confidence,
+            reason=reason,
+            model_used=model_used,
+            small_model=small_model,
+            start_time=start_time,
+            observation=obs,
+            is_first_action=is_first,
+        )
+
+        _cache_response(obs, ai_response)
+        return ai_response
+
+    async def aget_action(self, observation: Observation) -> AIResponse:
+        """Get action from LLM (async entry point)."""
+        start_time = time.time()
+        immediate, modified_obs, is_first = self._pre_process(observation, start_time)
+        if immediate is not None:
+            return immediate
+
+        obs = modified_obs
+
+        # Try cache (async)
+        if not self._require_approval:
+            cached = await _aget_cached_response(obs)
+            if cached:
+                if cached.action and cached.action.email_id:
+                    self._handled_ids.add(cached.action.email_id)
+                logger.info("Cache hit (async) - returning immediately")
+                return cached
+
+        # Provider + LLM call
+        try:
+            provider = self._get_provider()
+        except ValueError as exc:
+            logger.warning("Provider not available: %s", exc)
+            return self._fallback_response("provider_error", start_time)
+
+        settings = get_settings()
+        small_model = settings.model_name
+        use_tools = provider.supports(ProviderCapability.TOOLS) or provider.supports(
+            ProviderCapability.FUNCTION_CALLING
+        )
+
+        (
+            llm_response,
+            action,
+            confidence,
+            reason,
+            model_used,
+            error_status,
+        ) = await self._acall_llm_with_fallback(
+            provider=provider,
+            observation=obs,
+            small_model=small_model,
+            large_model=settings.larger_model,
+            confidence_threshold=settings.confidence_threshold,
+            use_tools=use_tools,
+            start_time=start_time,
+        )
+        if action is None:
+            return self._fallback_response(error_status or "fallback_parse_error", start_time)
+
+        ai_response = self._build_ai_response(
+            action=action,
+            llm_response=llm_response,
+            confidence=confidence,
+            reason=reason,
+            model_used=model_used,
+            small_model=small_model,
+            start_time=start_time,
+            observation=obs,
+            is_first_action=is_first,
+        )
+
+        await _acache_response(obs, ai_response)
         return ai_response
 
     def _fallback_response(self, status: str, start_time: float) -> AIResponse:
@@ -693,11 +919,19 @@ _default_agent: LLMAgent | None = None
 
 
 def get_action(observation: Observation) -> AIResponse:
-    """Get action from default LLM agent."""
+    """Get action from default LLM agent (sync)."""
     global _default_agent
     if _default_agent is None:
         _default_agent = LLMAgent()
     return _default_agent.get_action(observation)
+
+
+async def aget_action(observation: Observation) -> AIResponse:
+    """Get action from default LLM agent (async)."""
+    global _default_agent
+    if _default_agent is None:
+        _default_agent = LLMAgent()
+    return await _default_agent.aget_action(observation)
 
 
 def reset_agent() -> None:

@@ -13,6 +13,18 @@ from env.llm_agent import (
 from env.models import Action, Observation, ObservationEmail
 
 
+def _make_mock_openai_response(content: str):
+    """Build a MagicMock that looks like an OpenAI chat completion response."""
+    from unittest.mock import MagicMock
+
+    usage = MagicMock(prompt_tokens=50, completion_tokens=30, total_tokens=80)
+    msg = MagicMock(content=content)
+    msg.tool_calls = None
+    choice = MagicMock(message=msg, finish_reason="stop")
+    resp = MagicMock(choices=[choice], model="gpt-4o-mini", usage=usage)
+    return resp
+
+
 def _make_observation(emails=None) -> Observation:
     if emails is None:
         emails = [
@@ -213,18 +225,12 @@ class TestSafetyCheckMethod(unittest.TestCase):
 
 class TestLLMAgentIntegratesSafetyCheck(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.llm_agent.OpenAI")
+    @patch("env.providers.openai_provider.OpenAI")
     def test_prompt_injection_returns_fallback(self, mock_openai_class):
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(
-                message=MagicMock(
-                    content='{"action_type": "reply", "email_id": "e1", "content": "Response"}'
-                )
-            )
-        ]
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.chat.completions.create.return_value = _make_mock_openai_response(
+            '{"action_type": "reply", "email_id": "e1", "content": "Response"}'
+        )
         mock_openai_class.return_value = mock_client
 
         agent = LLMAgent()
