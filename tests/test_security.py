@@ -29,6 +29,9 @@ def test_mutating_requires_token_when_configured(monkeypatch):
     # Correct bearer token -> allowed.
     ok = client.post("/reset", json={}, headers={"Authorization": "Bearer s3cret"})
     assert ok.status_code == 200
+    # Bare token without "Bearer" prefix -> rejected (must follow Bearer <token> format).
+    bare = client.post("/reset", json={}, headers={"Authorization": "s3cret"})
+    assert bare.status_code == 401
     # X-API-Key header also works.
     ok2 = client.post("/reset", json={}, headers={"X-API-Key": "s3cret"})
     assert ok2.status_code == 200

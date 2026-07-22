@@ -4,7 +4,7 @@ import asyncio
 import json
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from .environment import ExecutiveEmailEnv
 
@@ -93,3 +93,59 @@ async def dashboard_reset(
     state = runtime_env.state().model_dump()
     asyncio.create_task(broadcast_state(state))
     return obs.model_dump()
+
+
+@dashboard_router.get("/dashboard/eval/results")
+async def eval_results(
+    task_id: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> dict[str, Any]:
+    from .db_async import AsyncEpisodeRepository
+
+    repo = AsyncEpisodeRepository()
+    episodes = await repo.list(task_id=task_id, limit=limit, offset=offset)
+    return {
+        "total": len(episodes),
+        "episodes": [
+            {
+                "episode_id": e.episode_id,
+                "task_id": e.task_id,
+                "seed": e.seed,
+                "persona": e.persona,
+                "score": e.score,
+                "total_reward": e.total_reward,
+                "steps": e.steps,
+                "created_at": str(e.created_at),
+            }
+            for e in episodes
+        ],
+    }
+
+
+@dashboard_router.get("/dashboard/eval/summary")
+async def eval_summary() -> dict[str, Any]:
+    from .db_async import AsyncEpisodeRepository
+
+    repo = AsyncEpisodeRepository()
+    episodes = await repo.list(limit=500)
+    if not episodes:
+        return {"summary": {}}
+
+    scores = [e.score for e in episodes if e.score is not None]
+    rewards = [e.total_reward for e in episodes if e.total_reward is not None]
+    from statistics import mean, stdev
+
+    return {
+        "summary": {
+            "total_episodes": len(episodes),
+            "avg_score": mean(scores) if scores else None,
+            "std_score": stdev(scores) if len(scores) > 1 else None,
+            "avg_reward": mean(rewards) if rewards else None,
+            "best_score": max(scores) if scores else None,
+            "by_task": {
+                task: sum(1 for e in episodes if e.task_id == task)
+                for task in {e.task_id for e in episodes}
+            },
+        }
+    }

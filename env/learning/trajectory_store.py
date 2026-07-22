@@ -37,7 +37,8 @@ def _set_sqlite_pragma(dbapi_connection, _connection_record):  # pragma: no cove
 
 
 TrajectorySessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=trajectory_engine)
-TrajectoryBase = declarative_base()
+# Typed Any so mypy accepts declarative subclassing (see env/db.py Base).
+TrajectoryBase: Any = declarative_base()
 
 
 class SuccessfulTrajectory(TrajectoryBase):

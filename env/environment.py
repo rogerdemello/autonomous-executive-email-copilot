@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import cast
+
 from .models import (
     Action,
     ActionResult,
     EmailRecord,
+    InterruptionEvent,
     Observation,
     ObservationEmail,
     PersonaType,
+    RiskType,
     Scenario,
     StateSnapshot,
 )
@@ -36,7 +40,7 @@ class ExecutiveEmailEnv:
         self._persona_profile = get_persona_profile(persona)
         self._scenario: Scenario | None = None
         self._emails: list[EmailRecord] = []
-        self._pending_interruptions = []
+        self._pending_interruptions: list[InterruptionEvent] = []
         self._time_remaining = 0
         self._current_minute = 0
         self._risk_level = "medium"
@@ -85,7 +89,7 @@ class ExecutiveEmailEnv:
             persona=self._persona,
             time_remaining=self._time_remaining,
             current_minute=self._current_minute,
-            risk_level=self._risk_level,
+            risk_level=cast(RiskType, self._risk_level),
             emails=[email.model_copy(deep=True) for email in self._emails],
             action_history=[action.model_copy(deep=True) for action in self._action_history],
             total_reward=round(self._total_reward, 6),
@@ -195,7 +199,7 @@ class ExecutiveEmailEnv:
                 subject=e.subject,
                 body=e.body,
                 priority_hint=e.priority_hint,
-                deadline_minutes=e.deadline_minutes,
+                deadline_minutes=max(0, e.deadline_minutes),
                 business_value=e.business_value,
                 risk_tag=e.risk_tag,
                 thread_history=e.thread_history,
@@ -206,7 +210,7 @@ class ExecutiveEmailEnv:
             emails=emails,
             time_remaining=self._time_remaining,
             pending_actions=compute_pending_actions(self._emails),
-            risk_level=self._risk_level,
+            risk_level=cast(RiskType, self._risk_level),
             current_minute=self._current_minute,
             persona=self._persona,
             remaining_interruptions=len(self._pending_interruptions),
@@ -331,9 +335,9 @@ class ExecutiveEmailEnv:
             if email.id in self._deadline_penalized_ids:
                 continue
             if (
-                email.expected_label == "urgent"
-                and not email.resolved
+                not email.resolved
                 and email.deadline_minutes <= 0
+                and (email.expected_label == "urgent" or email.critical)
             ):
                 penalty -= 0.7 * self._persona_profile.deadline_penalty_multiplier
                 self._deadline_penalized_ids.add(email.id)

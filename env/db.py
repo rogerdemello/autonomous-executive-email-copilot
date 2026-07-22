@@ -3,8 +3,9 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import Column, Float, Integer, String, Text, create_engine
+from sqlalchemy import Column, Float, Integer, String, Text, create_engine, func, inspect
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -69,7 +70,10 @@ engine = create_engine(DATABASE_URL, **build_engine_kwargs(DATABASE_URL))
 # closed session (get_session commits then closes), so repository callers can
 # safely read/serialize ORM instances after the context manager exits.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
-Base = declarative_base()
+# Typed as Any so mypy accepts ``class Model(Base)`` subclassing and treats mapped
+# ``Column`` attributes as dynamic (the SQLAlchemy 1.x-style declarative base is not
+# a static type). This is the pragmatic alternative to the sqlalchemy mypy plugin.
+Base: Any = declarative_base()
 
 
 class Episode(Base):
@@ -101,7 +105,7 @@ class Episode(Base):
         import json
 
         try:
-            decisions = json.loads(self.decisions_json) if self.decisions_json else []
+            decisions = json.loads(self.decisions_json) if self.decisions_json else []  # type: ignore[arg-type]
         except (TypeError, ValueError):
             decisions = []
 
@@ -199,8 +203,8 @@ class TeamSettings(Base):
         return {
             "id": self.id,
             "team_id": self.team_id,
-            "approval_rules": json.loads(approval_rules_str) if approval_rules_str else [],
-            "escalation_targets": json.loads(escalation_targets_str)
+            "approval_rules": json.loads(approval_rules_str) if approval_rules_str else [],  # type: ignore[arg-type]
+            "escalation_targets": json.loads(escalation_targets_str)  # type: ignore[arg-type]
             if escalation_targets_str
             else [],
             "created_at": self.created_at,
@@ -208,8 +212,33 @@ class TeamSettings(Base):
         }
 
 
+_SCHEMA_VERSION = 1
+
+
+class SchemaVersion(Base):
+    __tablename__ = "schema_version"
+    version = Column(Integer, primary_key=True)
+    applied_at = Column(
+        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
+    )
+
+
+def _register_saas_models() -> None:
+    """Import the SaaS ORM models so their tables join ``Base.metadata``.
+
+    Done lazily (not at module import) because ``env.saas.models_db`` imports
+    ``Base`` from this module — a top-level import would be circular. Import is
+    cheap and idempotent, so calling it before every ``create_all`` is safe.
+    """
+    try:
+        import env.saas.models_db  # noqa: F401
+    except Exception:  # pragma: no cover - defensive; SaaS layer is additive
+        pass
+
+
 def init_db() -> None:
-    """Initialize database tables."""
+    """Initialize database tables (core + SaaS layer)."""
+    _register_saas_models()
     Base.metadata.create_all(bind=engine)
 
 
@@ -232,6 +261,25 @@ def get_session():
         session.close()
 
 
+def _run_migration(version: int) -> None:
+    """Execute a single migration step for the given version number."""
+    if version == 1:
+        return
+
+
 def migrate_db() -> None:
-    """Run database migrations."""
+    """Run database migrations with schema version tracking."""
     init_db()
+
+    inspector = inspect(engine)
+    if "schema_version" not in inspector.get_table_names():
+        SchemaVersion.__table__.create(bind=engine)
+        with get_session() as session:
+            session.add(SchemaVersion(version=_SCHEMA_VERSION))
+        return
+
+    with get_session() as session:
+        current = session.query(func.max(SchemaVersion.version)).scalar() or 0
+        for v in range(current + 1, _SCHEMA_VERSION + 1):
+            _run_migration(v)
+            session.add(SchemaVersion(version=v))

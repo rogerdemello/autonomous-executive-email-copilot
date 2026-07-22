@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy.stats import kendalltau
 
 from .data_loader import load_yaml
-from .models import EmailRecord
+from .models import EmailRecord, LabelType
 
 DATA_ROOT = Path(__file__).resolve().parents[1] / "data"
 SETTINGS_FILE = DATA_ROOT / "settings.yaml"
@@ -146,7 +146,7 @@ def ranking_similarity(predicted_order: list[str], gold_order: list[str]) -> flo
     return clip_score((tau + 1.0) / 2.0)
 
 
-def classify_heuristic(subject: str, body: str, priority_hint: str, risk_tag: str) -> str:
+def classify_heuristic(subject: str, body: str, priority_hint: str, risk_tag: str) -> LabelType:
     text = (subject + " " + body).lower()
     spam_terms, urgent_terms = get_classifier_terms()
 

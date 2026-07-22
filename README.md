@@ -20,6 +20,7 @@ The project is built as a full experimentation stack rather than a single simula
 - [docs/BENCHMARK.md](docs/BENCHMARK.md) — benchmark methodology, scoring, and how to reproduce results.
 - [docs/WHITEPAPER.md](docs/WHITEPAPER.md) — positioning & methods: what it measures, real results, honest findings.
 - [docs/RUNBOOK.md](docs/RUNBOOK.md) — operations: probes, metrics, alerts, incidents.
+- [docs/COMMERCIAL.md](docs/COMMERCIAL.md) — SaaS layer: accounts, organizations, RBAC, and sales-led licensing.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — phased improvement plan and status.
 - [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example) — contributing, security policy, configuration.
 

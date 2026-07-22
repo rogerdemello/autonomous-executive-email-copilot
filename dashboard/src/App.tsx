@@ -5,12 +5,13 @@ import Replay from './components/Replay'
 import ApprovalQueue from './components/ApprovalQueue'
 import Settings from './components/Settings'
 import Team from './components/Team'
+import Account from './components/Account'
 import { createApiClient, defaultApiBase, setAuthToken } from './api'
 import { useDashboardSocket } from './useDashboardSocket'
 
 const TOKEN_STORAGE_KEY = 'apiToken'
 
-type Tab = 'inbox' | 'timeline' | 'replay' | 'approvals' | 'settings' | 'team'
+type Tab = 'inbox' | 'timeline' | 'replay' | 'approvals' | 'settings' | 'team' | 'account'
 
 const API_BASE = import.meta.env.VITE_API_BASE || defaultApiBase()
 
@@ -33,6 +34,7 @@ const TABS: TabDef[] = [
   { id: 'approvals', label: 'Approvals', lede: 'Actions waiting for your sign-off' },
   { id: 'team', label: 'Team', lede: 'Who handles escalations, and what needs approval' },
   { id: 'settings', label: 'Preferences', lede: 'Defaults and notifications' },
+  { id: 'account', label: 'Account', lede: 'Your workspace, members, billing, and mailboxes' },
 ]
 
 function App() {
@@ -167,6 +169,7 @@ function App() {
             {activeTab === 'approvals' && <ApprovalQueue apiBase={apiBase} />}
             {activeTab === 'settings' && <Settings apiBase={apiBase} />}
             {activeTab === 'team' && <Team apiBase={apiBase} />}
+            {activeTab === 'account' && <Account apiBase={apiBase} />}
           </div>
         </div>
       </main>

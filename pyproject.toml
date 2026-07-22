@@ -25,6 +25,7 @@ dependencies = [
   "sqlalchemy==2.0.51",
   "fpdf2==2.8.7",
   "openai==2.44.0",
+  "email-validator==2.3.0",  # required by pydantic EmailStr in the SaaS auth layer
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,29 @@ dev = [
   "mypy==2.1.0",
   "bandit==1.9.4",
   "pip-audit==2.10.1",
+]
+
+otel = [
+  "opentelemetry-api>=1.30.0",
+  "opentelemetry-sdk>=1.30.0",
+  "opentelemetry-exporter-otlp-proto-http>=1.30.0",
+]
+
+redis = [
+  "redis>=5.0.0",
+]
+
+async_db = [
+  "asyncpg>=0.30.0",
+  "aiosqlite>=0.20.0",
+]
+
+loadtest = [
+  "locust>=2.30.0",
+]
+
+all = [
+  "exec-email-copilot[otel,redis,async_db,loadtest]",
 ]
 
 [project.scripts]

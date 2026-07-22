@@ -69,7 +69,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install mypy
-      - run: mypy env --ignore-missing-imports --no-strict-optional || true
+      - run: mypy env --config-file mypy.ini
 
   security:
     runs-on: ubuntu-latest

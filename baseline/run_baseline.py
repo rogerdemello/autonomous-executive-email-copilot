@@ -56,6 +56,12 @@ def run(
 
     if mode == "llm":
         policy = LLMPolicy()
+        # The llm path drives the module-global agent via get_action(); reset it so
+        # each episode starts with fresh per-episode state (handled-email tracking,
+        # provider/circuit-breaker state) instead of leaking across runs.
+        from env.llm_agent import reset_agent
+
+        reset_agent()
     elif mode == "hybrid":
         policy = HybridPolicy(planner_interval=planner_interval)
     else:

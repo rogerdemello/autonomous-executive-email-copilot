@@ -1,0 +1,118 @@
+# Helm values for exec-email-copilot.
+# Default values — override per environment (e.g. -f values-prod.yaml).
+# ---------------------------------------------------------------------------
+# Image
+image:
+  repository: exec-email-copilot
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Replica count for horizontal scaling (stateless API servers).
+replicaCount: 2
+
+# Service configuration.
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# Ingress — disabled by default; enable with --set ingress.enabled=true.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: copilot.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource requests/limits — tune to workload.
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2
+    memory: 1Gi
+
+# Startup, liveness, and readiness probes.
+probes:
+  enabled: true
+  startup:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 30
+  liveness:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    failureThreshold: 5
+  readiness:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+
+# Environment variables injected into the pod.
+# Sensitive values should come from an existing Secret (see existingSecret).
+extraEnv:
+  - name: LOG_LEVEL
+    value: info
+  - name: API_AUTH_TOKEN
+    value: ""
+  - name: RATE_LIMIT_PER_MINUTE
+    value: "60"
+  - name: CORS_ORIGINS
+    value: "*"
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: ""
+
+# Name of an existing Secret whose keys are injected as env vars.
+# If empty, a default secret is created from .Values.secret.
+existingSecret: ""
+
+# Values used to create a default secret when existingSecret is empty.
+secret:
+  OPENAI_API_KEY: ""
+  ANTHROPIC_API_KEY: ""
+  GOOGLE_API_KEY: ""
+  LLM_MODEL: gpt-4o
+  LLM_PROVIDER: openai
+
+# PersistentVolumeClaim for episode / trajectory storage.
+persistence:
+  enabled: false
+  size: 10Gi
+  storageClass: ""
+
+# ServiceAccount — useful for workload identity / IRSA.
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Pod-level security context.
+podSecurityContext:
+  fsGroup: 1000
+
+# Container-level security context.
+containerSecurityContext:
+  runAsUser: 1000
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# Additional topology spread or affinity constraints.
+affinity: {}
+
+# Tolerations for node scheduling.
+tolerations: []
+
+# Node selector.
+nodeSelector: {}

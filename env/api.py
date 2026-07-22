@@ -8,9 +8,31 @@ from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+try:
+    from telemetry.otel import configure_otel, in_span
+
+    _OTEL_CONFIGURED = False
+except ImportError:
+    _OTEL_CONFIGURED = True  # skip configure
+
+    def in_span(name, attributes=None, kind=None):
+        from contextlib import nullcontext
+
+        return nullcontext()
+
+    def configure_otel(**kwargs):
+        pass
+
 
 from baseline.leaderboard import build_leaderboard
 from baseline.run_baseline import run as run_baseline
@@ -90,6 +112,22 @@ async def lifespan(_app: FastAPI):
     logger.info(
         "Starting Autonomous Executive Email Copilot API (log_level=%s)", get_settings().log_level
     )
+    if get_settings().auth_secret_is_dev:
+        logger.warning(
+            "AUTH_SECRET_KEY is not set — using an insecure development signing "
+            "secret. Set AUTH_SECRET_KEY to a long random value in production; "
+            "all session tokens and license keys are signed with it."
+        )
+    global _OTEL_CONFIGURED
+    if not _OTEL_CONFIGURED:
+        settings = get_settings()
+        otlp_endpoint = getattr(settings, "otel_exporter_otlp_endpoint", None) or None
+        configure_otel(
+            service_name="exec-email-copilot",
+            otlp_endpoint=otlp_endpoint,
+            enable_console=False,
+        )
+        _OTEL_CONFIGURED = True
     yield
     logger.info("Shutting down Autonomous Executive Email Copilot API")
 
@@ -145,6 +183,26 @@ class _V1PathRewriteMiddleware:
 
 app.add_middleware(_V1PathRewriteMiddleware)
 app.include_router(dashboard_router)
+
+# Commercial SaaS layer: accounts, organizations (tenants), RBAC, sales-led
+# licensing. Additive — it does not touch the benchmark/scoring routes.
+from .saas.mailbox_routes import mailbox_router  # noqa: E402
+from .saas.marketing import marketing_router  # noqa: E402
+from .saas.processing_routes import inbox_router  # noqa: E402
+from .saas.routes import (  # noqa: E402
+    SAAS_SELF_AUTH_PREFIXES,
+    auth_router,
+    billing_router,
+    org_router,
+)
+
+app.include_router(auth_router)
+app.include_router(org_router)
+app.include_router(billing_router)
+app.include_router(mailbox_router)
+app.include_router(inbox_router)
+app.include_router(marketing_router)
+
 runtime_env = ExecutiveEmailEnv()
 
 
@@ -159,74 +217,76 @@ async def _gateway_middleware(request, call_next):
     request_id = set_request_id(request.headers.get("X-Request-ID"))
     settings = get_settings()
     start = time.perf_counter()
-    path = request.url.path  # refined to the route template after routing
+    path = request.url.path
 
-    # Resolve auth + tenant up front so rate limiting can key on the tenant when
-    # one is known. With neither API_AUTH_TOKEN nor API_TENANTS set, ``tenant`` is
-    # None and the rate-limit key falls back to the client IP -- byte-identical to
-    # the previous IP-only behavior. (Tenant tagging does NOT enforce per-tenant
-    # DB isolation; that is a deliberate follow-up.)
-    authorized, tenant = resolve_auth(
-        request.method,
-        settings.api_auth_token,
-        settings.tenant_token_map,
-        request.headers.get("Authorization"),
-        request.headers.get("X-API-Key"),
-    )
-
-    # Opt-in rate limiting (disabled when RATE_LIMIT_PER_MINUTE <= 0). Key per
-    # tenant when resolved, else per client IP.
-    rate_key = f"tenant:{tenant}" if tenant else _client_key(request)
-    if not rate_limiter.allow(rate_key, settings.rate_limit_per_minute):
-        record_request(0.0, {"path": path, "method": request.method, "status": "429"})
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "Rate limit exceeded", "request_id": request_id},
-            headers={"X-Request-ID": request_id, "Retry-After": "60"},
+    span_attrs = {
+        "http.method": request.method,
+        "http.target": path,
+        "net.peer.ip": request.client.host if request.client else "unknown",
+        "enduser.id": request.headers.get("X-User-ID", ""),
+    }
+    with in_span("gateway.request", attributes=span_attrs):
+        authorized, tenant = resolve_auth(
+            request.method,
+            settings.api_auth_token,
+            settings.tenant_token_map,
+            request.headers.get("Authorization"),
+            request.headers.get("X-API-Key"),
         )
 
-    # Opt-in auth (open when neither API_AUTH_TOKEN nor API_TENANTS is set; only
-    # gates mutating methods).
-    if not authorized:
-        record_request(0.0, {"path": path, "method": request.method, "status": "401"})
-        record_api_error("unauthorized")
-        return JSONResponse(
-            status_code=401,
-            content={"detail": "Missing or invalid API token", "request_id": request_id},
-            headers={"X-Request-ID": request_id},
-        )
+        rate_key = f"tenant:{tenant}" if tenant else _client_key(request)
+        if not rate_limiter.allow(rate_key, settings.rate_limit_per_minute):
+            record_request(0.0, {"path": path, "method": request.method, "status": "429"})
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded", "request_id": request_id},
+                headers={"X-Request-ID": request_id, "Retry-After": "60"},
+            )
 
-    # Tag the request with the resolved tenant for downstream handlers/logging.
-    if tenant is not None:
-        request.state.tenant = tenant
+        # The SaaS/product API self-authenticates with per-user session tokens, so
+        # it must bypass the operator API_AUTH_TOKEN gate (it enforces its own auth
+        # via route dependencies). Public auth endpoints are a subset of these.
+        if not authorized and any(path.startswith(p) for p in SAAS_SELF_AUTH_PREFIXES):
+            authorized = True
 
-    try:
-        response = await call_next(request)
-    except Exception:
+        if not authorized:
+            record_request(0.0, {"path": path, "method": request.method, "status": "401"})
+            record_api_error("unauthorized")
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing or invalid API token", "request_id": request_id},
+                headers={"X-Request-ID": request_id},
+            )
+
+        if tenant is not None:
+            request.state.tenant = tenant
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = (time.perf_counter() - start) * 1000.0
+            record_request(
+                duration_ms,
+                {"path": _metric_path(request), "method": request.method, "status": "500"},
+            )
+            record_api_error("unhandled_exception")
+            logger.exception("Unhandled error handling %s %s", request.method, request.url.path)
+            raise
         duration_ms = (time.perf_counter() - start) * 1000.0
         record_request(
-            duration_ms, {"path": _metric_path(request), "method": request.method, "status": "500"}
+            duration_ms,
+            {
+                "path": _metric_path(request),
+                "method": request.method,
+                "status": str(response.status_code),
+            },
         )
-        record_api_error("unhandled_exception")
-        logger.exception("Unhandled error handling %s %s", request.method, request.url.path)
-        raise
-    duration_ms = (time.perf_counter() - start) * 1000.0
-    # Prefer the matched route template (e.g. /episodes/{episode_id}) over the
-    # concrete path to keep metric label cardinality bounded.
-    record_request(
-        duration_ms,
-        {
-            "path": _metric_path(request),
-            "method": request.method,
-            "status": str(response.status_code),
-        },
-    )
-    if response.status_code >= 500:
-        record_api_error(str(response.status_code))
-    response.headers["X-Request-ID"] = request_id
-    if tenant is not None:
-        response.headers["X-Tenant"] = tenant
-    return response
+        if response.status_code >= 500:
+            record_api_error(str(response.status_code))
+        response.headers["X-Request-ID"] = request_id
+        if tenant is not None:
+            response.headers["X-Tenant"] = tenant
+        return response
 
 
 @app.exception_handler(Exception)
@@ -355,6 +415,111 @@ def state() -> StateSnapshot:
 def state_post() -> StateSnapshot:
     # Keep POST variant for compatibility with method-style runtime checks.
     return runtime_env.state()
+
+
+@app.post("/step/stream")
+async def step_stream(request: BaselineRequest) -> StreamingResponse:
+    """SSE endpoint that streams each environment step as a server-sent event.
+
+    Events:
+      - ``step``: a single step result (action + observation + reward)
+      - ``done``: final result with score
+      - ``error``: an error message
+
+    Usage::
+
+        curl -N -X POST http://localhost:8000/step/stream \\
+          -H "Content-Type: application/json" \\
+          -d '{"task_id":"hard_full_management","seed":42,"persona":"balanced","mode":"baseline","max_steps":10}'
+    """
+
+    async def event_generator():
+        env = ExecutiveEmailEnv()
+        env.reset(
+            task_id=request.task_id,
+            seed=request.seed,
+            persona=request.persona,
+        )
+
+        total_reward = 0.0
+        steps = 0
+        decision_traces: list[dict[str, Any]] = []
+        action_trace: list[Action] = []
+
+        for step_idx in range(request.max_steps):
+            if env._is_done():
+                break
+
+            # Compute action using the appropriate policy
+            from .policy import BaselinePolicy, HybridPolicy
+
+            if request.mode == "baseline":
+                policy = BaselinePolicy()
+                action: Action | None = policy.next_action(env._build_observation())
+            elif request.mode in ("llm", "hybrid"):
+                policy = HybridPolicy()
+                action = policy.next_action(env._build_observation())
+            else:
+                action = None
+
+            if action is None:
+                break
+
+            result = env.step(action)
+            total_reward = env._total_reward
+            steps += 1
+            action_trace.append(action)
+
+            # Build decision trace
+            trace_entry = {
+                "step": step_idx,
+                "action": action.model_dump() if action else None,
+                "reward": result.reward,
+                "done": result.done,
+                "observation": result.observation.model_dump() if result.observation else None,
+            }
+            decision_traces.append(trace_entry)
+
+            # Yield SSE event
+            yield f"data: {json.dumps(trace_entry)}\n\n"
+
+            if result.done:
+                break
+
+        # Final score
+        from .grader import evaluate_trajectory
+
+        try:
+            grade = evaluate_trajectory(
+                task_id=request.task_id,
+                seed=request.seed,
+                persona=request.persona,
+                actions=action_trace,
+            )
+        except Exception:
+            grade = None
+
+        final = {
+            "done": True,
+            "steps": steps,
+            "total_reward": total_reward,
+            "score": grade.score if grade else None,
+            "breakdown": grade.breakdown if grade else None,
+            "action_trace": [a.model_dump() for a in action_trace],
+        }
+        yield f"data: {json.dumps(final)}\n\n"
+
+    import json
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/grader", response_model=GraderResponse)

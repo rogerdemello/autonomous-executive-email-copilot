@@ -31,7 +31,7 @@ def extract_bearer_token(authorization: str | None, api_key_header: str | None) 
         parts = authorization.split(" ", 1)
         if len(parts) == 2 and parts[0].lower() == "bearer":
             return parts[1].strip()
-        return authorization.strip()
+        # Bare tokens without "Bearer" prefix are rejected.
     if api_key_header:
         return api_key_header.strip()
     return None

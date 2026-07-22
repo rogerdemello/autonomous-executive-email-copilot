@@ -22,6 +22,10 @@ DEFAULT_LARGER_MODEL = "gpt-4o"
 DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
 
+# A deterministic, obviously-not-secret fallback so local dev and tests work with
+# zero config. Production MUST set AUTH_SECRET_KEY (see Settings.auth_secret_is_dev).
+DEV_AUTH_SECRET = "dev-insecure-secret-do-not-use-in-production"
+
 
 class Settings(BaseSettings):
     """Typed view over the process environment (and an optional .env file)."""
@@ -33,9 +37,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Provider selection (auto-detected if not set)
+    llm_provider: str | None = None  # "openai" | "anthropic" | "gemini" | "ollama"
+
     # Provider credentials
     openai_api_key: str | None = None
     hf_token: str | None = None
+    anthropic_api_key: str | None = None
+    google_api_key: str | None = None
+    ollama_base_url: str | None = None
 
     # Endpoint / model selection
     api_base_url: str = DEFAULT_API_BASE_URL
@@ -83,6 +93,54 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     rate_limit_per_minute: int = 0  # 0 disables rate limiting
 
+    # --- Commercial SaaS layer (accounts, tenants, licensing) ---
+    # Secret used to sign session tokens and license keys (HS256). Leave unset
+    # for local dev/tests (a clearly-marked, non-production fallback is used and
+    # a warning is logged). MUST be set to a long random value in production —
+    # rotating it invalidates all outstanding tokens and licenses.
+    auth_secret_key: str | None = None
+    # Lifetime of an issued login token, in minutes (default 12h).
+    access_token_ttl_minutes: int = 720
+    # Lifetime of a password-reset link, in minutes (default 1h).
+    password_reset_ttl_minutes: int = 60
+    # Public base URL of the app, used to build user-facing links (password reset,
+    # invites). Falls back to the OAuth redirect base or the API base URL.
+    app_public_url: str | None = None
+
+    # --- Transactional email (password reset, invites) ---
+    # "console" (default) logs emails instead of sending — zero-config for local
+    # dev and tests. "smtp" sends via the SMTP_* settings below.
+    email_provider: str = "console"
+    email_from: str = "no-reply@example.com"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_starttls: bool = True
+    # Self-serve signup toggle. When False, only an operator can provision orgs
+    # (pure sales-led onboarding). Default True so the trial funnel works.
+    signup_enabled: bool = True
+    # Where "Contact sales" leads and license requests are announced (optional
+    # webhook, e.g. Slack incoming webhook). When unset, leads are persisted +
+    # logged only.
+    sales_webhook_url: str | None = None
+    sales_contact_email: str = "sales@example.com"
+
+    # --- Mailbox OAuth (connect real Gmail / Microsoft 365 inboxes) ---
+    # Base URL of the deployed app, used to build the OAuth redirect URI
+    # (``<base>/mailbox/oauth/callback``). When unset it is derived from the
+    # incoming request. Set it in production so it matches the value registered
+    # with Google/Microsoft.
+    oauth_redirect_base_url: str | None = None
+    # Google Cloud OAuth client (Gmail). A provider is "available" only when both
+    # its id and secret are set — otherwise the connect endpoint 400s.
+    google_oauth_client_id: str | None = None
+    google_oauth_client_secret: str | None = None
+    # Microsoft Entra (Azure AD) app registration for Microsoft 365 mail.
+    microsoft_oauth_client_id: str | None = None
+    microsoft_oauth_client_secret: str | None = None
+    microsoft_oauth_tenant: str = "common"
+
     # Dashboard / UI
     app_api_base_url: str = "http://localhost:8000"
 
@@ -120,9 +178,38 @@ class Settings(BaseSettings):
         return mapping
 
     @property
+    def resolved_auth_secret(self) -> str:
+        """The signing secret for tokens/licenses, or a dev fallback."""
+        secret = (self.auth_secret_key or "").strip()
+        return secret or DEV_AUTH_SECRET
+
+    @property
+    def auth_secret_is_dev(self) -> bool:
+        """True when no real AUTH_SECRET_KEY is configured (dev fallback in use)."""
+        return not (self.auth_secret_key or "").strip()
+
+    @property
+    def resolved_app_public_url(self) -> str:
+        """Public base URL for user-facing links (password reset, invites)."""
+        for candidate in (self.app_public_url, self.oauth_redirect_base_url, self.app_api_base_url):
+            if candidate and candidate.strip():
+                return candidate.strip().rstrip("/")
+        return "http://localhost:8000"
+
+    @property
     def resolved_api_key(self) -> str | None:
         """Provider key: HF_TOKEN, then OPENAI_API_KEY, then AZURE_OPENAI_API_KEY."""
         return self.hf_token or self.openai_api_key or self.azure_openai_api_key
+
+    @property
+    def provider_available(self) -> bool:
+        """True when any provider credential is configured."""
+        return bool(
+            self.resolved_api_key
+            or self.anthropic_api_key
+            or self.google_api_key
+            or self.ollama_base_url
+        )
 
 
 def get_settings() -> Settings:
@@ -189,7 +276,7 @@ def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:
     return kwargs, model
 
 
-def build_chat_client(timeout_seconds: float = 30.0):  # type: ignore[no-untyped-def]
+def build_chat_client(timeout_seconds: float = 30.0):
     """Construct an OpenAI/Azure client wired for the configured provider.
 
     Convenience wrapper over :func:`chat_client_kwargs` for direct callers.

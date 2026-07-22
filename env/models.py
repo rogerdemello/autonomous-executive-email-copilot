@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -217,7 +217,7 @@ class LeaderboardRequest(BaseModel):
         ]
     )
     personas: list[PersonaType] = Field(
-        default_factory=lambda: ["strict_ceo", "balanced", "chill_manager"]
+        default_factory=lambda: cast(list[PersonaType], ["strict_ceo", "balanced", "chill_manager"])
     )
     seeds: list[int] = Field(default_factory=lambda: [42, 43, 44])
     max_steps: int = 120

@@ -49,6 +49,9 @@ playwright-output/
 artifacts/
 leaderboard*.csv
 
+# Lock files (pip's requirements.txt is authoritative)
+uv.lock
+
 # Node / dashboard build artifacts
 node_modules/
 dashboard/dist/

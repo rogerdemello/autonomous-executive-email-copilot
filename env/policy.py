@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
-from env.models import Action, Observation
+from env.models import Action, LabelType, Observation
 from env.utils import classify_heuristic
+
+if TYPE_CHECKING:
+    from env.llm_policy import Strategy
 
 
 @dataclass
 class BaselinePolicy:
     did_prioritize: bool = False
-    predicted_labels: dict[str, str] = field(default_factory=dict)
+    predicted_labels: dict[str, LabelType] = field(default_factory=dict)
     handled_ids: set[str] = field(default_factory=set)
 
     def next_action(self, observation: Observation) -> Action | None:
@@ -129,8 +133,8 @@ class HybridPolicy:
         self._planner_interval = planner_interval
         self._executor = Executor()
         self._step_count = 0
-        self._current_strategy = None
-        self._strategy_metadata = {}
+        self._current_strategy: Strategy | None = None
+        self._strategy_metadata: dict[str, Any] = {}
         # Strong deterministic fallback used whenever no LLM provider is
         # configured. Reusing BaselinePolicy verbatim keeps the no-key hybrid
         # trajectory competitive with the baseline instead of degenerating.

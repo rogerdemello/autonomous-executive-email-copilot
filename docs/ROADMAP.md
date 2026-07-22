@@ -86,7 +86,178 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 
 ---
 
+## Phase 8 — LLM Integration Overhaul ✅ CORE COMPLETE (async conversion deferred)
+
+Bar: Async, multi-provider, function-calling LLM integration. The system works with OpenAI, Azure, Anthropic, Gemini, and local models from the same codebase.
+
+### 8.1 Provider abstraction layer ✅ COMPLETE
+- [x] Create `env/providers/` package with `LLMProvider` ABC: `generate()`, `generate_stream()`, capabilities.
+- [x] Implement `OpenAIProvider` (OpenAI + Azure), `AnthropicProvider`, `GeminiProvider`, `OllamaProvider`.
+- [x] Auto-detect provider from config (endpoint URL, env vars). Registry + factory pattern.
+- [x] Add `LLM_PROVIDER`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` to `.env.example` and `env/config.py`.
+- [x] Provider-level pricing table (USD per 1M tokens per model) for accurate cost tracking.
+
+### 8.2 Async + streaming ⏳ PARTIAL (sync path done, async deferred)
+- [x] Refactored `LLMAgent` to use `OpenAIProvider` internally instead of raw `OpenAI` client.
+- [ ] Convert `LLMAgent.get_action()` → `async def`. All internal LLM calls use `await provider.agenerate()`.
+- [ ] Convert `Planner.plan()` → async. `HybridPolicy.next_action()` → async.
+- [ ] Add `GET /step/stream` SSE endpoint for real-time agent execution trace.
+- [ ] `asyncio.Lock` for cache access instead of thread lock.
+- [ ] `inference.py` top-level `asyncio.run(main())`.
+
+### 8.3 Function/tool calling ✅ COMPLETE
+- [x] Define typed `ToolDefinition` list for all 5 action types (classify, reply, escalate, defer, prioritize).
+- [x] Integrated tool calling into `LLMAgent._call_llm_with_fallback()` — uses tools when provider supports them, JSON fallback otherwise.
+- [x] Simplify `SYSTEM_PROMPT` — guidelines only, action schema is in tool definitions.
+- [x] `_parse_llm_response()` and `_validate_action()` kept as JSON fallback path for non-tool providers.
+
+### 8.4 Structured output gate ✅ COMPLETE
+- [x] Tool calling effectively provides structured output for supported providers.
+- [x] Graceful fallback: tool calling → JSON parsing → prompt-based.
+- [x] Provider capability flags: `"structured_output"`, `"tools"`, `"streaming"`.
+
+### 8.5 Circuit breaker ✅ COMPLETE
+- [x] Per-(provider, model) circuit breaker: 3 failures → open 30s → half-open → retry.
+- [x] Multi-provider failover: if primary is open, try secondary provider.
+- [x] `AllProvidersFailedError` — last-resort fallback to deterministic baseline.
+- [ ] Prometheus metrics: `circuit_breaker_state`, `circuit_breaker_trips_total` — deferred (OTEL migration in Phase 9).
+
+> **Tests:** 452 passing (all existing + updated mocks for provider-based architecture). New test file `tests/test_providers.py` (3 tests) exists; additional provider/circuit-breaker tests deferred.
+
+---
+
+## Phase 9 — LLMOps Infrastructure
+
+Bar: LLM observability, evaluation, and prompt management at production quality.
+
+### 9.1 OpenTelemetry distributed tracing
+- [ ] Replace custom `PrometheusMetrics` with OTEL API: `TracerProvider`, `MeterProvider`.
+- [ ] Instrument: gateway middleware, env step, grader, LLM call, DB query — each with a named span + attributes.
+- [ ] OTLP exporter (console + HTTP). Add Tempo datasource to Grafana dashboard.
+- [ ] Dual-write: OTEL + legacy Prometheus during transition. Phase out legacy after verification.
+
+### 9.2 A/B evaluation pipeline
+- [ ] `scripts/run_ab_test.py` — compare two agent configs across N seeds, paired t-test, 95% CI, Cohen's d.
+- [ ] HTML report: summary table, delta heatmap, per-task breakdown, step-by-step trajectory diff.
+- [ ] Integration with `BenchmarkRunner` + `benchmark/significance.py`.
+
+### 9.3 Prompt registry
+- [ ] Move prompts to `prompts/` directory as versioned `.jinja2` templates.
+- [ ] `scripts/prompt_cli.py` — diff versions, validate rendering, switch active version.
+- [ ] `PROMPT_VERSION` config key — select active version at runtime.
+- [ ] Backward compat: default version loads current prompts.
+
+### 9.4 Evaluation dashboard (React)
+- [ ] API endpoints: `POST /eval/run`, `GET /eval/job/{id}`, `GET /eval/jobs`.
+- [ ] React components: `EvalConfig` (form), `EvalProgress` (progress bar), `EvalResults` (charts + table), `EvalHistory` (list).
+- [ ] Chart types: grouped bar (task × agent), box plot (score distribution), radar (agent strengths).
+- [ ] New "Evaluations" tab in the dashboard.
+
+### 9.5 Confidence calibration
+- [ ] Compute ECE + calibration curve from benchmark runs.
+- [ ] `scripts/calibrate.py` — run calibration benchmark, output report + plot.
+- [ ] Grafana panel: calibration curve over time.
+
+> **Tests:** ~50 new tests across 6 test files (tracing, A/B stats, prompt registry, eval runner, calibration, eval dashboard API). CI load-test job verifies SLA.
+
+---
+
+## Phase 10 — Cloud-Native & Production Engineering
+
+Bar: Deployable on Kubernetes with distributed caching, async DB, and performance SLAs.
+
+### 10.1 Helm chart
+- [ ] `deploy/helm/exec-email-copilot/` — Deployment, Service, Ingress, ConfigMap, Secret, HPA, PDB, ServiceMonitor.
+- [ ] `values.yaml` with sensible defaults. `values.prod.yaml` / `values.staging.yaml` overrides.
+- [ ] Helm template validation in CI.
+- [ ] `deploy/helm/README.md` — install, upgrade, rollback instructions.
+
+### 10.2 Async SQLAlchemy
+- [ ] Add async engine (`aiosqlite` dev, `asyncpg` prod). `AsyncSession`, `async_sessionmaker`, `get_async_session()`.
+- [ ] Convert all repository methods to async. Update route handlers to `async def`.
+- [ ] Opt-in via `USE_ASYNC_DB=true`, default sync. Phase out sync after verification.
+- [ ] Keep sync path as fallback for minimal-dependency deployments.
+
+### 10.3 Redis distributed cache
+- [ ] `env/cache.py` — async Redis client with `get_or_compute()`, TTL, namespace isolation.
+- [ ] Replace in-memory `_response_cache` dict with Redis-backed cache L2 (memory as L1).
+- [ ] No-op when `REDIS_URL` unset — full backward compatibility.
+- [ ] Cache hit/miss Prometheus counters.
+
+### 10.4 Load testing suite
+- [ ] Enhanced `scripts/loadtest/locustfile.py` — realistic user mix: reset, baseline, leaderboard, health.
+- [ ] CI load-test job: 10 users, 60s, assert p95 < 2000ms for baseline, error rate < 1%.
+- [ ] HTML report artifact.
+
+### 10.5 Semantic cache
+- [ ] Embedding-based cache: flatten observation → embed (sentence-transformers or OpenAI) → cosine similarity search in Redis vector index.
+- [ ] Configurable similarity threshold (default 0.92). Opt-in via `SEMANTIC_CACHE_ENABLED`.
+- [ ] Fallback chain: exact cache → semantic cache → LLM provider.
+
+> **Tests:** ~30 new tests across 5 test files (Helm validation, async repositories, cache, loadtest locustfile, semantic cache). Integration test with Redis container.
+
+---
+
+## Phase 11 — True Multi-Agent System
+
+Bar: Each specialist is LLM-powered. Agents negotiate. System is extensible via plugins.
+
+### 11.1 LLM-powered specialist agents
+- [ ] `LLMClassifierAgent`, `LLMResponderAgent`, `LLMEscalatorAgent` — each with own system prompt + tool definitions.
+- [ ] `CoordinatorAgent` accepts optional `provider` param; LLM specialists when provider given, rule-based fallback when None.
+- [ ] Specialist agents report confidence, reasoning, alternatives in decision trace.
+
+### 11.2 Agent-to-agent negotiation
+- [ ] `NegotiationRound` protocol: propose → critique → decide. Max 2 rounds, then tiebreaker.
+- [ ] Each specialist proposes an action. Others can challenge. Coordinator makes final call.
+- [ ] Full negotiation trace logged to `message_log` and exposed via API.
+
+### 11.3 Agent health monitoring
+- [ ] OTEL metrics per agent: latency histogram, error counter, confidence histogram.
+- [ ] Grafana dashboard panel: agent latency (p50/p95), error rate, confidence distribution.
+- [ ] `BaseAgent.execute()` wraps all implementations with automatic metric recording.
+
+### 11.4 Plugin system
+- [ ] `env/agents/plugin.py` — discover agents via `exec_email_copilot.agents` entry points.
+- [ ] `create_agent(name)` — built-in + plugin resolution.
+- [ ] `docs/AGENT_PLUGINS.md` — how to write, package, and install a custom agent plugin.
+
+> **Tests:** ~25 new tests across 4 test files (LLM specialists, negotiation, agent metrics, plugin system).
+
+---
+
+## Phase 12 — Portfolio Storytelling
+
+Bar: The project presents itself as a world-class portfolio piece — documentation, visuals, interactivity.
+
+### 12.1 Architecture Decision Records (ADRs)
+- [ ] `docs/adr/` directory with template and 5+ records:
+  - ADR-001: Use strict unit interval for scores
+  - ADR-002: Opt-in auth (open by default)
+  - ADR-003: Provider abstraction (Phase 8)
+  - ADR-004: Async migration (Phase 10)
+  - ADR-005: Function calling over JSON (Phase 8)
+
+### 12.2 Jupyter notebook demo
+- [ ] `notebooks/demo.ipynb` — end-to-end walkthrough: install → env → baseline → grade → visualize → compare agents.
+- [ ] Interactive widgets: dropdown for task/persona/agent selection.
+- [ ] Matplotlib charts: score breakdown, agent comparison bar chart, score distribution histogram.
+
+### 12.3 Architecture diagram (visual)
+- [ ] PlantUML + Mermaid diagram showing all layers: clients → API → environment → agents → LLM providers → infrastructure.
+- [ ] Embedded in `docs/ARCHITECTURE.md` and `README.md`.
+- [ ] CI step to render PlantUML on push (optional).
+
+### 12.4 Benchmark results page
+- [ ] `docs/benchmark/` — interactive HTML page (Chart.js) with grouped bar charts, radar charts, data tables.
+- [ ] `scripts/generate_benchmark_page.py` — generate from benchmark JSON output.
+- [ ] GitHub Pages deployment workflow.
+
+> **Tests:** 0 new tests (documentation only). Verification through manual review.
+
+---
+
 ## Execution notes
-- Work phase-by-phase, Phase 0 first, on a feature branch; keep tests green at every commit.
+- Work phase-by-phase, starting from Phase 8, on a feature branch; keep tests green at every commit.
 - Each phase ends with proving tests + a docs update so the claim↔test↔code loop never reopens.
-- Pause for product decisions at phase boundaries (default auth posture; HITL-on-by-default in API).
+- Pause for product decisions at phase boundaries (default provider priority; plugin security model).
