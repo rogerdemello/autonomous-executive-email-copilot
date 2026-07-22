@@ -644,8 +644,8 @@ Container healthcheck probes `http://localhost:7860/health`.
 
 ## 19) Operational Notes and Current Constraints
 
-1. API `/baseline` accepts modes `baseline`, `stress`, `llm` (Pydantic `PolicyMode`).
-2. CLI `baseline.run_baseline` supports an additional `hybrid` mode.
+1. API `/baseline` accepts modes `baseline`, `stress`, `llm`, `hybrid` (Pydantic `PolicyMode`).
+2. CLI `baseline.run_baseline` supports the same modes.
 3. The `/baseline` endpoint persists each run via `EpisodeRepository.save_episode` (in addition to the in-memory `episode_history_store`), and `/replay/{episode_id}` falls back to the DB when the in-memory entry is absent.
 4. Successful trajectory auto-save is wired into the baseline flow: above-threshold runs are written to the learning trajectory store; feedback endpoints also write to the learning DB.
 5. Telemetry is instrumented via an HTTP middleware that records per-request count/latency and API errors, plus episode start/end around `/baseline`, so `/metrics` reflects real traffic.

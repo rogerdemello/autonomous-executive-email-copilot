@@ -412,7 +412,7 @@ WebSocket pong frame:
 - `baseline`: deterministic heuristic agent.
 - `stress`: heuristic with randomized perturbation by `stress_rate`.
 - `llm`: LLM-driven strategy and action synthesis with safety/approval gates.
-- `hybrid`: supported in CLI runner, not accepted by the `/baseline` API schema.
+- `hybrid`: LLM planner + heuristic executor; accepted by both the CLI runner and the `/baseline` API.
 
 ## UI
 
@@ -462,7 +462,7 @@ provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.m
 
 ## Important Constraints
 
-- `/baseline` mode enum is `baseline | stress | llm`.
+- `/baseline` mode enum is `baseline | stress | llm | hybrid`.
 - `/baseline` runs are persisted to the episode DB and (when they clear the score threshold) auto-saved to the learning trajectory store; `/replay/{episode_id}` falls back to the DB so replay survives a restart.
 - LLM mode behavior depends on provider credentials and guardrail checks. The human-in-the-loop approval gate is opt-in (`LLMAgent(require_approval=True)` or the `REQUIRE_APPROVAL` env var); with it off the agent returns its decided action directly.
 - LLM responses are cached by observation hash (TTL + size cap); the cache is bypassed when approval is required.

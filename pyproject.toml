@@ -26,6 +26,7 @@ dependencies = [
   "fpdf2==2.8.7",
   "openai==2.44.0",
   "email-validator==2.3.0",  # required by pydantic EmailStr in the SaaS auth layer
+  "cryptography==46.0.3",  # audited Fernet AEAD for at-rest OAuth-token encryption
 ]
 
 [project.optional-dependencies]

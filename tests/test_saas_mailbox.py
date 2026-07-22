@@ -50,12 +50,17 @@ class TestTokenVault:
             TokenVault("key-b").decrypt(blob)
 
     def test_tampered_ciphertext_rejected(self):
+        # Backend-agnostic: corrupting the payload of the vault's own ciphertext
+        # (Fernet or the stdlib fallback) must fail authentication on decrypt.
         v = TokenVault("k")
         blob = v.encrypt("secret-value")
-        version, _, b64 = blob.partition("$")
-        raw = bytearray(base64.b64decode(b64))
-        raw[-1] ^= 0x01  # flip a ciphertext bit
-        tampered = f"{version}${base64.b64encode(bytes(raw)).decode()}"
+        prefix, sep, payload = blob.partition("$")
+        assert sep  # sanity: versioned format
+        flip = "B" if payload[len(payload) // 2] != "B" else "C"
+        tampered = (
+            f"{prefix}${payload[: len(payload) // 2]}{flip}{payload[len(payload) // 2 + 1 :]}"
+        )
+        assert tampered != blob
         with pytest.raises(DecryptionError):
             v.decrypt(tampered)
 

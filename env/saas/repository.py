@@ -30,6 +30,19 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Pagination bounds shared by list endpoints so a large tenant can't force an
+# unbounded query. Callers clamp the requested page size into [1, MAX_PAGE_SIZE].
+DEFAULT_PAGE_SIZE = 100
+MAX_PAGE_SIZE = 500
+
+
+def clamp_page(limit: int | None, offset: int | None) -> tuple[int, int]:
+    """Clamp a requested ``(limit, offset)`` into safe bounds."""
+    safe_limit = DEFAULT_PAGE_SIZE if not limit or limit < 1 else min(int(limit), MAX_PAGE_SIZE)
+    safe_offset = 0 if not offset or offset < 0 else int(offset)
+    return safe_limit, safe_offset
+
+
 class OrganizationRepository:
     def create(self, name: str, slug: str) -> dict[str, Any]:
         with get_session() as session:
@@ -449,13 +462,31 @@ class ProcessedMessageRepository:
             session.flush()
             return msg.to_dict()
 
-    def list_for_org(self, org_id: str, connection_id: str | None = None) -> list[dict[str, Any]]:
+    def list_for_org(
+        self,
+        org_id: str,
+        connection_id: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> dict[str, Any]:
+        safe_limit, safe_offset = clamp_page(limit, offset)
         with get_session() as session:
             query = session.query(ProcessedMessage).filter(ProcessedMessage.org_id == org_id)
             if connection_id:
                 query = query.filter(ProcessedMessage.connection_id == connection_id)
-            rows = query.order_by(ProcessedMessage.synced_at.desc()).all()
-            return [r.to_dict() for r in rows]
+            total = query.count()
+            rows = (
+                query.order_by(ProcessedMessage.synced_at.desc())
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "messages": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
 
     def get(self, org_id: str, message_id: str) -> dict[str, Any] | None:
         with get_session() as session:
@@ -503,13 +534,31 @@ class ProposedActionRepository:
             session.flush()
             return action.to_dict()
 
-    def list_for_org(self, org_id: str, status: str | None = None) -> list[dict[str, Any]]:
+    def list_for_org(
+        self,
+        org_id: str,
+        status: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> dict[str, Any]:
+        safe_limit, safe_offset = clamp_page(limit, offset)
         with get_session() as session:
             query = session.query(ProposedAction).filter(ProposedAction.org_id == org_id)
             if status:
                 query = query.filter(ProposedAction.status == status)
-            rows = query.order_by(ProposedAction.created_at.desc()).all()
-            return [r.to_dict() for r in rows]
+            total = query.count()
+            rows = (
+                query.order_by(ProposedAction.created_at.desc())
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "actions": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
 
     def get(self, org_id: str, action_id: str) -> dict[str, Any] | None:
         with get_session() as session:

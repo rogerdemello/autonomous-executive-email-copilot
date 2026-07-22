@@ -85,13 +85,27 @@ def sync(body: SyncRequest, actor: dict = Depends(require_role(ROLE_ADMIN))) -> 
 
 
 @inbox_router.get("/messages")
-def list_messages(connection_id: str | None = None, user: dict = Depends(get_current_user)) -> dict:
-    return {"messages": _messages.list_for_org(user["org_id"], connection_id=connection_id)}
+def list_messages(
+    connection_id: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Processed messages (paginated). Returns ``{messages, total, limit, offset}``."""
+    return _messages.list_for_org(
+        user["org_id"], connection_id=connection_id, limit=limit, offset=offset
+    )
 
 
 @inbox_router.get("/actions")
-def list_actions(status: str | None = None, user: dict = Depends(get_current_user)) -> dict:
-    return {"actions": _actions.list_for_org(user["org_id"], status=status)}
+def list_actions(
+    status: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Proposed/decided actions (paginated). Returns ``{actions, total, limit, offset}``."""
+    return _actions.list_for_org(user["org_id"], status=status, limit=limit, offset=offset)
 
 
 @inbox_router.post("/actions/{action_id}/approve")

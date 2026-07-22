@@ -233,6 +233,29 @@ class TestInboxJourney:
         )
         assert actions_after_second == actions_after_first  # no duplicate actions
 
+    def test_message_and_action_lists_are_paginated(self, client, monkeypatch):
+        shared = FakeProvider()
+        monkeypatch.setattr(processing_routes, "build_provider", lambda conn: shared)
+        data = _signup(client)
+        token = data["access_token"]
+        conn_id = _seed_connection(data["organization"]["id"], data["user"]["id"])
+        client.post("/inbox/sync", headers=_hdr(token), json={"connection_id": conn_id})
+
+        # Endpoints now carry pagination metadata and honor limit/offset.
+        page = client.get("/inbox/messages?limit=2", headers=_hdr(token)).json()
+        assert page["total"] == 4
+        assert page["limit"] == 2
+        assert len(page["messages"]) == 2
+        page2 = client.get("/inbox/messages?limit=2&offset=2", headers=_hdr(token)).json()
+        assert len(page2["messages"]) == 2
+        # No overlap between the two pages.
+        ids1 = {m["id"] for m in page["messages"]}
+        ids2 = {m["id"] for m in page2["messages"]}
+        assert ids1.isdisjoint(ids2)
+        # An oversized limit is clamped, not honored blindly.
+        clamped = client.get("/inbox/actions?limit=100000", headers=_hdr(token)).json()
+        assert clamped["limit"] <= 500
+
     def test_provider_write_failure_does_not_abort_sync(self, client, monkeypatch):
         # Bug 1b: a failing auto-label write marks that action failed but the sync
         # still completes and records last_synced_at.

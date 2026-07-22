@@ -31,6 +31,22 @@ _KEY_LEN = 32
 _NONCE_LEN = 16
 _TAG_LEN = 32
 _VERSION = b"v1"
+# Fernet-backed ciphertexts carry this prefix so both schemes can coexist and
+# old ``v1$`` blobs stay decryptable after an upgrade.
+_FERNET_PREFIX = "f1$"
+
+try:  # Prefer the audited AEAD (AES-128-CBC + HMAC-SHA256) when available.
+    from cryptography.fernet import Fernet, InvalidToken
+
+    _FERNET_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency
+    _FERNET_AVAILABLE = False
+
+
+def _fernet_key(secret: str) -> bytes:
+    """Derive a urlsafe-base64 32-byte Fernet key from the app secret."""
+    raw = hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), _KDF_SALT, _KDF_ITERATIONS, 32)
+    return base64.urlsafe_b64encode(raw)
 
 
 class DecryptionError(Exception):
@@ -64,11 +80,19 @@ class TokenVault:
     """Encrypts/decrypts short secret strings with a key derived from ``secret``."""
 
     def __init__(self, secret: str) -> None:
+        if not secret:
+            raise ValueError("a non-empty secret is required")
+        self._secret = secret
         self._key = _derive_key(secret)
+        self._fernet = Fernet(_fernet_key(secret)) if _FERNET_AVAILABLE else None
 
     def encrypt(self, plaintext: str) -> str:
         if plaintext is None:
             raise ValueError("plaintext is required")
+        # Prefer the audited Fernet AEAD; fall back to the stdlib construction.
+        if self._fernet is not None:
+            token = self._fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
+            return _FERNET_PREFIX + token
         data = plaintext.encode("utf-8")
         nonce = os.urandom(_NONCE_LEN)
         ciphertext = _xor(data, _keystream(self._key, nonce, len(data)))
@@ -79,6 +103,17 @@ class TokenVault:
     def decrypt(self, token: str) -> str:
         if not token:
             raise DecryptionError("empty ciphertext")
+        # Fernet-encrypted blobs (post-upgrade). Older v1$ blobs still decrypt
+        # via the stdlib path below, so an upgrade needs no re-encryption.
+        if token.startswith(_FERNET_PREFIX):
+            if self._fernet is None:
+                raise DecryptionError("Fernet ciphertext but cryptography is not installed")
+            try:
+                return self._fernet.decrypt(token[len(_FERNET_PREFIX) :].encode("ascii")).decode(
+                    "utf-8"
+                )
+            except InvalidToken as exc:
+                raise DecryptionError("authentication failed (tampered or wrong key)") from exc
         try:
             version, _, b64 = token.partition("$")
             if version.encode("ascii") != _VERSION or not b64:
