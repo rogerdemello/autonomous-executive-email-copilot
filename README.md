@@ -22,6 +22,7 @@ The project is built as a full experimentation stack rather than a single simula
 - [docs/RUNBOOK.md](docs/RUNBOOK.md) — operations: probes, metrics, alerts, incidents.
 - [docs/COMMERCIAL.md](docs/COMMERCIAL.md) — SaaS layer: accounts, organizations, RBAC, and sales-led licensing.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — phased improvement plan and status.
+- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) — STRIDE-per-boundary threat model and honest limitations.
 - [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example) — contributing, security policy, configuration.
 
 ## What You Can Do

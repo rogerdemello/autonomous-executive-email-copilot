@@ -22,6 +22,13 @@ def test_landing_renders(client):
     assert "Start free trial" in resp.text
 
 
+def test_security_txt_served(client):
+    resp = client.get("/.well-known/security.txt")
+    assert resp.status_code == 200
+    assert "Contact:" in resp.text
+    assert "Expires:" in resp.text
+
+
 def test_pricing_page_lists_all_plans(client):
     resp = client.get("/pricing")
     assert resp.status_code == 200

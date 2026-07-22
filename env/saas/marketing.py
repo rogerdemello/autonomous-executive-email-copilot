@@ -17,7 +17,7 @@ import html
 import json
 
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from ..config import get_settings
 from . import licensing
@@ -316,3 +316,21 @@ def pricing_json() -> JSONResponse:
         for p in licensing.PLANS.values()
     ]
     return JSONResponse(json.loads(json.dumps({"plans": plans})))
+
+
+@marketing_router.get(
+    "/.well-known/security.txt", response_class=PlainTextResponse, include_in_schema=False
+)
+def security_txt() -> PlainTextResponse:
+    """Serve an RFC 9116 security.txt at the well-known location."""
+    settings = get_settings()
+    contact = settings.sales_contact_email.replace("sales@", "security@")
+    base = settings.resolved_app_public_url
+    body = (
+        f"Contact: mailto:{contact}\n"
+        "Preferred-Languages: en\n"
+        f"Policy: {base}/SECURITY.md\n"
+        f"Canonical: {base}/.well-known/security.txt\n"
+        "Expires: 2027-01-01T00:00:00.000Z\n"
+    )
+    return PlainTextResponse(body)

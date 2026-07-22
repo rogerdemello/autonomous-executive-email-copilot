@@ -87,6 +87,15 @@ export interface SyncResult {
   auto_executed: number
 }
 
+export interface AuditEntry {
+  id: number
+  action: string
+  actor_user_id: string | null
+  target: string | null
+  ip: string | null
+  created_at: string
+}
+
 export function getSession(): string | undefined {
   if (typeof localStorage === 'undefined') return undefined
   return localStorage.getItem(SESSION_KEY) || undefined
@@ -186,6 +195,7 @@ export function createSaasClient(base: string) {
       req<{ action: ProposedAction }>(base, 'POST', `/inbox/actions/${id}/approve`),
     rejectAction: (id: string, comment?: string) =>
       req<{ action: ProposedAction }>(base, 'POST', `/inbox/actions/${id}/reject`, { comment }),
+    listAuditLog: () => req<{ entries: AuditEntry[] }>(base, 'GET', '/org/audit-log'),
     exportOrg: () => req<Record<string, unknown>>(base, 'GET', '/org/export'),
     deleteOrg: (confirm: string) =>
       req<{ status: string; deleted: Record<string, number> }>(base, 'DELETE', '/org', { confirm }),

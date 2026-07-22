@@ -10,6 +10,7 @@ import {
   createSaasClient,
   getSession,
   setSession,
+  type AuditEntry,
   type Entitlement,
   type MailboxConnection,
   type Organization,
@@ -725,6 +726,52 @@ function InboxReview({ apiBase, me }: { apiBase: string; me: SaasUser }) {
   )
 }
 
+// --- Audit log (admin+) -----------------------------------------------------
+function AuditLog({ apiBase }: { apiBase: string }) {
+  const client = useMemo(() => createSaasClient(apiBase), [apiBase])
+  const [entries, setEntries] = useState<AuditEntry[]>([])
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    client
+      .listAuditLog()
+      .then((r) => setEntries(r.entries))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load audit log'))
+  }, [client])
+
+  return (
+    <Card title="Audit log">
+      {error && <Banner kind="error">{error}</Banner>}
+      {entries.length === 0 ? (
+        <EmptyState title="No activity yet" />
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Action</th>
+              <th>Target</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.slice(0, 50).map((e) => (
+              <tr key={e.id}>
+                <td>{new Date(e.created_at).toLocaleString()}</td>
+                <td>
+                  <Badge tone="neutral">{e.action}</Badge>
+                </td>
+                <td>{e.target || '—'}</td>
+                <td>{e.ip || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Card>
+  )
+}
+
 // --- Danger zone (owner: export / delete org) -------------------------------
 function DangerZone({
   apiBase,
@@ -903,6 +950,7 @@ function Account({ apiBase }: Props) {
       <Mailboxes apiBase={apiBase} me={user} />
       <InboxReview apiBase={apiBase} me={user} />
       <Members apiBase={apiBase} me={user} onSeatsChanged={refreshOrg} />
+      {(user.role === 'owner' || user.role === 'admin') && <AuditLog apiBase={apiBase} />}
       {user.role === 'owner' && org && (
         <DangerZone apiBase={apiBase} org={org} onDeleted={signOut} />
       )}
