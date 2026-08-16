@@ -17,9 +17,9 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.saas import auth as auth_mod
-from env.saas import oidc
+from app.main import app
+from app.saas import auth as auth_mod
+from app.saas import oidc
 
 ISSUER = "https://idp.example.com"
 CLIENT_ID = "test-client-id"

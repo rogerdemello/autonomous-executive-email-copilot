@@ -1,6 +1,6 @@
 """Data + schema integrity guard (INV-5).
 
-* Every shipped scenario validates against ``env.scenario_schema``.
+* Every shipped scenario validates against ``research.sim.scenario_schema``.
 * ``build_scenario`` succeeds for every task and yields gradeable records.
 * The closed-schema guarantee: gold fields (``expected_*``, ``critical``,
   ``recommended_escalation``) live only on ``EmailRecord`` and can NEVER appear on
@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import pytest
 
-from env.environment import ExecutiveEmailEnv
-from env.models import EmailRecord, ObservationEmail
-from env.scenario_schema import validate_all_scenarios
-from env.tasks import build_scenario
+from app.core.models import EmailRecord, ObservationEmail
+from research.sim.environment import ExecutiveEmailEnv
+from research.sim.scenario_schema import validate_all_scenarios
+from research.sim.tasks import build_scenario
 
 from .invariants import PERSONAS, TASKS
 

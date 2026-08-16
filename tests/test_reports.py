@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
+from app.main import app
 from reports.generator import PDFGenerator, PDFReport
 
 
@@ -145,7 +145,7 @@ class TestReportsAPI:
     def client(self):
         return TestClient(app)
 
-    @patch("env.api.pdf_generator")
+    @patch("app.main.pdf_generator")
     def test_download_episode_report_success(self, mock_gen, client):
         mock_gen.generate.return_value = b"PDF content here"
 
@@ -156,7 +156,7 @@ class TestReportsAPI:
         assert "attachment" in response.headers["content-disposition"]
         mock_gen.generate.assert_called_once_with("test_ep_123")
 
-    @patch("env.api.pdf_generator")
+    @patch("app.main.pdf_generator")
     def test_download_episode_report_not_found(self, mock_gen, client):
         mock_gen.generate.side_effect = ValueError("Episode not found")
 
@@ -164,7 +164,7 @@ class TestReportsAPI:
 
         assert response.status_code == 404
 
-    @patch("env.api.pdf_generator")
+    @patch("app.main.pdf_generator")
     def test_generate_report_from_data(self, mock_gen, client):
         mock_gen.generate_summary.return_value = b"PDF bytes"
 

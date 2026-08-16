@@ -69,7 +69,7 @@ No scenario payloads are hardcoded in environment logic.
 ### API server
 
 ```bash
-uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Container server entrypoint
@@ -82,7 +82,7 @@ Runs `uvicorn server.app:app --host 0.0.0.0 --port 7860`.
 
 ### Alternative ASGI import entrypoint
 
-`main.py` exports `app` from `env.api`.
+`main.py` exports `app` from `app.main`.
 
 ### React dashboard
 
@@ -95,16 +95,16 @@ In the container build the dashboard is compiled and served at `/dashboard/`.
 ### Baseline runner CLI
 
 ```bash
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode baseline
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode stress --stress-rate 0.5
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode llm
-python -m baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode hybrid --planner-interval 3
+python -m research.baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode baseline
+python -m research.baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode stress --stress-rate 0.5
+python -m research.baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode llm
+python -m research.baseline.run_baseline --task hard_full_management --seed 42 --persona balanced --mode hybrid --planner-interval 3
 ```
 
 ### Leaderboard CLI
 
 ```bash
-python -m baseline.leaderboard --tasks easy_classification,medium_prioritization,hard_full_management --personas strict_ceo,balanced,chill_manager --seeds 42,43,44
+python -m research.baseline.leaderboard --tasks easy_classification,medium_prioritization,hard_full_management --personas strict_ceo,balanced,chill_manager --seeds 42,43,44
 ```
 
 ### Inference script
@@ -604,7 +604,7 @@ pip install -r requirements.txt
 ### Start API
 
 ```bash
-uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Start React dashboard (dev)
@@ -645,7 +645,7 @@ Container healthcheck probes `http://localhost:7860/health`.
 ## 19) Operational Notes and Current Constraints
 
 1. API `/baseline` accepts modes `baseline`, `stress`, `llm`, `hybrid` (Pydantic `PolicyMode`).
-2. CLI `baseline.run_baseline` supports the same modes.
+2. CLI `research.baseline.run_baseline` supports the same modes.
 3. The `/baseline` endpoint persists each run via `EpisodeRepository.save_episode` (in addition to the in-memory `episode_history_store`), and `/replay/{episode_id}` falls back to the DB when the in-memory entry is absent.
 4. Successful trajectory auto-save is wired into the baseline flow: above-threshold runs are written to the learning trajectory store; feedback endpoints also write to the learning DB.
 5. Telemetry is instrumented via an HTTP middleware that records per-request count/latency and API errors, plus episode start/end around `/baseline`, so `/metrics` reflects real traffic.

@@ -13,15 +13,28 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 
 _EXPECTED = [
-    "env",
-    "env.agents",
-    "env.learning",
-    "env.safety",
-    "env.eval",
-    "env.connectors",
-    "baseline",
-    "server",
-    "benchmark",
+    # Product
+    "app",
+    "app.core",
+    "app.copilot",
+    "app.copilot.providers",
+    "app.copilot.connectors",
+    "app.llm",
+    "app.llm.providers",
+    "app.llm.prompts",
+    "app.llm.cache",
+    "app.llm.safety",
+    "app.saas",
+    "app.web",
+    # Research
+    "research",
+    "research.sim",
+    "research.sim.agents",
+    "research.sim.learning",
+    "research.sim.eval",
+    "research.baseline",
+    "research.benchmark",
+    # Ops
     "telemetry",
     "reports",
 ]

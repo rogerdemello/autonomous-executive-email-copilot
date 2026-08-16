@@ -119,7 +119,7 @@ Bar: Async, multi-provider, function-calling LLM integration. The system works w
 ### 8.5 Circuit breaker ✅ COMPLETE
 - [x] Per-(provider, model) circuit breaker: 3 failures → open 30s → half-open → retry.
 - [x] Multi-provider failover: if primary is open, try secondary provider.
-- [x] `AllProvidersFailedError` — last-resort fallback to deterministic baseline.
+- [x] `AllProvidersFailedError` — last-resort fallback to deterministic research.baseline.
 - [ ] Prometheus metrics: `circuit_breaker_state`, `circuit_breaker_trips_total` — deferred (OTEL migration in Phase 9).
 
 > **Tests:** 452 passing (all existing + updated mocks for provider-based architecture). New test file `tests/test_providers.py` (3 tests) exists; additional provider/circuit-breaker tests deferred.

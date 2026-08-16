@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.config import get_settings
-from env.security import rate_limiter, resolve_auth
+from app.core.config import get_settings
+from app.core.security import rate_limiter, resolve_auth
+from app.main import app
 
 client = TestClient(app)
 

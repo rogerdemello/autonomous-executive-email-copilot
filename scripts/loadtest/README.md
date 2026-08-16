@@ -19,7 +19,7 @@ pip install locust
 In one terminal, start the API the usual way (see the README quickstart):
 
 ```bash
-uvicorn env.api:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 The same app serves on container port `7860` in Docker; point `--host` at

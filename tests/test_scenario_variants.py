@@ -6,7 +6,7 @@ Two guarantees are locked in here:
   byte-identical to historical behaviour: the canonical ``{task_id}.yaml`` is
   always loaded and golden baseline scores are unchanged.
 * With the flag on, selection is a deterministic function of the seed, and
-  every globbed candidate file validates against ``env.scenario_schema``.
+  every globbed candidate file validates against ``research.sim.scenario_schema``.
 """
 
 from __future__ import annotations
@@ -15,10 +15,10 @@ import random
 
 import pytest
 
-from baseline.run_baseline import run
-from env.data_loader import SCENARIOS_DIR, resolve_scenario_path
-from env.scenario_schema import validate_scenario_file
-from env.tasks import build_scenario
+from research.baseline.run_baseline import run
+from research.sim.data_loader import SCENARIOS_DIR, resolve_scenario_path
+from research.sim.scenario_schema import validate_scenario_file
+from research.sim.tasks import build_scenario
 
 TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 

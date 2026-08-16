@@ -27,8 +27,8 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from benchmark.results_report import write_results_report  # noqa: E402
-from benchmark.runner import (  # noqa: E402
+from research.benchmark.results_report import write_results_report  # noqa: E402
+from research.benchmark.runner import (  # noqa: E402
     DEFAULT_PERSONAS,
     DEFAULT_SEEDS,
     DEFAULT_TASKS,
@@ -110,12 +110,12 @@ def run(
     """Run the selected agents and write artifacts to ``out_dir``."""
     # The benchmark is sim-only by construction: refuse to run if a real-inbox
     # connector is enabled, so real mail can never contaminate benchmark results.
-    from env.connectors import email_connector_enabled
+    from app.copilot.connectors import email_connector_enabled
 
     if email_connector_enabled():
         raise RuntimeError(
             "EMAIL_CONNECTOR_ENABLED is set; the benchmark is sim-only and refuses to "
-            "run with a real-inbox connector enabled. Unset it to run the benchmark."
+            "run with a real-inbox connector enabled. Unset it to run the research.benchmark."
         )
 
     runner = BenchmarkRunner(
@@ -135,7 +135,7 @@ def run(
         print(f"  {name}: {path}")
 
     if record_history:
-        from benchmark.history import append_run
+        from research.benchmark.history import append_run
 
         entry = append_run(history_path, results, label=",".join(agents))
         print(f"  history: appended run to {history_path} (deltas: {entry['deltas']})")

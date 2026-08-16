@@ -10,7 +10,8 @@ boundaries operators should understand before deploying.
 **Please do not open a public issue for security vulnerabilities.**
 
 Report privately via a GitHub [security advisory](https://docs.github.com/en/code-security/security-advisories)
-or the contact in [`.well-known/security.txt`](.well-known/security.txt). Include
+or the contact published at `/.well-known/security.txt` on any running instance
+(generated from the deployment's own configuration). Include
 a description, reproduction steps, affected versions, and impact. We aim to
 acknowledge within **2 business days** and to provide a remediation timeline
 after triage. We support coordinated disclosure and will credit reporters who

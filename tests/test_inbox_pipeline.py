@@ -14,11 +14,11 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.product import enrich, pipeline
-from env.product.providers.fake import FakeProvider, default_fixture_messages
-from env.saas import processing_routes
-from env.saas.repository import MailboxRepository
+from app.copilot import enrich, pipeline
+from app.copilot.providers.fake import FakeProvider, default_fixture_messages
+from app.main import app
+from app.saas import processing_routes
+from app.saas.repository import MailboxRepository
 
 
 @pytest.fixture
@@ -261,7 +261,7 @@ class TestInboxJourney:
         # still completes and records last_synced_at.
         class FailingLabelProvider(FakeProvider):
             def add_label(self, provider_message_id, label):
-                from env.product.providers.base import WriteResult
+                from app.copilot.providers.base import WriteResult
 
                 return WriteResult(ok=False, detail="simulated provider outage")
 

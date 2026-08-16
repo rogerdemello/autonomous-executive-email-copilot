@@ -2,7 +2,7 @@
 
 `env/product/*` is the real-inbox runtime. To keep the deterministic benchmark
 untouchable and the package reusable, it must NOT import the tenant/DB layer
-(`env.saas`), the grader, or the simulator (`env.environment`). Mirrors
+(`app.saas`), the grader, or the simulator (`research.sim.environment`). Mirrors
 tests/test_connector_isolation.py.
 """
 
@@ -12,7 +12,7 @@ import ast
 from pathlib import Path
 
 _PRODUCT_DIR = Path(__file__).resolve().parent.parent / "env" / "product"
-_FORBIDDEN = ("env.saas", "env.grader", "env.environment")
+_FORBIDDEN = ("app.saas", "research.sim.grader", "research.sim.environment")
 
 
 def _imported_modules(path: Path) -> set[str]:
@@ -44,8 +44,8 @@ def test_shared_policy_behavior_is_frozen_for_the_benchmark():
     shifting benchmark results. If a change here is intentional, update this
     expectation in the same reviewed commit that regenerates the golden snapshots.
     """
-    from env.product import enrich, pipeline
-    from env.product.providers.fake import default_fixture_messages
+    from app.copilot import enrich, pipeline
+    from app.copilot.providers.fake import default_fixture_messages
 
     obs = enrich.to_observation(default_fixture_messages(), account_email="exec@acme.example")
     proposals = pipeline.to_proposals(pipeline.run_policy(obs))

@@ -14,9 +14,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from env.environment import ExecutiveEmailEnv
-from env.grader import evaluate_trajectory
-from env.policy import BaselinePolicy
+from app.copilot.policy import BaselinePolicy
+from research.sim.environment import ExecutiveEmailEnv
+from research.sim.grader import evaluate_trajectory
 
 TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 PERSONAS = ["strict_ceo", "balanced", "chill_manager"]

@@ -1,8 +1,5 @@
 .venv/
 venv/
-.env-venv/
-env.bak/
-env.local/
 
 # Python caches and build artifacts
 __pycache__/
@@ -13,6 +10,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
 .coverage
 .coverage.*
 htmlcov/
@@ -26,9 +24,10 @@ dist/
 .env.*
 !.env.example
 
-# IDE/editor and OS files
+# IDE/editor, agent, and OS files
 .idea/
 .vscode/
+.claude/
 .DS_Store
 Thumbs.db
 
@@ -51,7 +50,3 @@ leaderboard*.csv
 
 # Lock files (pip's requirements.txt is authoritative)
 uv.lock
-
-# Node / dashboard build artifacts
-node_modules/
-dashboard/dist/

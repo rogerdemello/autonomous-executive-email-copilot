@@ -12,9 +12,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.config import get_settings
-from env.saas import licensing
+from app.core.config import get_settings
+from app.main import app
+from app.saas import licensing
 
 
 @pytest.fixture

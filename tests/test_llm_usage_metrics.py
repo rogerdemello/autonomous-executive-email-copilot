@@ -11,15 +11,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from env.llm_agent import LLMAgent
-from env.models import Observation, ObservationEmail
+from app.core.models import Observation, ObservationEmail
+from app.llm.agent import LLMAgent
 
 
 @pytest.fixture(autouse=True)
 def _isolate_llm_cache():
     """Clear the module-global response cache around every test so a cached
     response can never short-circuit the live (API-calling) path under test."""
-    from env.llm_agent import _response_cache
+    from app.llm.agent import _response_cache
 
     _response_cache.clear()
     yield
@@ -81,7 +81,7 @@ def _mock_client(mock_openai_class, *, prompt_tokens=100, completion_tokens=40):
 class TestLLMUsageMetrics(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
     @patch("telemetry.metrics.record_llm_usage")
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_records_usage_once_on_success(self, mock_openai_class, mock_record):
         _mock_client(mock_openai_class, prompt_tokens=100, completion_tokens=40)
 
@@ -103,7 +103,7 @@ class TestLLMUsageMetrics(unittest.TestCase):
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
     @patch("telemetry.metrics.record_llm_usage")
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_telemetry_failure_does_not_break_agent(self, mock_openai_class, mock_record):
         _mock_client(mock_openai_class)
         mock_record.side_effect = RuntimeError("metrics backend down")
@@ -119,7 +119,7 @@ class TestLLMUsageMetrics(unittest.TestCase):
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
     @patch("telemetry.metrics.record_llm_usage")
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_cache_hit_does_not_record(self, mock_openai_class, mock_record):
         _mock_client(mock_openai_class)
 

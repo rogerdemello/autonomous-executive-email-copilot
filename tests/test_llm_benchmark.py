@@ -4,7 +4,7 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from baseline.run_baseline import run
+from research.baseline.run_baseline import run
 
 
 def _make_mock_openai_response(content: str):
@@ -79,7 +79,7 @@ class TestAIModePersonaVariants(unittest.TestCase):
         return content
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_ai_mode_strict_ceo(self, mock_openai_class) -> None:
         """AI mode should work with strict_ceo persona."""
         mock_client = MagicMock()
@@ -105,7 +105,7 @@ class TestAIModePersonaVariants(unittest.TestCase):
         self.assertEqual(len(result["decision_traces"]), result["steps"])
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_ai_mode_balanced(self, mock_openai_class) -> None:
         """AI mode should work with balanced persona."""
         mock_client = MagicMock()
@@ -130,7 +130,7 @@ class TestAIModePersonaVariants(unittest.TestCase):
         self.assertEqual(result["persona"], "balanced")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_ai_mode_chill_manager(self, mock_openai_class) -> None:
         """AI mode should work with chill_manager persona."""
         mock_client = MagicMock()
@@ -175,7 +175,7 @@ class TestAIAndBaselineOutputShape(unittest.TestCase):
         return content
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_output_shape_comparable(self, mock_openai_class) -> None:
         """AI and baseline should have similar output structure."""
         # Mock LLM for AI mode
@@ -229,7 +229,7 @@ class TestAIAndBaselineOutputShape(unittest.TestCase):
         self.assertLessEqual(ai_result["score"], 1.0)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_grader_bounds_for_ai_mode(self, mock_openai_class) -> None:
         """AI mode scores should be within valid bounds."""
         personas = ["strict_ceo", "balanced", "chill_manager"]
@@ -277,7 +277,7 @@ class TestRegressionAcrossPersonas(unittest.TestCase):
         return content
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_all_tasks_work_with_all_personas(self, mock_openai_class) -> None:
         """AI mode should work with all task/persona combinations."""
         tasks = ["easy_classification", "medium_prioritization", "hard_full_management"]
@@ -304,7 +304,7 @@ class TestRegressionAcrossPersonas(unittest.TestCase):
                 self.assertIn("decision_traces", result)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_decision_traces_populated(self, mock_openai_class) -> None:
         """Decision traces should be populated correctly."""
         mock_client = MagicMock()

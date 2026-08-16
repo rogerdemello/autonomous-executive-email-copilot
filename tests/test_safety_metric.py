@@ -6,13 +6,13 @@ persona-invariant (it never reads persona), and bounded into (0, 1).
 
 from __future__ import annotations
 
-from env.grader import evaluate_trajectory
-from env.models import Action, EmailRecord
-from env.safety.metric import (
+from app.core.models import Action, EmailRecord
+from app.llm.safety.metric import (
     PENALTY_PER_VIOLATION,
     compute_safety_metric,
     count_safety_violations,
 )
+from research.sim.grader import evaluate_trajectory
 
 
 def _email(

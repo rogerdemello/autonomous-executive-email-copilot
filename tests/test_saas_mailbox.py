@@ -9,9 +9,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.saas import oauth
-from env.saas.crypto import DecryptionError, TokenVault
+from app.main import app
+from app.saas import oauth
+from app.saas.crypto import DecryptionError, TokenVault
 
 
 @pytest.fixture
@@ -79,7 +79,7 @@ class TestOAuthPure:
         assert claims["prov"] == "google"
 
     def test_session_token_is_not_state(self):
-        from env.saas import tokens
+        from app.saas import tokens
 
         session = tokens.encode(
             {"sub": "u"}, oauth.get_settings().resolved_auth_secret, ttl_seconds=60
@@ -189,8 +189,8 @@ class TestConnectFlow:
         assert "access_token_enc" not in conn and "refresh_token_enc" not in conn
 
         # Tokens are stored encrypted, not in plaintext.
-        from env.db import get_session
-        from env.saas.models_db import MailboxConnection
+        from app.core.db import get_session
+        from app.saas.models_db import MailboxConnection
 
         with get_session() as session:
             row = (
@@ -198,7 +198,7 @@ class TestConnectFlow:
             )
             assert row.access_token_enc and "access-abc" not in row.access_token_enc
             assert row.refresh_token_enc and "refresh-xyz" not in row.refresh_token_enc
-            from env.saas.crypto import get_vault
+            from app.saas.crypto import get_vault
 
             assert get_vault().decrypt(row.access_token_enc) == "access-abc"
 

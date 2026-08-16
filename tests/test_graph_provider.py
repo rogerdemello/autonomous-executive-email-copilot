@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from env.product.providers.graph import MicrosoftGraphProvider
+from app.copilot.providers.graph import MicrosoftGraphProvider
 
 
 class RecordingTransport:

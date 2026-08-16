@@ -1,6 +1,6 @@
-# Render Blueprint — deploys the multi-stage Dockerfile as a single web service
-# (FastAPI + the built React dashboard served at /dashboard). Render injects
-# $PORT, which the container binds automatically (see Dockerfile / server/app.py).
+# Render Blueprint — deploys the Dockerfile as a single web service (FastAPI
+# serving both the JSON API and the server-rendered UI). Render injects $PORT,
+# which the container binds automatically (see Dockerfile / app.main:main).
 #
 # Deploy: push to GitHub, then in Render → New → Blueprint and point it at this
 # repo. Set any secrets below in the Render dashboard (they are marked

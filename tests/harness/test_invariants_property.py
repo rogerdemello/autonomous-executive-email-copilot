@@ -10,8 +10,8 @@ from __future__ import annotations
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from env.environment import ExecutiveEmailEnv
-from env.models import Action
+from app.core.models import Action
+from research.sim.environment import ExecutiveEmailEnv
 
 from .invariants import (
     PERSONAS,

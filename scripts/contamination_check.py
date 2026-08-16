@@ -40,8 +40,8 @@ def check() -> list[str]:
 
     Returns a list of human-readable findings; empty means clean.
     """
-    from env.environment import ExecutiveEmailEnv
-    from env.llm_agent import SYSTEM_PROMPT, _build_user_prompt
+    from app.llm.agent import SYSTEM_PROMPT, _build_user_prompt
+    from research.sim.environment import ExecutiveEmailEnv
 
     findings: list[str] = []
 

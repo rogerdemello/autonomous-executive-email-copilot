@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from env.saas import licensing, rbac
+from app.saas import licensing, rbac
 
 
 class TestLicensing:
@@ -48,7 +48,7 @@ class TestLicensing:
             licensing.mint_license("org1", "platinum", self.SECRET)
 
     def test_session_token_is_not_a_license(self):
-        from env.saas import tokens
+        from app.saas import tokens
 
         session = tokens.encode({"sub": "u1", "org": "o1"}, self.SECRET, ttl_seconds=60)
         with pytest.raises(licensing.LicenseError):

@@ -15,7 +15,7 @@ cp .env.example .env   # optional; only needed for LLM/hybrid modes
 Run the API locally:
 
 ```bash
-uvicorn env.api:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 Frontend (optional):

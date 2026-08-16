@@ -236,15 +236,15 @@ then grade the collected trajectory with `evaluate_trajectory`
 
 | Agent (`name`) | Implementation | Decision source | Tokens / cost reported |
 |----------------|----------------|-----------------|------------------------|
-| `baseline` | `BaselineAgent` | `env.policy.BaselinePolicy` (deterministic heuristic) | `tokens=0`, `cost_usd=0.0` |
-| `llm` | `LLMAgent` | `env.llm_agent` (`get_action`, default model `gpt-4o-mini`) | real token sum; cost via `MODEL_PRICING` |
-| `multiagent` | `MultiAgent` | `env.agents.coordinator.CoordinatorAgent` | `tokens=0`, `cost_usd=0.0` |
+| `baseline` | `BaselineAgent` | `app.copilot.policy.BaselinePolicy` (deterministic heuristic) | `tokens=0`, `cost_usd=0.0` |
+| `llm` | `LLMAgent` | `app.llm.agent` (`get_action`, default model `gpt-4o-mini`) | real token sum; cost via `MODEL_PRICING` |
+| `multiagent` | `MultiAgent` | `research.sim.agents.coordinator.CoordinatorAgent` | `tokens=0`, `cost_usd=0.0` |
 
 Notes derived from `benchmark/agents.py`:
 
 - **Baseline heuristic.** Pure rule-based policy; no model calls. It is the
   determinism anchor and the zero-cost reference (`BaselineAgent.run`, lines 45-80).
-- **LLM agent.** Calls `env.llm_agent.get_action(observation)` each step and sums
+- **LLM agent.** Calls `app.llm.agent.get_action(observation)` each step and sums
   `trace.token_usage.total_tokens` (`LLMAgent.run`, lines 97-145). Cost is computed
   as `(total_tokens / 1_000_000) * pricing["completion"]` using
   `MODEL_PRICING` (`env/llm_agent.py`, lines 167-170; `gpt-4o-mini` ->
@@ -300,8 +300,8 @@ per-agent averages of score/time/tokens/cost (`benchmark/reporter.py`).
 ### Default full run
 
 ```python
-from benchmark.runner import BenchmarkRunner
-from benchmark.reporter import Reporter
+from research.benchmark.runner import BenchmarkRunner
+from research.benchmark.reporter import Reporter
 
 runner = BenchmarkRunner()          # 3 tasks x 3 personas x 3 seeds x 3 agents = 81 runs
 results = runner.run_all()

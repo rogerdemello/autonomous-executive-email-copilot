@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.agents import BaseBenchmarkAgent, BenchmarkMetrics
-from benchmark.runner import BenchmarkResult, BenchmarkRunner
+from research.benchmark.agents import BaseBenchmarkAgent, BenchmarkMetrics
+from research.benchmark.runner import BenchmarkResult, BenchmarkRunner
 
 
 class _StubAgent(BaseBenchmarkAgent):

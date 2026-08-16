@@ -9,8 +9,8 @@ does not perform writes.
 
 from __future__ import annotations
 
-from env.learning.example_extractor import example_extractor
-from env.learning.prompt_enhancer import prompt_enhancer
+from research.sim.learning.example_extractor import example_extractor
+from research.sim.learning.prompt_enhancer import prompt_enhancer
 
 
 def test_enhance_system_prompt_is_deterministic() -> None:

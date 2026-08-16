@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.dashboard_api import dashboard_router
+from app.live_api import dashboard_router
+from app.main import app
 
 client = TestClient(app)
 
@@ -60,7 +60,7 @@ def test_dashboard_static_mount():
     # The dashboard SPA is mounted only when its build exists (the Docker image
     # or a local `npm run build`). The CI test job doesn't build it, so guard on
     # the dist being present.
-    from env.api import dashboard_dist
+    from app.main import dashboard_dist
 
     if dashboard_dist.exists():
         assert client.get("/dashboard/").status_code == 200
@@ -69,7 +69,7 @@ def test_dashboard_static_mount():
 def test_root_serves_dashboard_when_built():
     # When the dashboard build is present, GET and HEAD / both redirect to the
     # dashboard (the app's landing page); otherwise / falls back to the info page.
-    from env.api import dashboard_dist
+    from app.main import dashboard_dist
 
     for method in ("GET", "HEAD"):
         resp = client.request(method, "/", follow_redirects=False)

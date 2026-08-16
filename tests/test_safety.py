@@ -4,13 +4,13 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from env.llm_agent import (
+from app.core.models import Action, Observation, ObservationEmail
+from app.llm.agent import (
     LLMAgent,
     _detect_prompt_injection,
     _detect_risky_content,
     _is_forbidden_escalation,
 )
-from env.models import Action, Observation, ObservationEmail
 
 
 def _make_mock_openai_response(content: str):
@@ -225,7 +225,7 @@ class TestSafetyCheckMethod(unittest.TestCase):
 
 class TestLLMAgentIntegratesSafetyCheck(unittest.TestCase):
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("env.providers.openai_provider.OpenAI")
+    @patch("app.llm.providers.openai_provider.OpenAI")
     def test_prompt_injection_returns_fallback(self, mock_openai_class):
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = _make_mock_openai_response(

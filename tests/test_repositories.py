@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from env import db
-from env.repositories import (
+from app.core import db
+from app.core.repositories import (
     EpisodeRepository,
     TeamSettingsRepository,
     UserPreferenceRepository,

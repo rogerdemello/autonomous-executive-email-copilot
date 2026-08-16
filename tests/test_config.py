@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from env.config import (
+from app.core.config import (
     DEFAULT_API_BASE_URL,
     DEFAULT_MODEL,
     build_chat_client,
@@ -141,7 +141,7 @@ def test_production_startup_rejects_dev_auth_secret(monkeypatch):
     import anyio
     from fastapi import FastAPI
 
-    from env.api import lifespan
+    from app.main import lifespan
 
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("AUTH_SECRET_KEY", raising=False)
@@ -158,7 +158,7 @@ def test_production_startup_accepts_real_auth_secret(monkeypatch):
     import anyio
     from fastapi import FastAPI
 
-    from env.api import lifespan
+    from app.main import lifespan
 
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("AUTH_SECRET_KEY", "a-long-random-production-secret-value")

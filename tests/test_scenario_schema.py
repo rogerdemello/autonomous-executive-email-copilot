@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from env.scenario_schema import (
+from research.sim.scenario_schema import (
     SCENARIOS_DIR,
     ScenarioFile,
     validate_all_scenarios,

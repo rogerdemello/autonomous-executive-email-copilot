@@ -1,4 +1,4 @@
-from baseline.run_baseline import run
+from research.baseline.run_baseline import run
 
 
 def test_baseline_is_deterministic_for_same_seed() -> None:

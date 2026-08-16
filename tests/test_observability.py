@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from env.api import app
+from app.main import app
 
 client = TestClient(app)
 
 
 def test_version_endpoint():
-    from env import __version__
+    from app import __version__
 
     resp = client.get("/version")
     assert resp.status_code == 200

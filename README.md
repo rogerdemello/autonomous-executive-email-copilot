@@ -91,7 +91,7 @@ pip install -r requirements.txt
 ### 2) Run API
 
 ```bash
-uvicorn env.api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 3) Run React Dashboard (optional)

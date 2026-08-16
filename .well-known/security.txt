@@ -1,9 +1,0 @@
-# Security contact for Executive Email Copilot
-# https://www.rfc-editor.org/rfc/rfc9116
-
-Contact: mailto:security@example.com
-Preferred-Languages: en
-Policy: https://github.com/rogerdemello/autonomous-executive-email-copilot/blob/main/SECURITY.md
-Canonical: https://exec-email-copilot.onrender.com/.well-known/security.txt
-# Expires must be kept in the future; update on each review.
-Expires: 2027-01-01T00:00:00.000Z

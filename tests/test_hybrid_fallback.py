@@ -11,11 +11,11 @@ from __future__ import annotations
 
 import pytest
 
-from baseline.run_baseline import run
-from env.environment import ExecutiveEmailEnv
-from env.grader import evaluate_trajectory
-from env.llm_policy import llm_provider_available
-from env.policy import BaselinePolicy, HybridPolicy
+from app.copilot.policy import BaselinePolicy, HybridPolicy
+from app.llm.policy import llm_provider_available
+from research.baseline.run_baseline import run
+from research.sim.environment import ExecutiveEmailEnv
+from research.sim.grader import evaluate_trajectory
 
 TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 

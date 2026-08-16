@@ -45,7 +45,7 @@ Operational reference for running the Autonomous Executive Email Copilot API.
 | `episodes_failed_total` climbing | Bad task/seed input or env error | Inspect logs by `X-Request-ID`; check `/baseline` payloads. |
 | `api_errors_total{type="unauthorized"}` spikes | Clients missing token after `API_AUTH_TOKEN` was set | Distribute the token or rotate it. |
 | 429 responses | Rate limit too low | Raise `RATE_LIMIT_PER_MINUTE` or set `0` to disable. |
-| LLM mode degraded | Missing/invalid provider key | Set `OPENAI_API_KEY`/`HF_TOKEN`; the agent otherwise falls back to baseline. |
+| LLM mode degraded | Missing/invalid provider key | Set `OPENAI_API_KEY`/`HF_TOKEN`; the agent otherwise falls back to research.baseline. |
 
 ## Security toggles (env)
 

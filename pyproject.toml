@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "autonomous-executive-email-copilot"
 version = "1.0.0"
-description = "Deterministic RL-style executive-inbox environment with a typed API, bounded graders, baselines, and a production ops stack"
+description = "An executive email copilot: reads the inbox, triages by risk and deadline, drafts replies, and holds every outbound action for human approval"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -62,16 +62,21 @@ loadtest = [
 ]
 
 all = [
-  "exec-email-copilot[otel,redis,async_db,loadtest]",
+  "autonomous-executive-email-copilot[otel,redis,async_db,loadtest]",
 ]
 
 [project.scripts]
-server = "server.app:main"
+server = "app.main:main"
 
-# Discover every package (including subpackages like env.agents, env.learning,
-# env.safety, env.eval, env.connectors) so a built wheel is complete.
+# Ship the product (app*) and the research benchmark (research*) plus the ops
+# helpers, including every subpackage, so a built wheel is complete.
 [tool.setuptools.packages.find]
-include = ["env*", "baseline*", "server*", "benchmark*", "telemetry*", "reports*"]
+include = ["app*", "research*", "telemetry*", "reports*"]
+
+# The web UI is templates + CSS, not Python. Without this a wheel would ship
+# app.web as an empty package and every page would 500 on a missing template.
+[tool.setuptools.package-data]
+"app.web" = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 markers = [
@@ -87,7 +92,7 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["dashboard", ".venv"]
+extend-exclude = [".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]

@@ -7,11 +7,11 @@ import uuid
 
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.product.providers.gmail import GmailProvider
-from env.saas import oauth, provider_factory
-from env.saas.crypto import get_vault
-from env.saas.repository import MailboxRepository
+from app.copilot.providers.gmail import GmailProvider
+from app.main import app
+from app.saas import oauth, provider_factory
+from app.saas.crypto import get_vault
+from app.saas.repository import MailboxRepository
 
 
 def _b64url(text: str) -> str:
@@ -217,7 +217,7 @@ class TestProviderFactory:
         assert vault.decrypt(stored["access_token_enc"]) == "access-new"
 
     def test_unconfigured_falls_back_to_fake(self):
-        from env.product.providers.fake import FakeProvider
+        from app.copilot.providers.fake import FakeProvider
 
         conn = {"provider": "google", "org_id": "x", "id": "y"}
         # No such connection in DB -> no token -> FakeProvider.

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from env.llm_policy import (
+from app.core.models import Observation, ObservationEmail
+from app.llm.policy import (
     LLMPolicy,
     Planner,
     Strategy,
@@ -12,7 +13,6 @@ from env.llm_policy import (
     llm_provider_available,
     reset_planner,
 )
-from env.models import Observation, ObservationEmail
 
 
 class TestLLMProviderAvailable:
@@ -234,7 +234,7 @@ class TestModuleLevelFunctions:
         get_strategy(obs)
         reset_planner()
 
-        from env.llm_policy import _default_planner
+        from app.llm.policy import _default_planner
 
         assert _default_planner is None
 
@@ -274,7 +274,7 @@ class TestLLMPolicy:
     def test_reset_clears_state(self) -> None:
         policy = LLMPolicy()
         policy._handled_ids.add("e1")
-        with patch("env.llm_agent.reset_agent") as mock_reset:
+        with patch("app.llm.agent.reset_agent") as mock_reset:
             policy.reset()
         assert len(policy._handled_ids) == 0
         mock_reset.assert_called_once()

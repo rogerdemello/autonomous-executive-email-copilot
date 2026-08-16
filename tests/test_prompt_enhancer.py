@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from env.learning.prompt_enhancer import PromptEnhancer
+from research.sim.learning.prompt_enhancer import PromptEnhancer
 
 
 def test_enhance_system_prompt_returns_base_when_no_examples() -> None:
@@ -23,7 +23,7 @@ def test_enhance_system_prompt_includes_examples_when_exist() -> None:
     with (
         patch.object(enhancer, "has_examples", return_value=True),
         patch(
-            "env.learning.prompt_enhancer.example_extractor.extract_all_examples",
+            "research.sim.learning.prompt_enhancer.example_extractor.extract_all_examples",
             return_value=fake_examples,
         ),
     ):
@@ -48,7 +48,7 @@ def test_get_examples_for_action_returns_correct_examples() -> None:
     }
     enhancer = PromptEnhancer()
     with patch(
-        "env.learning.prompt_enhancer.example_extractor.extract_all_examples",
+        "research.sim.learning.prompt_enhancer.example_extractor.extract_all_examples",
         return_value=fake_examples,
     ):
         classify_examples = enhancer.get_examples_for_action("task", "balanced", "classify")
@@ -71,7 +71,7 @@ def test_get_examples_for_action_respects_max_examples() -> None:
     }
     enhancer = PromptEnhancer(max_examples_per_action=3)
     with patch(
-        "env.learning.prompt_enhancer.example_extractor.extract_all_examples",
+        "research.sim.learning.prompt_enhancer.example_extractor.extract_all_examples",
         return_value=fake_examples,
     ):
         result = enhancer.get_examples_for_action("task", "balanced", "classify")
@@ -83,7 +83,7 @@ def test_has_examples_returns_false_when_no_examples() -> None:
     empty_examples = {"classify": [], "reply": [], "escalate": [], "prioritize": []}
     enhancer = PromptEnhancer()
     with patch(
-        "env.learning.prompt_enhancer.example_extractor.extract_all_examples",
+        "research.sim.learning.prompt_enhancer.example_extractor.extract_all_examples",
         return_value=empty_examples,
     ):
         assert enhancer.has_examples("task", "balanced") is False
@@ -98,7 +98,7 @@ def test_has_examples_returns_true_when_examples_exist() -> None:
     }
     enhancer = PromptEnhancer()
     with patch(
-        "env.learning.prompt_enhancer.example_extractor.extract_all_examples",
+        "research.sim.learning.prompt_enhancer.example_extractor.extract_all_examples",
         return_value=nonempty_examples,
     ):
         assert enhancer.has_examples("task", "balanced") is True

@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.saas import licensing
+from app.main import app
+from app.saas import licensing
 
 
 @pytest.fixture

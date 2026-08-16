@@ -7,9 +7,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.saas import processing_routes
-from env.saas.repository import MailboxRepository
+from app.main import app
+from app.saas import processing_routes
+from app.saas.repository import MailboxRepository
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def _hdr(token):
 
 class TestExport:
     def test_export_bundle_is_complete_and_secret_free(self, client, monkeypatch):
-        from env.product.providers.fake import FakeProvider
+        from app.copilot.providers.fake import FakeProvider
 
         monkeypatch.setattr(processing_routes, "build_provider", lambda conn: FakeProvider())
         owner = _signup(client)
@@ -111,7 +111,7 @@ class TestDeletion:
         assert resp.status_code == 400
 
     def test_delete_purges_everything(self, client, monkeypatch):
-        from env.product.providers.fake import FakeProvider
+        from app.copilot.providers.fake import FakeProvider
 
         monkeypatch.setattr(processing_routes, "build_provider", lambda conn: FakeProvider())
         owner = _signup(client)

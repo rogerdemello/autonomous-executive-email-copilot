@@ -4,7 +4,7 @@
 Billing is sales-led: after a contract is signed, an operator runs this to mint
 the customer's license key and (optionally) persist the license row so it can be
 revoked later. The key is handed to the customer, who activates it via
-``POST /billing/activate-license`` or the dashboard.
+``POST /billing/activate-license`` or the in-app billing settings page.
 
 The key is signed with ``AUTH_SECRET_KEY`` — it MUST match the running server's
 secret, or activation will fail signature verification.
@@ -23,8 +23,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-from env.config import get_settings
-from env.saas import licensing
+from app.core.config import get_settings
+from app.saas import licensing
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,8 +68,8 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.persist:
-        from env.db import migrate_db
-        from env.saas.repository import LicenseRepository
+        from app.core.db import migrate_db
+        from app.saas.repository import LicenseRepository
 
         migrate_db()
         LicenseRepository().upsert(

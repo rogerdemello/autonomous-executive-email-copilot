@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from env.grader import evaluate_trajectory
+from research.sim.grader import evaluate_trajectory
 
 from .invariants import canonical_trace
 

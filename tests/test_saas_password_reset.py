@@ -8,9 +8,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.saas import email as email_mod
-from env.saas.email import MemorySender
+from app.main import app
+from app.saas import email as email_mod
+from app.saas.email import MemorySender
 
 
 @pytest.fixture
