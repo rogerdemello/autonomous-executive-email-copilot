@@ -5,7 +5,7 @@ Autonomous Executive Email Copilot is a data-driven executive inbox simulation e
 - deterministic scenarios and grading
 - multiple decision policies (baseline, stress, LLM, hybrid planner/executor, multi-agent benchmark mode)
 - FastAPI runtime endpoints exposing an RL-style reset/step/state loop
-- a React dashboard
+- a server-rendered web UI (landing, auth, inbox, approvals)
 - benchmark, comparison, report generation, telemetry, and approval workflows
 
 This README is a full, code-derived functionality reference.
@@ -33,7 +33,7 @@ This README is a full, code-derived functionality reference.
 
 - Full REST API for runtime, grading, baselines, leaderboard, episodes, approvals, feedback, learning stats, benchmark, reports, telemetry, alerts
 - Dashboard API + WebSocket push channel
-- React dashboard app
+- Server-rendered web UI (Jinja templates; no bundler)
 - SQLite-backed repositories for episodes/preferences/team settings and learning feedback
 - PDF episode reporting
 - Prometheus-style metrics output and alert rules
@@ -42,15 +42,15 @@ This README is a full, code-derived functionality reference.
 
 ### Runtime layers
 
-1. Environment core (`env/environment.py`)
-2. Task/scenario loader (`env/tasks.py`, `env/data_loader.py`, `data/*.yaml`)
-3. Grader (`env/grader.py`)
-4. Policies/agents (`env/policy.py`, `env/llm_policy.py`, `env/llm_agent.py`, `env/agents/*`)
-5. API layer (`env/api.py`, `env/dashboard_api.py`)
-6. UI layer (`dashboard/src/*`)
-7. Persistence and learning (`env/db.py`, `env/repositories.py`, `env/learning/*`)
+1. Environment core (`research/sim/environment.py`)
+2. Task/scenario loader (`research/sim/tasks.py`, `research/sim/data_loader.py`, `data/*.yaml`)
+3. Grader (`research/sim/grader.py`)
+4. Policies/agents (`app/copilot/policy.py`, `app/llm/policy.py`, `app/llm/agent.py`, `research/sim/agents/*`)
+5. API layer (`app/main.py`, `app/live_api.py`)
+6. UI layer (`app/web/*`)
+7. Persistence and learning (`app/core/db.py`, `app/core/repositories.py`, `research/sim/learning/*`)
 8. Telemetry and alerts (`telemetry/*`)
-9. Benchmark and reports (`benchmark/*`, `baseline/*`, `reports/*`)
+9. Benchmark and reports (`research/benchmark/*`, `research/baseline/*`, `reports/*`)
 
 ### Data source model
 
@@ -78,19 +78,16 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 python -m server.app
 ```
 
-Runs `uvicorn server.app:app --host 0.0.0.0 --port 7860`.
+Runs `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (8000 by default).
 
 ### Alternative ASGI import entrypoint
 
-`main.py` exports `app` from `app.main`.
+`app/main.py` exports both `app` and a `main()` uvicorn launcher.
 
-### React dashboard
+### Web UI
 
-```bash
-cd dashboard && npm install && npm run dev
-```
-
-In the container build the dashboard is compiled and served at `/dashboard/`.
+Served by the same process — there is nothing to build or start separately.
+Open <http://localhost:8000>. Seed a demo workspace first with `make demo`.
 
 ### Baseline runner CLI
 
@@ -169,7 +166,7 @@ Persona multipliers from `data/settings.yaml` scale deadline, terminal, urgent-d
 
 ## 5) Data Loading and Difficulty Scaling
 
-Scenario creation in `env/tasks.py` and `env/data_loader.py` supports:
+Scenario creation in `research/sim/tasks.py` and `research/sim/data_loader.py` supports:
 
 - seeded deterministic shuffle of initial emails
 - deterministic interruption trigger resolution from fixed ranges
@@ -185,7 +182,7 @@ YAML is cached by mtime+size and supports hot reload when files are modified.
 
 ## 6) Grading and Score Semantics
 
-`env/grader.py` computes task scores from environment metrics:
+`research/sim/grader.py` computes task scores from environment metrics:
 
 - easy_classification: `classification_accuracy`
 - medium_prioritization: `prioritization`
@@ -214,7 +211,7 @@ This keeps scores numerically stable: downstream consumers never have to special
 
 ## 7) Policy and Agent Modes
 
-### Baseline policy (`env/policy.py`)
+### Baseline policy (`app/copilot/policy.py`)
 
 - first action is prioritize
 - classifies all emails via heuristic terms and risk/priority cues
@@ -223,7 +220,7 @@ This keeps scores numerically stable: downstream consumers never have to special
 - defers lower-priority items
 - emits keepalive prioritize actions while interruptions are still pending
 
-### Stress mode (`baseline/run_baseline.py`)
+### Stress mode (`research/baseline/run_baseline.py`)
 
 With probability `stress_rate`, baseline actions are corrupted:
 
@@ -232,7 +229,7 @@ With probability `stress_rate`, baseline actions are corrupted:
 - reply converted to defer
 - escalate target changed to `finance_lead`
 
-### LLM agent mode (`env/llm_agent.py`)
+### LLM agent mode (`app/llm/agent.py`)
 
 Implemented features:
 
@@ -248,7 +245,7 @@ Implemented features:
 - token usage and cost estimation
 - approval queue integration for `reply` and `escalate`
 
-### Hybrid planner/executor (`env/policy.py` + `env/llm_policy.py`)
+### Hybrid planner/executor (`app/copilot/policy.py` + `app/llm/policy.py`)
 
 - planner selects high-level strategy every N steps (`planner_interval`)
 - executor converts strategy to concrete actions with deterministic fallback
@@ -259,7 +256,7 @@ Implemented features:
   - `defer_low_value`
   - `monitor`
 
-### Multi-agent coordination (`env/agents/*`)
+### Multi-agent coordination (`research/sim/agents/*`)
 
 - `CoordinatorAgent` delegates to specialist agents
 - `ClassifierAgent`, `ResponderAgent`, `EscalatorAgent`
@@ -316,8 +313,8 @@ Implemented features:
 
 ### Benchmark and reports
 
-- `POST /benchmark/run`
-- `POST /benchmark/run_html`
+- `POST /research/benchmark/run`
+- `POST /research/benchmark/run_html`
 - `GET /reports/episode/{episode_id}`
 - `POST /reports/generate`
 
@@ -339,66 +336,75 @@ Implemented features:
 
 - `GET /docs` (FastAPI OpenAPI UI)
 
-## 9) Dashboard and UI Functionality
+## 9) Web UI
 
-### React dashboard (`dashboard/`)
+### Server-rendered pages (`app/web/`)
 
-Views (`dashboard/src/components/*`):
+Jinja templates plus one stylesheet. No bundler, no build step, no `node_modules`.
+Every action is a plain HTML form POST followed by a redirect, so the app works
+with JavaScript disabled; `static/app.js` adds only a theme toggle, a confirm on
+destructive actions, and double-submit protection.
 
-- Inbox
-- Timeline
-- Replay
-- Approval Queue
-- Team settings
-- User settings
+| Route | Auth | Purpose |
+|---|---|---|
+| `GET /` | public | Landing page (`HEAD` too, for uptime probes) |
+| `GET /pricing` | public | Plans, rendered from `licensing.PLANS` |
+| `GET,POST /login` | public | Sign in; offers SSO when OIDC is configured |
+| `GET,POST /signup` | public | Provisions org + owner + trial license |
+| `POST /logout` | session | Clears the session cookie |
+| `GET /app/connect` | session | Gmail · Microsoft 365 · demo mailbox |
+| `POST /app/connect/demo` | admin+ | Attach the demo mailbox and sync it |
+| `POST /app/connect/{provider}` | admin+ | Begin the provider OAuth flow |
+| `POST /app/sync` | admin+ | Re-sync every connected mailbox |
+| `GET /app/inbox` | session | Message list, reader, and copilot panel |
+| `POST /app/actions/{id}/approve` | admin+ | Approve and dispatch to the provider |
+| `POST /app/actions/{id}/reject` | admin+ | Record the rejection; nothing is sent |
+| `GET /app/approvals` | session | Everything held for a human |
+| `GET /app/activity` | admin+ | The organization's audit log |
+| `GET /app/settings` | session | Plan, seats, members, mailboxes |
 
-The dashboard talks to the FastAPI service via the shared API client
-(`dashboard/src/api.ts`, with timeout/retry/typed errors) and a live WebSocket
-(`useDashboardSocket`, ping/pong + reconnect). In the container build it is
-compiled and served at `/dashboard/`.
+`GET /welcome` permanently redirects to `/`, so links shared before the landing
+page moved still resolve.
 
-### React dashboard (`dashboard/src/*`)
+### Session and CSRF (`app/web/session.py`)
 
-Main tabs/components:
+The JSON API authenticates with a Bearer header, which a browser page cannot
+send. The same token therefore also rides in an `ec_session` cookie —
+`HttpOnly`, `SameSite=Lax`, and `Secure` outside development.
+`app/saas/deps.py` accepts either, header first, so an explicit credential is
+never overridden by a stale cookie.
 
-- Inbox
-- Timeline
-- Replay
-- Approvals
-- Team
-- Settings
+Cookie auth reintroduces CSRF, mitigated twice over: `SameSite=Lax` stops the
+cookie riding along on cross-site posts, and every mutating form carries a
+signed, expiring token bound to the session (verified in
+`verify_csrf`). The token embeds a digest of the session rather than the session
+itself, so leaked page HTML does not disclose a credential.
 
-React app features:
+### The demo mailbox (`app/copilot/providers/demo.py`)
 
-- periodic `/health` connectivity check
-- configurable API base
-- inbox reset/state fetch and email list rendering
-- timeline rendering from `decision_trace`
-- replay controls and step navigation
-- approval pending/history actions
-- user/team preference editing
-
-Build/deploy notes:
-
-- Vite base path is `/dashboard/`
-- FastAPI serves static dashboard files when `dashboard/dist` exists
+A `provider="demo"` connection needs no OAuth and no network. Messages come from
+`data/demo/inbox.json`; writes are recorded in memory. The decisions are not
+scripted — the real `BaselinePolicy` computes them from the real inferred
+signals, so editing a subject line changes the routing. The fixture supplies the
+reply prose and the reviewer-facing rationale, because the policy is a router and
+emits one identical sentence for every reply.
 
 ## 10) Persistence and Learning Stores
 
 ### Primary SQLite (`data/episodes.db`)
 
-Tables in `env/db.py`:
+Tables in `app/core/db.py`:
 
 - `episodes`
 - `decisions`
 - `user_preferences`
 - `team_settings`
 
-Repository layer in `env/repositories.py` supports CRUD-like list/filter stats for episodes and preferences.
+Repository layer in `app/core/repositories.py` supports CRUD-like list/filter stats for episodes and preferences.
 
-### Learning SQLite (`env/data/trajectories.db`)
+### Learning SQLite (`data/trajectories.db`)
 
-Tables in `env/learning/trajectory_store.py`:
+Tables in `research/sim/learning/trajectory_store.py`:
 
 - `successful_trajectories` (score-thresholded stores)
 - `user_feedback`
@@ -410,13 +416,13 @@ Learning utilities:
 
 ## 11) Benchmarking and Reporting
 
-### Benchmark subsystem (`benchmark/*`)
+### Benchmark subsystem (`research/benchmark/*`)
 
 - agents: baseline, llm, multiagent
 - runner: Cartesian runs across tasks/personas/seeds
 - reporter: HTML and JSON summaries with aggregate averages
 
-### Leaderboard subsystem (`baseline/leaderboard.py`)
+### Leaderboard subsystem (`research/baseline/leaderboard.py`)
 
 For each task/persona across seeds, computes:
 
@@ -499,29 +505,28 @@ Supports webhook POST dispatch for triggered alerts.
 
 ### Root runtime files
 
-- `main.py`: ASGI app export
-- `server/app.py`: uvicorn launcher on port 7860
-- `inference.py`: CLI inference runner (structured `[START]/[STEP]/[END]` logs)
-- `Dockerfile`: container build/runtime
+- `app/main.py`: the FastAPI app, plus a `main()` uvicorn launcher honouring `$PORT`
+- `research/inference.py`: CLI inference runner (structured `[START]/[STEP]/[END]` logs)
+- `Dockerfile`: container build/runtime (single stage; no Node toolchain)
 
-### `env/` package
+### `app/` package
 
-- `env/api.py`: primary FastAPI app with all REST endpoints
-- `env/dashboard_api.py`: dashboard endpoints + WebSocket broadcast loop
-- `env/environment.py`: simulation state machine
-- `env/models.py`: Pydantic models and API schemas
-- `env/tasks.py`: task and scenario assembly
-- `env/data_loader.py`: YAML loader/cache + synthetic difficulty combinators
-- `env/utils.py`: scoring helpers, heuristics, persona profiles, ranking
-- `env/grader.py`: trajectory evaluator
-- `env/policy.py`: baseline policy, executor, hybrid policy
-- `env/llm_policy.py`: strategic planner and LLMPolicy wrapper
-- `env/llm_agent.py`: LLM decision engine, safety, fallback, approvals
-- `env/approval.py`: approval request lifecycle store
-- `env/db.py`: SQLAlchemy models and DB bootstrap
-- `env/repositories.py`: episode/preferences/team repositories
+- `app/main.py`: primary FastAPI app with all REST endpoints
+- `app/live_api.py`: dashboard endpoints + WebSocket broadcast loop
+- `research/sim/environment.py`: simulation state machine
+- `app/core/models.py`: Pydantic models and API schemas
+- `research/sim/tasks.py`: task and scenario assembly
+- `research/sim/data_loader.py`: YAML loader/cache + synthetic difficulty combinators
+- `app/core/utils.py`: scoring helpers, heuristics, persona profiles, ranking
+- `research/sim/grader.py`: trajectory evaluator
+- `app/copilot/policy.py`: baseline policy, executor, hybrid policy
+- `app/llm/policy.py`: strategic planner and LLMPolicy wrapper
+- `app/llm/agent.py`: LLM decision engine, safety, fallback, approvals
+- `app/core/approval.py`: approval request lifecycle store
+- `app/core/db.py`: SQLAlchemy models and DB bootstrap
+- `app/core/repositories.py`: episode/preferences/team repositories
 
-### `env/agents/`
+### `research/sim/agents/`
 
 - `base.py`: base abstract agent contract
 - `classifier.py`: classification specialist
@@ -530,7 +535,7 @@ Supports webhook POST dispatch for triggered alerts.
 - `coordinator.py`: delegation and conflict resolution
 - `__init__.py`: exports multi-agent API
 
-### `env/learning/`
+### `research/sim/learning/`
 
 - `trajectory_store.py`: successful trajectory + feedback persistence
 - `example_extractor.py`: few-shot extraction by action type
@@ -541,7 +546,7 @@ Supports webhook POST dispatch for triggered alerts.
 - `run_baseline.py`: mode runner (baseline/stress/llm/hybrid)
 - `leaderboard.py`: aggregate performance summaries and CSV export
 
-### `benchmark/`
+### `research/benchmark/`
 
 - `agents.py`: benchmark execution adapters
 - `runner.py`: run matrix coordinator
@@ -557,17 +562,15 @@ Supports webhook POST dispatch for triggered alerts.
 - `alerts.py`: alert rules and webhook dispatch
 - `grafana_dashboard.json`: dashboard/rule definitions
 
-### `dashboard/src/`
+### `app/web/`
 
-- `App.tsx`: shell and tab routing
-- `components/Inbox.tsx`: reset/state + inbox display
-- `components/Timeline.tsx`: LLM decision timeline viewer
-- `components/Replay.tsx`: replay controls and stepwise inspection
-- `components/ApprovalQueue.tsx`: pending/history approval actions
-- `components/Settings.tsx`: user preference management UI
-- `components/Team.tsx`: team rules and escalation target UI
-- `index.css`: UI styling
-- `main.tsx`: React mount
+- `routes.py`: page and form handlers; no business logic of their own
+- `session.py`: the session cookie and CSRF tokens
+- `templates/base.html`, `_public.html`, `_app.html`: shared chrome
+- `templates/landing.html`, `pricing.html`, `login.html`, `signup.html`: public pages
+- `templates/connect.html`, `inbox.html`, `approvals.html`, `activity.html`, `settings.html`: the product
+- `static/app.css`: the whole design system, light and dark
+- `static/app.js`: progressive enhancement only
 
 ### Tests (`tests/`)
 
@@ -607,20 +610,14 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Start React dashboard (dev)
+### Seed the demo workspace
 
 ```bash
-cd dashboard
-npm install
-npm run dev
+make demo          # or: python scripts/seed_demo.py [--fresh]
 ```
 
-### Build React dashboard for FastAPI static serving
-
-```bash
-cd dashboard
-npm run build
-```
+Creates the Northwind Industries organization, connects the demo mailbox, and
+runs the first sync. No credentials required. See [DEMO.md](DEMO.md).
 
 ### Run tests
 
@@ -632,10 +629,10 @@ python -m pytest -q
 
 ```bash
 docker build -t exec-email-copilot .
-docker run -p 7860:7860 exec-email-copilot
+docker run -p 8000:8000 exec-email-copilot
 ```
 
-Container healthcheck probes `http://localhost:7860/health`.
+Container healthcheck probes `http://localhost:8000/health`.
 
 ## 18) CI and Deployment Files
 

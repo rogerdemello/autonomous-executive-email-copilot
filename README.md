@@ -1,54 +1,147 @@
-# Autonomous Executive Email Copilot
+# Executive Email Copilot
 
-![Tests](https://img.shields.io/badge/tests-387%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-83%25-green)
+![Tests](https://img.shields.io/badge/tests-682%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-78%25-green)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Build](https://img.shields.io/badge/docker-multi--stage-2496ED)
+![Build](https://img.shields.io/badge/docker-single--stage-2496ED)
 
-> **A reproducible, deterministic benchmark *and* a production-style product for executive-inbox agents.** A Gym-style reset/step/state environment, bounded and numerically stable scoring, baseline / hybrid / LLM / multi-agent policies, and a full ops stack (FastAPI + React, approvals, telemetry, alerts).
+> **An email copilot for people whose inbox can't wait.** It reads a real mailbox,
+> triages by deadline and risk, drafts the replies worth sending, routes legal and
+> security matters to the right owner — and holds every outbound action for a human.
 
-Autonomous Executive Email Copilot is a deterministic, RL-style executive inbox simulation for evaluating agents that triage and manage high-stakes email workloads. It models an executive mailbox with incoming messages, deadlines, business value, risk tags, thread history, and mid-episode interruptions. Agents interact with the environment through a standard reset/step/state loop, choose among classify, prioritize, reply, escalate, and defer actions, and are scored by task-specific graders that keep results bounded and numerically stable (open interval `(0,1)`).
+Connect Gmail or Microsoft 365 and the copilot works the inbox: it classifies each
+message, infers priority, deadline, business value, and risk, then proposes an
+action. Anything that touches the outside world — a reply, an escalation — waits
+for your sign-off. Anything internal and low-risk applies itself as a label.
 
-The project is built as a full experimentation stack rather than a single simulator. Scenario generation is driven by YAML task and scenario files; policies include a heuristic baseline, stress-test corruption, LLM-backed decisioning, and hybrid planner/executor modes; and the surrounding tooling supports approvals, replay, benchmark comparison, reports, telemetry, and alerts. A React dashboard provides inbox review, approvals, replay, and team settings on top of the FastAPI service.
+It is multi-tenant from the ground up: organizations, three ranked roles, encrypted
+mailbox tokens, a per-organization audit log, data export, and hard delete.
+
+---
+
+## See it in 60 seconds
+
+No API key, no OAuth credentials, no network:
+
+```bash
+pip install -r requirements.txt
+make demo                                  # seed the demo workspace
+uvicorn app.main:app --port 8000
+```
+
+Open **http://localhost:8000** and walk:
+
+| Step | What you see |
+|---|---|
+| `/` | The landing page — what the product is |
+| `/pricing` | Plans, generated from the licensing registry so the copy can't drift |
+| `/login` | Sign in as `alex.chen@northwind.example` / `demo1234` |
+| `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
+| `/app/inbox` | 14 triaged messages, with the copilot's reasoning and its drafts |
+| `/app/approvals` | The 6 actions waiting on a human |
+| `/app/activity` | The audit trail of everything that just happened |
+
+[docs/DEMO.md](docs/DEMO.md) is a walkthrough script, including what is real and
+what is simulated.
+
+**The demo mailbox is content, not theatre.** Its routing is computed by the same
+`BaselinePolicy` that runs against a real Gmail account, from the same inferred
+signals — edit a subject line in [data/demo/inbox.json](data/demo/inbox.json) and
+the decision genuinely changes. What is authored is the prose of the drafted
+replies, because the policy is a router, not a writer.
+
+## How it works
+
+```
+mailbox provider  ->  enrich  ->  policy  ->  proposals  ->  approval  ->  provider write
+(Gmail/Graph/demo)    infer       decide     hold or auto     human       send/label/archive
+                      signals
+```
+
+- **[`app/copilot/providers`](app/copilot/providers)** — one interface per mail
+  backend. Gmail and Microsoft Graph over OAuth; a demo mailbox that needs nothing.
+- **[`app/copilot/enrich.py`](app/copilot/enrich.py)** — infers sender role, risk
+  tag, priority, deadline, and business value from the message itself.
+- **[`app/copilot/policy.py`](app/copilot/policy.py)** — decides: classify, reply,
+  escalate, or defer. Deterministic; no credentials required.
+- **[`app/saas/sync_service.py`](app/saas/sync_service.py)** — persists per tenant,
+  auto-applies low-risk actions, holds `reply` and `escalate` for a human.
+- **[`app/web`](app/web)** — the UI: Jinja templates and one stylesheet. No bundler.
+
+An LLM is optional. With a provider configured, the model-backed paths in
+[`app/llm`](app/llm) take over; with none, everything falls back to the
+deterministic heuristics — which is why the whole product runs offline.
+
+## Project layout
+
+```
+app/            the product
+  core/         config, database, models, security, approval
+  copilot/      mail providers, signal inference, decision policy
+  llm/          provider abstraction, LLM agent, prompts, safety
+  saas/         accounts, RBAC, licensing, mailbox sync, audit log
+  web/          server-rendered UI (templates + static)
+research/       the deterministic RL-style benchmark this grew out of
+  sim/          environment, graders, scenarios, agents
+  baseline/ benchmark/ inference.py
+data/           demo mailbox, task and scenario configs
+docs/  tests/  scripts/  telemetry/  reports/  helm/
+```
+
+Dependencies point one way: `research` may import from `app`, never the reverse.
+
+## Install and run
+
+```bash
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1      # Windows PowerShell
+source .venv/bin/activate          # Linux/macOS
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Tests: `python -m pytest -q`. CI gate locally: `make check` (lint + tests) or `make cov`.
+
+## Connecting a real mailbox
+
+Set OAuth client credentials for the provider you want, then use **Connect** in the app:
+
+```bash
+OAUTH_REDIRECT_BASE_URL=https://your-host
+GOOGLE_OAUTH_CLIENT_ID=...        GOOGLE_OAUTH_CLIENT_SECRET=...
+MICROSOFT_OAUTH_CLIENT_ID=...     MICROSOFT_OAUTH_CLIENT_SECRET=...
+```
+
+Tokens are encrypted at rest before storage and decrypted in exactly one module
+([`app/saas/provider_factory.py`](app/saas/provider_factory.py)). A provider with no
+credentials configured shows as unavailable in the UI rather than failing when
+clicked — the demo mailbox always works.
 
 ## Documentation
 
-- [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) — full, code-derived reference.
+- [docs/DEMO.md](docs/DEMO.md) — the demo walkthrough script.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, request flow, design decisions.
-- [docs/BENCHMARK.md](docs/BENCHMARK.md) — benchmark methodology, scoring, and how to reproduce results.
-- [docs/WHITEPAPER.md](docs/WHITEPAPER.md) — positioning & methods: what it measures, real results, honest findings.
+- [docs/COMMERCIAL.md](docs/COMMERCIAL.md) — accounts, organizations, RBAC, licensing.
+- [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) — full, code-derived reference.
 - [docs/RUNBOOK.md](docs/RUNBOOK.md) — operations: probes, metrics, alerts, incidents.
-- [docs/COMMERCIAL.md](docs/COMMERCIAL.md) — SaaS layer: accounts, organizations, RBAC, and sales-led licensing.
-- [docs/ROADMAP.md](docs/ROADMAP.md) — phased improvement plan and status.
-- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) — STRIDE-per-boundary threat model and honest limitations.
-- [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example) — contributing, security policy, configuration.
+- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) — STRIDE-per-boundary model and honest limits.
+- [docs/BENCHMARK.md](docs/BENCHMARK.md) · [docs/WHITEPAPER.md](docs/WHITEPAPER.md) — the research side.
+- [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [.env.example](.env.example)
 
-## What You Can Do
+---
 
-- Simulate executive inbox workloads with deterministic seeds and personas.
-- Run baseline, stress, hybrid, and LLM-backed decision policies.
-- Score trajectories with bounded, numerically stable grading.
-- Compare results across tasks, personas, and seeds.
-- Collect approvals, preferences, feedback, replay artifacts, reports, and telemetry.
-- Operate via a FastAPI service and a React dashboard.
+# The benchmark underneath
 
-## Supported Tasks
-
-- `easy_classification`
-- `medium_prioritization`
-- `hard_full_management`
-
-Task, scenario, and tuning config live in [data/tasks.yaml](data/tasks.yaml), [data/settings.yaml](data/settings.yaml), and [data/scenarios/](data/scenarios/).
-
-## Benchmark Results
+The product grew out of a reproducible benchmark for executive-inbox agents, kept
+intact under [`research/`](research). It is a Gym-style reset/step/state environment
+with bounded, numerically stable graders and a deterministic scenario generator —
+which is how the routing policy above was chosen rather than guessed.
 
 Mean task score (open interval `(0,1)`, higher is better) over **3 personas × 3 seeds**
-per cell, produced by the reproducible harness. The LLM column is **real Azure OpenAI
-`gpt-4o`** (deployment `gpt-4o`, API `2024-12-01-preview`). Full methodology — scoring
-weights, the `atan` reward squash, determinism guarantees — is in
-[docs/BENCHMARK.md](docs/BENCHMARK.md).
+per cell. The LLM column is real Azure OpenAI `gpt-4o`.
 
 | Task | Baseline (heuristic) | Multi-agent (task-aware) | LLM — Azure `gpt-4o` |
 |------|:---:|:---:|:---:|
@@ -56,57 +149,28 @@ weights, the `atan` reward squash, determinism guarantees — is in
 | `medium_prioritization` | **1.00** | **1.00** | **1.00** |
 | `hard_full_management` | **0.67** | 0.09 | 0.62 |
 
-<sub>Deterministic agents (baseline, multi-agent) have ≈0 variance; the LLM ran at
-`temperature=0.2` and averaged ~3k tokens / **≈ $0.009 per episode** (gpt-4o), ~$0.23 for the
-full 27-episode LLM sweep. Scores are **persona-invariant** by design — personas shape per-step
-reward/penalties, not the headline metric (see [docs/BENCHMARK.md](docs/BENCHMARK.md)).</sub>
+<sub>Deterministic agents have ≈0 variance; the LLM ran at `temperature=0.2` and
+averaged ~3k tokens / **≈ $0.009 per episode**. Scores are persona-invariant by
+design — see [docs/BENCHMARK.md](docs/BENCHMARK.md).</sub>
 
-**What the numbers say (honest findings, not tuned):**
-- The benchmark **discriminates** — a strong heuristic, a naive multi-agent crew, and a frontier LLM separate clearly, and differently per task.
-- On the realistic **full-management** task, the LLM (`0.62`) is competitive with the hand-tuned baseline (`0.67`) and far ahead of the naive multi-agent (`0.09`) — this is where model flexibility pays off.
-- On narrow **classification**, the LLM scores low (`0.17`): its task-blind safety guardrails (always prioritize first, auto-escalate risk, prefer replies) trade classification coverage for caution. That's an honest **agent-design** finding, not a model-capability one.
-- The **multi-agent crew is task-conditioned** (was 0.00 on classification before the coordinator became task-aware — see [docs/BENCHMARK.md](docs/BENCHMARK.md)); the **no-key hybrid** falls back to the strong baseline heuristics, scoring `1.00 / 1.00 / 0.60` with no provider configured (was ~0).
+**Honest findings, not tuned:**
 
-Reproduce (deterministic agents need no API key; add `llm` after configuring a provider):
+- The benchmark **discriminates** — a strong heuristic, a naive multi-agent crew, and a
+  frontier LLM separate clearly, and differently per task.
+- On realistic **full management** the LLM (`0.62`) is competitive with the hand-tuned
+  baseline (`0.67`) and far ahead of the naive multi-agent (`0.09`).
+- On narrow **classification** the LLM scores low (`0.17`): its task-blind guardrails
+  trade coverage for caution. That is an agent-design finding, not a model-capability one.
+
+Reproduce (deterministic agents need no API key):
 
 ```bash
 python scripts/run_benchmark.py --agents baseline multiagent --out artifacts/results
-# writes results.json / results.csv / results.html (aggregated with 95% CIs)
 ```
 
-## Quick Start
-
-### 1) Install
-
-```bash
-python -m venv .venv
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-# Linux/macOS
-source .venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 2) Run API
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### 3) Run React Dashboard (optional)
-
-```bash
-cd dashboard
-npm install
-npm run dev
-```
-
-### 4) Tests
-
-```bash
-python -m pytest -q
-```
+Supported tasks: `easy_classification`, `medium_prioritization`, `hard_full_management`.
+Config lives in [data/tasks.yaml](data/tasks.yaml), [data/settings.yaml](data/settings.yaml),
+and [data/scenarios/](data/scenarios/).
 
 ## API Surface With Examples
 
@@ -417,35 +481,37 @@ WebSocket pong frame:
 
 ## UI
 
-- React dashboard in [dashboard/src/App.tsx](dashboard/src/App.tsx): inbox, timeline, replay, approvals, team settings, user settings. Built in the Docker image and served at `/dashboard/`.
+Server-rendered from [app/web](app/web): Jinja templates plus one stylesheet, with
+no bundler and no build step. Pages: landing, pricing, login, signup, connect a
+mailbox, inbox, approvals, activity, settings. Every action works as a plain form
+POST, so the app functions with JavaScript disabled.
 
 ## Deployment Notes
 
-- API entrypoint export: [main.py](main.py)
-- Server launcher: [server/app.py](server/app.py)
+- Application entrypoint: [app/main.py](app/main.py) — exports `app` and a `main()` runner
 - Container build: [Dockerfile](Dockerfile)
 - Render Blueprint: [render.yaml](render.yaml)
 - CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 - Deployment guide: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
-Run container (multi-stage build also compiles the React dashboard, served at `/dashboard/`):
+Run the container (single stage — no Node toolchain):
 
 ```bash
 docker build -t exec-email-copilot .
-docker run -p 7860:7860 exec-email-copilot
+docker run -p 8000:8000 exec-email-copilot
 # or
 docker compose up --build
 ```
 
 **Deploy on Render:** push to GitHub, then **New → Blueprint** and point Render
 at this repo — [`render.yaml`](render.yaml) provisions a single Docker web
-service. The container binds the `$PORT` Render injects (7860 locally). See
+service. The container binds the `$PORT` Render injects (8000 locally). See
 [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for secrets and durable-storage notes.
 
 ## Security & Configuration
 
 All configuration is environment-driven (see [.env.example](.env.example), loaded
-via `env/config.py`). Security controls are **opt-in** so local dev, tests, and
+via `app/core/config.py`). Security controls are **opt-in** so local dev, tests, and
 automated tooling work with zero setup:
 
 - `API_AUTH_TOKEN` — when set, mutating routes require `Authorization: Bearer <token>` or `X-API-Key`.
@@ -453,13 +519,21 @@ automated tooling work with zero setup:
 - `RATE_LIMIT_PER_MINUTE` — per-IP request cap (default `0` = disabled).
 - `REQUIRE_APPROVAL` — gate `reply`/`escalate` behind human approval (default off).
 - `LOG_LEVEL` — structured logs; every response carries an `X-Request-ID`.
+- `ENVIRONMENT=production` — refuses to start without `AUTH_SECRET_KEY`, rather than
+  silently signing sessions and licenses with the well-known development secret.
+- `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` — enables SSO sign-in;
+  id_tokens are verified RS256 against the issuer's published JWKS.
+
+The web session is an HttpOnly, `SameSite=Lax` cookie carrying the same token the API
+accepts as a Bearer header, and every mutating form is guarded by a signed CSRF token
+bound to that session.
 
 Observability: Prometheus metrics at `/metrics`, alert evaluation at `/alerts`,
 provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.md).
 
 ## Testing Coverage
 
-**387 tests pass at 83% coverage.** Tests under [tests/](tests/) cover API contracts, determinism, grading bounds, approvals, LLM behavior, benchmark/report generation, telemetry, dashboard routes, and the score/log-format contracts — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
+**682 tests pass at 78% coverage.** Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
 
 ## Important Constraints
 

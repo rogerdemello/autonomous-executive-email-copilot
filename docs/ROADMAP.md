@@ -14,23 +14,23 @@
 ## Phase 0 — Make it honest & green (correctness foundation) ✅ COMPLETE
 Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a test.
 
-- [x] Resolve HITL/agent contract & fix failing test: approval-gating now opt-in (`require_approval` arg / `REQUIRE_APPROVAL` env), default off (`reply`→`reply`); both modes tested. *(env/llm_agent.py)*
-- [x] Wire episode persistence: `EpisodeRepository.save_episode()` from `/baseline`; `/replay` falls back to DB. *(env/api.py)*
-- [x] Wire learning auto-save: above-threshold trajectories persisted from the baseline flow. *(env/api.py, env/learning/trajectory_store.py)*
-- [x] Wire telemetry: HTTP middleware records request count/latency/errors + episode start/end. *(env/api.py, telemetry/metrics.py)*
-- [x] Fix LLM cache: removed per-call `_clear_cache()`; keyed by observation hash + TTL/size cap; bypassed under approval. *(env/llm_agent.py)*
+- [x] Resolve HITL/agent contract & fix failing test: approval-gating now opt-in (`require_approval` arg / `REQUIRE_APPROVAL` env), default off (`reply`→`reply`); both modes tested. *(app/llm/agent.py)*
+- [x] Wire episode persistence: `EpisodeRepository.save_episode()` from `/baseline`; `/replay` falls back to DB. *(app/main.py)*
+- [x] Wire learning auto-save: above-threshold trajectories persisted from the baseline flow. *(app/main.py, research/sim/learning/trajectory_store.py)*
+- [x] Wire telemetry: HTTP middleware records request count/latency/errors + episode start/end. *(app/main.py, telemetry/metrics.py)*
+- [x] Fix LLM cache: removed per-call `_clear_cache()`; keyed by observation hash + TTL/size cap; bypassed under approval. *(app/llm/agent.py)*
 - [x] Replace `datetime.utcnow()` with timezone-aware UTC; remove bare `except:`. *(db.py, repositories.py, trajectory_store.py, alerts.py, llm_agent.py)*
 - [x] Fixed latent bugs found en route: `Episode.to_dict()` ignored `decisions_json`; `expire_on_commit=True` caused `DetachedInstanceError` on returned ORM objects.
 - [x] Updated README/TECHNICAL_REFERENCE "Operational Notes & Constraints" to reflect closed gaps.
 
-> **Carried into Phase 1:** a large set of real source files (`benchmark/`, `telemetry/`, `reports/`, `dashboard/`, `docs/`, `env/agents/`, `env/dashboard_api.py`, `env/approval.py`, several `tests/`) are present in the working tree but **never committed to git** — the history is missing chunks of the codebase. Phase 1 must commit real source and untrack DB artifacts.
+> **Carried into Phase 1:** a large set of real source files (`research/benchmark/`, `telemetry/`, `reports/`, `dashboard/`, `docs/`, `research/sim/agents/`, `app/live_api.py`, `app/core/approval.py`, several `tests/`) are present in the working tree but **never committed to git** — the history is missing chunks of the codebase. Phase 1 must commit real source and untrack DB artifacts.
 
 ## Phase 1 — Repo hygiene & developer experience ✅ COMPLETE
-- [x] Committed the large body of **untracked source** (benchmark/, telemetry/, reports/, dashboard/, docs/, env/agents, env/dashboard_api, env/approval, env/learning extras, 7 tests, CI, lockfile) — the history was missing chunks of the codebase.
+- [x] Committed the large body of **untracked source** (research/benchmark/, telemetry/, reports/, dashboard/, docs/, research/sim/agents, env/dashboard_api, env/approval, research/sim/learning extras, 7 tests, CI, lockfile) — the history was missing chunks of the codebase.
 - [x] Untrack generated CSVs; gitignore `*.db/sqlite`, `artifacts/`, `leaderboard*.csv`, `node_modules/`, `dashboard/dist/`. (Schema is created on startup via `migrate_db()`.)
 - [x] Add LICENSE (MIT) + license field, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, `.env.example`.
-- [x] Centralize config in `env/config.py` (pydantic-settings, fresh-read); replace scattered `os.getenv` in llm_agent/llm_policy; de-dup `normalize_openai_base_url`.
-- [x] Structured logging (`env/logging_config.py`) + request-id middleware (X-Request-ID). (Existing prints are intentional CLI output.)
+- [x] Centralize config in `app/core/config.py` (pydantic-settings, fresh-read); replace scattered `os.getenv` in llm_agent/llm_policy; de-dup `normalize_openai_base_url`.
+- [x] Structured logging (`app/core/logging_config.py`) + request-id middleware (X-Request-ID). (Existing prints are intentional CLI output.)
 - [x] pre-commit: ruff lint+format + prettier (dashboard) + whitespace/EOF/yaml/toml. `ruff check` clean; repo formatted.
 - [ ] eslint for the dashboard is deferred to Phase 4 (frontend tooling) — the dashboard has no eslint config yet.
 
@@ -48,7 +48,7 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 
 ## Phase 3 — Deployment & CI/CD ✅ COMPLETE (release pipeline deferred)
 - [x] Multi-stage Dockerfile that **builds the dashboard** (Node stage → dist copied into Python runtime) so `/dashboard` serves; non-root user; layer-cached deps; healthcheck; unified on port 7860; `.dockerignore`. Fixed DEPLOYMENT_GUIDE port refs.
-- [x] Fixed the dashboard build (never compiled): vite-env.d.ts + unused-symbol errors. Fixed `server/app.py` undefined `app` export.
+- [x] Fixed the dashboard build (never compiled): vite-env.d.ts + unused-symbol errors. Fixed `app/main.py` undefined `app` export.
 - [x] `docker-compose.yml` for one-command local bring-up.
 - [x] CI: parallel jobs — lint (ruff), test matrix (3.10/3.11/3.12) + coverage gate (70%, current 77%, Codecov), typecheck (mypy, informational), security (bandit blocking + pip-audit informational), frontend (npm ci + tsc + build), docker build + smoke (`/health`, `/docs`, `/dashboard/`), inference smoke.
 - [ ] Release pipeline (changelog, semver tags, GHCR publish, SBOM) — **deferred**; needs repo settings/secrets and a tagging convention.
@@ -91,10 +91,10 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 Bar: Async, multi-provider, function-calling LLM integration. The system works with OpenAI, Azure, Anthropic, Gemini, and local models from the same codebase.
 
 ### 8.1 Provider abstraction layer ✅ COMPLETE
-- [x] Create `env/providers/` package with `LLMProvider` ABC: `generate()`, `generate_stream()`, capabilities.
+- [x] Create `app/llm/providers/` package with `LLMProvider` ABC: `generate()`, `generate_stream()`, capabilities.
 - [x] Implement `OpenAIProvider` (OpenAI + Azure), `AnthropicProvider`, `GeminiProvider`, `OllamaProvider`.
 - [x] Auto-detect provider from config (endpoint URL, env vars). Registry + factory pattern.
-- [x] Add `LLM_PROVIDER`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` to `.env.example` and `env/config.py`.
+- [x] Add `LLM_PROVIDER`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` to `.env.example` and `app/core/config.py`.
 - [x] Provider-level pricing table (USD per 1M tokens per model) for accurate cost tracking.
 
 ### 8.2 Async + streaming ⏳ PARTIAL (sync path done, async deferred)
@@ -139,7 +139,7 @@ Bar: LLM observability, evaluation, and prompt management at production quality.
 ### 9.2 A/B evaluation pipeline
 - [ ] `scripts/run_ab_test.py` — compare two agent configs across N seeds, paired t-test, 95% CI, Cohen's d.
 - [ ] HTML report: summary table, delta heatmap, per-task breakdown, step-by-step trajectory diff.
-- [ ] Integration with `BenchmarkRunner` + `benchmark/significance.py`.
+- [ ] Integration with `BenchmarkRunner` + `research/benchmark/significance.py`.
 
 ### 9.3 Prompt registry
 - [ ] Move prompts to `prompts/` directory as versioned `.jinja2` templates.
@@ -179,7 +179,7 @@ Bar: Deployable on Kubernetes with distributed caching, async DB, and performanc
 - [ ] Keep sync path as fallback for minimal-dependency deployments.
 
 ### 10.3 Redis distributed cache
-- [ ] `env/cache.py` — async Redis client with `get_or_compute()`, TTL, namespace isolation.
+- [ ] `app/llm/cache.py` — async Redis client with `get_or_compute()`, TTL, namespace isolation.
 - [ ] Replace in-memory `_response_cache` dict with Redis-backed cache L2 (memory as L1).
 - [ ] No-op when `REDIS_URL` unset — full backward compatibility.
 - [ ] Cache hit/miss Prometheus counters.
@@ -218,7 +218,7 @@ Bar: Each specialist is LLM-powered. Agents negotiate. System is extensible via 
 - [ ] `BaseAgent.execute()` wraps all implementations with automatic metric recording.
 
 ### 11.4 Plugin system
-- [ ] `env/agents/plugin.py` — discover agents via `exec_email_copilot.agents` entry points.
+- [ ] `research/sim/agents/plugin.py` — discover agents via `exec_email_copilot.agents` entry points.
 - [ ] `create_agent(name)` — built-in + plugin resolution.
 - [ ] `docs/AGENT_PLUGINS.md` — how to write, package, and install a custom agent plugin.
 
@@ -249,7 +249,7 @@ Bar: The project presents itself as a world-class portfolio piece — documentat
 - [ ] CI step to render PlantUML on push (optional).
 
 ### 12.4 Benchmark results page
-- [ ] `docs/benchmark/` — interactive HTML page (Chart.js) with grouped bar charts, radar charts, data tables.
+- [ ] `docs/research/benchmark/` — interactive HTML page (Chart.js) with grouped bar charts, radar charts, data tables.
 - [ ] `scripts/generate_benchmark_page.py` — generate from benchmark JSON output.
 - [ ] GitHub Pages deployment workflow.
 

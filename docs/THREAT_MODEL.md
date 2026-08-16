@@ -45,7 +45,7 @@ what is the operator's responsibility, and what is explicitly out of scope today
   deployments should treat a dev-secret warning as a release blocker.
 - **SSO (SAML/OIDC) is not yet implemented**; the `sso` plan feature is
   entitlement-gated but the login integration is a roadmap item.
-- **Read (GET) endpoints on the benchmark/telemetry surface are open by design**
+- **Read (GET) endpoints on the research/benchmark/telemetry surface are open by design**
   even when `API_AUTH_TOKEN` is set (only mutations are gated there). The
   customer SaaS surface (`/auth`, `/org`, `/billing`, `/mailbox`, `/inbox`)
   enforces its own per-user session auth on both reads and writes.

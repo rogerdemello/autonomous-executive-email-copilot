@@ -368,3 +368,157 @@ class TestRedirectSafety:
         )
         assert response.status_code == 303
         assert response.headers["location"] == "/app/inbox"
+
+
+# --------------------------------------------------------------------------- #
+# Mailbox management
+# --------------------------------------------------------------------------- #
+class TestMailboxManagement:
+    def test_connecting_an_unconfigured_provider_explains_rather_than_crashes(self, signed_in):
+        """Clicking Gmail on a server with no OAuth secrets is a normal state.
+
+        It used to raise a bare 400 from the API. The page should say what is
+        wrong and still offer the demo mailbox.
+        """
+        client, _ = signed_in
+        page = client.get("/app/connect").text
+        response = client.post("/app/connect/google", data={"csrf_token": csrf_from(page)})
+        assert response.status_code == 400
+        assert "not configured" in response.text.lower()
+        assert "Demo mailbox" in response.text
+
+    def test_connecting_an_unknown_provider_is_a_404(self, signed_in):
+        client, _ = signed_in
+        page = client.get("/app/connect").text
+        response = client.post("/app/connect/carrier-pigeon", data={"csrf_token": csrf_from(page)})
+        assert response.status_code == 404
+
+    def test_sync_all_is_idempotent(self, with_demo_mailbox):
+        """Re-syncing must not duplicate messages or re-propose decided actions."""
+        from app.saas.repository import UserRepository
+
+        client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        before = ProcessedMessageRepository().list_for_org(org_id)["total"]
+
+        page = client.get("/app/inbox").text
+        response = client.post("/app/sync", data={"csrf_token": csrf_from(page)})
+        assert response.status_code == 303
+
+        assert ProcessedMessageRepository().list_for_org(org_id)["total"] == before
+
+    def test_syncing_one_connection(self, with_demo_mailbox):
+        from app.saas.repository import MailboxRepository, UserRepository
+
+        client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        connection = MailboxRepository().list_for_org(org_id)[0]
+
+        page = client.get("/app/connect").text
+        response = client.post(
+            f"/app/mailboxes/{connection['id']}/sync", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 303
+
+    def test_syncing_a_connection_that_does_not_exist_is_harmless(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        page = client.get("/app/connect").text
+        response = client.post(
+            "/app/mailboxes/does-not-exist/sync", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 303
+
+    def test_disconnecting_removes_the_mailbox(self, with_demo_mailbox):
+        from app.saas.repository import MailboxRepository, UserRepository
+
+        client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        connection = MailboxRepository().list_for_org(org_id)[0]
+
+        page = client.get("/app/connect").text
+        response = client.post(
+            f"/app/mailboxes/{connection['id']}/disconnect", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 303
+        assert MailboxRepository().list_for_org(org_id) == []
+
+
+# --------------------------------------------------------------------------- #
+# Role gating
+# --------------------------------------------------------------------------- #
+class TestRoleGating:
+    def _demote_to_member(self, email: str) -> None:
+        from app.saas.repository import UserRepository
+
+        users = UserRepository()
+        user = users.get_by_email_global(email)
+        users.update_role(user["org_id"], user["id"], "member")
+
+    def test_a_member_cannot_connect_a_mailbox(self, signed_in):
+        client, email = signed_in
+        page = client.get("/app/connect").text
+        self._demote_to_member(email)
+
+        response = client.post("/app/connect/demo", data={"csrf_token": csrf_from(page)})
+        assert response.status_code == 403
+
+    def test_a_member_cannot_approve(self, with_demo_mailbox):
+        from app.saas.repository import UserRepository
+
+        client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        target = ProposedActionRepository().list_for_org(org_id, status="proposed")["actions"][0]
+
+        page = client.get("/app/approvals").text
+        self._demote_to_member(email)
+
+        response = client.post(
+            f"/app/actions/{target['id']}/approve", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 403
+        # And the action is untouched.
+        assert ProposedActionRepository().get(org_id, target["id"])["status"] == "proposed"
+
+    def test_a_member_still_sees_the_inbox_read_only(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        self._demote_to_member(email)
+
+        response = client.get("/app/inbox")
+        assert response.status_code == 200
+        assert "Waiting on an admin" in response.text
+
+    def test_a_member_cannot_read_the_audit_log(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        self._demote_to_member(email)
+
+        response = client.get("/app/activity")
+        assert response.status_code == 200
+        assert "Admins only" in response.text
+
+
+# --------------------------------------------------------------------------- #
+# Missing / stale references
+# --------------------------------------------------------------------------- #
+class TestMissingReferences:
+    def test_approving_an_action_that_does_not_exist_is_a_404(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        page = client.get("/app/approvals").text
+        response = client.post(
+            "/app/actions/no-such-action/approve", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 404
+
+    def test_rejecting_an_action_that_does_not_exist_is_a_404(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        page = client.get("/app/approvals").text
+        response = client.post(
+            "/app/actions/no-such-action/reject", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 404
+
+    def test_an_unknown_message_id_falls_back_to_the_first_message(self, with_demo_mailbox):
+        """A stale bookmark should show the inbox, not an error."""
+        client, _ = with_demo_mailbox
+        response = client.get("/app/inbox?message=no-such-message")
+        assert response.status_code == 200
+        assert "Copilot" in response.text

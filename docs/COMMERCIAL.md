@@ -5,7 +5,7 @@ a single-tenant product demo into a multi-tenant, sales-led SaaS: accounts,
 organizations (tenants), role-based access, and license-key entitlements.
 
 It is **additive** — the benchmark, deterministic scoring contract, and existing
-unversioned API are untouched. All SaaS code lives under [`env/saas/`](../env/saas).
+unversioned API are untouched. All SaaS code lives under [`app/saas/`](../app/saas).
 
 ---
 
@@ -92,7 +92,7 @@ There is **no self-serve card capture**. The motion is:
 
 ### Plans
 
-Plans are defined once in [`env/saas/licensing.py`](../env/saas/licensing.py)
+Plans are defined once in [`app/saas/licensing.py`](../app/saas/licensing.py)
 (`PLANS`) and drive **both** entitlement checks and the pricing page, so they
 can never drift. `GET /api/pricing` returns them as JSON.
 
@@ -134,23 +134,29 @@ Seats and features can be overridden per key at mint time
 | POST | `/mailbox/connect/{provider}` | admin+ | Begin OAuth; returns consent URL |
 | GET | `/mailbox/oauth/callback` | public | OAuth redirect target (identity in signed state) |
 | DELETE | `/mailbox/connections/{id}` | admin+ | Disconnect a mailbox |
-| GET | `/welcome`, `/pricing` | public | Marketing landing + pricing |
+| GET | `/`, `/pricing` | public | Landing page + pricing |
 
-The React dashboard exposes all of this under an **Account** tab
-([`dashboard/src/components/Account.tsx`](../dashboard/src/components/Account.tsx)):
-login/signup, workspace overview, members + roles, plan/entitlement + license
-activation, and mailbox connect/disconnect. It uses a session token stored
-separately from the operator API token so the two never conflict.
+The server-rendered UI ([`app/web`](../app/web)) exposes this as real pages
+rather than API calls: `/signup` and `/login` for onboarding, `/app/settings` for
+the workspace, members and roles, and plan/entitlement, and `/app/connect` for
+mailbox connect and disconnect.
+
+Both surfaces share one identity model. The pages carry the *same* session token
+the API accepts as `Authorization: Bearer`, in an HttpOnly `SameSite=Lax` cookie —
+so role checks and seat limits are enforced once, in `app/saas/deps.py`, not
+duplicated per surface. Because cookies are sent automatically, every mutating
+form additionally carries a signed CSRF token bound to that session. The operator
+`API_AUTH_TOKEN` is separate and never conflicts with a user session.
 
 ## Connecting real mailboxes (Gmail / Microsoft 365)
 
-`env/saas/oauth.py` implements the OAuth 2.0 authorization-code flow. A provider
+`app/saas/oauth.py` implements the OAuth 2.0 authorization-code flow. A provider
 is available only when its client id **and** secret are set
 (`GOOGLE_OAUTH_CLIENT_ID/SECRET`, `MICROSOFT_OAUTH_CLIENT_ID/SECRET`). Flow:
 `POST /mailbox/connect/{provider}` → consent screen → `GET /mailbox/oauth/callback`
 → code exchanged for tokens → an encrypted, tenant-scoped `MailboxConnection` row.
 OAuth tokens are encrypted at rest with a key derived from `AUTH_SECRET_KEY`
-(`env/saas/crypto.py`); the API never serializes token material.
+(`app/saas/crypto.py`); the API never serializes token material.
 
 ---
 
@@ -161,7 +167,7 @@ everything the org owns (org, users, licenses, mailboxes, processed messages,
 proposed actions, audit log, leads — no password hashes or OAuth tokens), and
 **erase** (`DELETE /org`, body `{"confirm": "<org-slug>"}`) the organization and
 every tenant-scoped row in one transaction. Both live in
-[`env/saas/data_lifecycle.py`](../env/saas/data_lifecycle.py) — the single place
+[`app/saas/data_lifecycle.py`](../app/saas/data_lifecycle.py) — the single place
 that enumerates every tenant table, so a new product table gets covered by adding
 it there. The dashboard's Account tab surfaces both under a "Data & danger zone"
 card (owner only, delete gated behind typing the slug).
@@ -174,7 +180,7 @@ card (owner only, delete gated behind typing the slug).
   the current user is re-read from the DB on each request so role changes and
   disablement take effect immediately.
 - **Tenant isolation**: every org read/write goes through
-  [`env/saas/repository.py`](../env/saas/repository.py) and is filtered by
+  [`app/saas/repository.py`](../app/saas/repository.py) and is filtered by
   `org_id`. The one deliberately un-scoped read is login-by-email (org unknown
   until resolved). Cross-tenant access returns 404, never another org's data.
 - **License / operator token separation**: `AUTH_SECRET_KEY` signs user tokens
@@ -195,8 +201,8 @@ Delivered so far: accounts, orgs, RBAC, sales-led licensing, marketing pages,
 
 ### Real-inbox processing (the copilot working a connected mailbox)
 
-The gold-free runtime lives in [`env/product/`](../env/product); the SaaS glue
-(tenant persistence, provider factory, sync service, routes) is in `env/saas`.
+The gold-free runtime lives in [`app/copilot/`](../app/copilot); the SaaS glue
+(tenant persistence, provider factory, sync service, routes) is in `app/saas`.
 Flow: `POST /inbox/sync` → fetch via a `MailProvider` (Gmail / Microsoft Graph,
 or an in-memory fake for dev/tests) → enrich each message with inferred
 signals → run `BaselinePolicy` → persist a tenant-scoped `ProcessedMessage` +
