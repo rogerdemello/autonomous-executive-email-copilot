@@ -21,7 +21,14 @@ _cache: dict[Path, tuple[int, int, Any]] = {}
 
 def load_yaml(path: Path) -> Any:
     if not path.exists():
-        raise RuntimeError(f"Missing YAML file: {path}")
+        # The usual cause is a non-editable wheel install: `data/` sits beside
+        # the package in the repository and is not packaged, so point at the
+        # override rather than leaving a bare path.
+        raise RuntimeError(
+            f"Missing YAML file: {path}. Project data lives in the repository's "
+            "data/ directory and is not bundled into the wheel — run from a "
+            "checkout, or set DATA_DIR to where the data directory is mounted."
+        )
 
     stat = path.stat()
     mtime_ns = stat.st_mtime_ns
