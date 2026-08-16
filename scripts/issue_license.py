@@ -22,9 +22,17 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-from app.core.config import get_settings
-from app.saas import licensing
+# Running a script puts its own directory on sys.path, not the repo root, so the
+# first-party packages are not importable. Add the repo root explicitly to keep
+# this entrypoint runnable directly (`python scripts/issue_license.py`).
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from app.core.config import get_settings  # noqa: E402
+from app.saas import licensing  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:

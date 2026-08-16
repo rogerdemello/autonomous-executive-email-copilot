@@ -2,12 +2,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from statistics import mean, stdev
 
-from research.benchmark.agents import LLMAgent as BenchmarkLLMAgent
-from research.benchmark.runner import BenchmarkResult
+# Running a script puts its own directory on sys.path, not the repo root, so the
+# first-party packages are not importable. Add the repo root explicitly to keep
+# this entrypoint runnable directly (`python research/benchmark/ab_eval.py`).
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from research.benchmark.agents import LLMAgent as BenchmarkLLMAgent  # noqa: E402
+from research.benchmark.runner import BenchmarkResult  # noqa: E402
 
 
 @dataclass

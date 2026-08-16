@@ -3,9 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from statistics import mean
 
-from research.sim.eval import brier_score, expected_calibration_error
+# Running a script puts its own directory on sys.path, not the repo root, so the
+# first-party packages are not importable. Add the repo root explicitly to keep
+# this entrypoint runnable directly (`python research/benchmark/calibration_cli.py`).
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from research.sim.eval import brier_score, expected_calibration_error  # noqa: E402
 
 Pair = tuple[float, bool]
 

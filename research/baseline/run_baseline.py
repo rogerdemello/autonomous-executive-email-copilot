@@ -3,12 +3,21 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
+from pathlib import Path
 
-from app.copilot.policy import BaselinePolicy, HybridPolicy
-from app.core.models import Action
-from app.llm.policy import LLMPolicy
-from research.sim.environment import ExecutiveEmailEnv
-from research.sim.grader import evaluate_trajectory
+# Running a script puts its own directory on sys.path, not the repo root, so the
+# first-party packages are not importable. Add the repo root explicitly to keep
+# this entrypoint runnable directly (`python research/baseline/run_baseline.py`).
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from app.copilot.policy import BaselinePolicy, HybridPolicy  # noqa: E402
+from app.core.models import Action  # noqa: E402
+from app.llm.policy import LLMPolicy  # noqa: E402
+from research.sim.environment import ExecutiveEmailEnv  # noqa: E402
+from research.sim.grader import evaluate_trajectory  # noqa: E402
 
 
 def _next_wrong_label(label: str) -> str:

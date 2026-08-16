@@ -3,14 +3,22 @@
 
 import os
 import sys
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from openai import OpenAI
+# Running a script puts its own directory on sys.path, not the repo root — so
+# `python research/inference.py` cannot see the `app` and `research` packages.
+# Add the repo root explicitly to keep this entrypoint runnable from anywhere.
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
-from app.copilot.policy import BaselinePolicy
-from app.core.models import Action
-from research.sim.environment import ExecutiveEmailEnv
-from research.sim.grader import evaluate_trajectory
+from openai import OpenAI  # noqa: E402
+
+from app.copilot.policy import BaselinePolicy  # noqa: E402
+from app.core.models import Action  # noqa: E402
+from research.sim.environment import ExecutiveEmailEnv  # noqa: E402
+from research.sim.grader import evaluate_trajectory  # noqa: E402
 
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
 DEFAULT_TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
