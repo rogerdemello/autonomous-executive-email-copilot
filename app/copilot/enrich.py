@@ -13,6 +13,8 @@ Inference reuses the same vocabulary the classifier uses
 
 from __future__ import annotations
 
+import re
+
 from app.core.models import Observation, ObservationEmail, RiskTag, SenderRole, ThreadEntry
 from app.core.utils import get_classifier_terms
 
@@ -24,17 +26,43 @@ _FREEMAIL = {"gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com
 _VENDOR_HINTS = ("noreply", "no-reply", "notifications", "billing", "support", "donotreply")
 
 # Risk vocabulary, checked in priority order (first hit wins).
+#
+# A trailing ``*`` means "this is a stem, match the whole word family"
+# (``indemnif*`` covers indemnify/indemnified/indemnification). Everything else
+# matches as a whole word only.
+#
+# Whole-word matching is not fussiness. These were once plain substring checks,
+# and short terms quietly wrecked the routing: "nda" fires on **Monday** and
+# **agenda**, "sla" on **translate** and **legislation**. Any message mentioning
+# a Monday deadline was being escalated to the legal team.
 _RISK_TERMS: list[tuple[RiskTag, tuple[str, ...]]] = [
     (
         "legal",
-        ("contract", "legal", "lawsuit", "liability", "nda", "indemnif", "compliance", "gdpr"),
+        ("contract*", "legal*", "lawsuit*", "liability", "nda", "indemnif*", "compliance", "gdpr"),
     ),
     (
         "security",
-        ("breach", "security", "phishing", "malware", "credential", "vulnerab", "ransomware"),
+        ("breach*", "security", "phishing", "malware", "credential*", "vulnerab*", "ransomware"),
     ),
-    ("finance", ("invoice", "payment", "wire transfer", "refund", "billing", "forecast", "budget")),
-    ("ops", ("outage", "downtime", "incident", "deploy", "sla")),
+    (
+        "finance",
+        ("invoice*", "payment*", "wire transfer", "refund*", "billing", "forecast*", "budget*"),
+    ),
+    ("ops", ("outage*", "downtime", "incident*", "deploy*", "sla")),
+]
+
+
+def _compile(terms: tuple[str, ...]) -> re.Pattern[str]:
+    """One alternation per risk tag: stems match their word family, others whole words."""
+    parts = [
+        rf"{re.escape(term[:-1])}\w*" if term.endswith("*") else rf"{re.escape(term)}\b"
+        for term in terms
+    ]
+    return re.compile(r"\b(?:" + "|".join(parts) + r")", re.IGNORECASE)
+
+
+_RISK_PATTERNS: list[tuple[RiskTag, re.Pattern[str]]] = [
+    (tag, _compile(terms)) for tag, terms in _RISK_TERMS
 ]
 
 _DEADLINE_BY_PRIORITY = {"high": 60, "medium": 240, "low": 480}
@@ -60,8 +88,8 @@ def infer_sender_role(sender: str, account_email: str) -> SenderRole:
 
 
 def infer_risk_tag(text: str) -> RiskTag:
-    for tag, terms in _RISK_TERMS:
-        if any(term in text for term in terms):
+    for tag, pattern in _RISK_PATTERNS:
+        if pattern.search(text):
             return tag
     return "none"
 

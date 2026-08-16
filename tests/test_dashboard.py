@@ -56,28 +56,27 @@ def test_dashboard_router_included():
         assert ws.receive_json() == {"type": "pong"}
 
 
-def test_dashboard_static_mount():
-    # The dashboard SPA is mounted only when its build exists (the Docker image
-    # or a local `npm run build`). The CI test job doesn't build it, so guard on
-    # the dist being present.
-    from app.main import dashboard_dist
+def test_root_serves_the_landing_page():
+    """`/` is the product's front door, not a redirect into an ops console.
 
-    if dashboard_dist.exists():
-        assert client.get("/dashboard/").status_code == 200
-
-
-def test_root_serves_dashboard_when_built():
-    # When the dashboard build is present, GET and HEAD / both redirect to the
-    # dashboard (the app's landing page); otherwise / falls back to the info page.
-    from app.main import dashboard_dist
-
+    It used to 307 to the React dashboard, which meant a visitor's first
+    impression of the product was a benchmark tool. The page is now served
+    directly, for both GET and HEAD.
+    """
     for method in ("GET", "HEAD"):
-        resp = client.request(method, "/", follow_redirects=False)
-        if dashboard_dist.exists():
-            assert resp.status_code == 307
-            assert resp.headers["location"] == "/dashboard/"
-        else:
-            assert resp.status_code == 200
+        response = client.request(method, "/", follow_redirects=False)
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+
+
+def test_dashboard_json_routes_survived_the_spa_removal():
+    """Deleting the React app must not have taken its API with it.
+
+    These endpoints back the live-state feed and are consumed by the WebSocket
+    clients, independently of any particular frontend.
+    """
+    assert client.get("/dashboard/health").status_code == 200
+    assert client.get("/dashboard/state").status_code == 200
 
 
 def test_dashboard_default_task_reset():

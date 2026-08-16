@@ -1,0 +1,51 @@
+{% extends "_app.html" %}
+
+{% block title %}Activity — Executive Email Copilot{% endblock %}
+{% block heading %}Activity{% endblock %}
+{% block lede %}An append-only record of every security-relevant action in {{ organization.name }}.{% endblock %}
+
+{% block main %}
+{% if not can_view %}
+  <div class="card">
+    <div class="empty">
+      <h3>Admins only</h3>
+      <p>The audit log is visible to admins and owners of this organization.</p>
+    </div>
+  </div>
+{% elif not entries %}
+  <div class="card">
+    <div class="empty">
+      <h3>No activity recorded yet</h3>
+      <p>Sign-ins, mailbox connections, syncs, and every approval decision land here.</p>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ entries | length }} most recent events</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Action</th>
+            <th>Actor</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td class="when">{{ entry.created_at | short_time }}</td>
+              <td><span class="chip chip--accent">{{ entry.action }}</span></td>
+              <td>{{ actor_names.get(entry.actor_user_id, entry.actor_user_id or "system") }}</td>
+              <td class="muted mono" style="font-size: 0.8rem">{{ entry.detail | audit_detail }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

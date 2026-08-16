@@ -60,7 +60,22 @@ PUBLIC_SAAS_PREFIXES = (
 # to it — otherwise a customer's session token wouldn't match the operator token
 # and every authenticated SaaS call would 401. These prefixes enforce their own
 # auth via route dependencies; unauthenticated calls still 401 there.
-SAAS_SELF_AUTH_PREFIXES = ("/auth", "/org", "/billing", "/mailbox", "/inbox")
+SAAS_SELF_AUTH_PREFIXES = (
+    "/auth",
+    "/org",
+    "/billing",
+    "/mailbox",
+    "/inbox",
+    # The server-rendered UI authenticates per-user with the session cookie
+    # and guards its own forms with CSRF, so it must not also be gated behind
+    # the operator-level API_AUTH_TOKEN — that would 401 every form post on a
+    # locked-down deployment.
+    "/app",
+    "/login",
+    "/signup",
+    "/logout",
+    "/static",
+)
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 org_router = APIRouter(prefix="/org", tags=["organization"])

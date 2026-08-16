@@ -36,6 +36,23 @@ class ProcessingError(Exception):
         self.status_code = status_code
 
 
+def _draft_text(provider: MailProvider, proposal) -> str | None:
+    """The reply body to hold for approval.
+
+    The policy decides *whether* to reply; it is not a writer, and emits one
+    generic sentence for every message. A provider may offer better wording for
+    a specific message (the demo mailbox ships authored drafts, and a future
+    LLM-backed drafter would hook in the same way). The decision is unchanged
+    either way — only the prose the reviewer reads.
+    """
+    author = getattr(provider, "draft_for", None)
+    if proposal.action_type == "reply" and callable(author):
+        drafted = author(proposal.email_id)
+        if drafted:
+            return str(drafted)
+    return proposal.content
+
+
 class InboxSyncService:
     def __init__(self) -> None:
         self.mailboxes = MailboxRepository()
@@ -66,6 +83,8 @@ class InboxSyncService:
                 provider_message_id=msg.provider_message_id,
                 thread_id=msg.thread_id or None,
                 sender=msg.sender,
+                sender_name=msg.sender_name or None,
+                received_at=msg.received_at or None,
                 subject=msg.subject,
                 body_preview=(msg.body or "")[:500],
                 sender_role=obs_email.sender_role,
@@ -95,7 +114,7 @@ class InboxSyncService:
                     org_id=org_id,
                     message_id=message_row["id"],
                     action_type=prop.action_type,
-                    content=prop.content,
+                    content=_draft_text(provider, prop),
                     escalate_to=prop.escalate_to,
                     label=prop.label,
                     status="proposed",

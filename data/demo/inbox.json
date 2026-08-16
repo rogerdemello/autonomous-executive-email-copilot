@@ -1,0 +1,227 @@
+{
+  "_comment": [
+    "The demo mailbox: a plausible morning in the inbox of Alex Chen, COO of Northwind Industries.",
+    "",
+    "This file is DATA, not script. The copilot's decisions are computed by the real",
+    "policy (app.copilot.policy.BaselinePolicy) from the real inferred signals — nothing",
+    "here says 'escalate this one'. What is authored is the prose: `suggested_reply`",
+    "replaces the policy's single generic sentence, and `rationale` explains the call in",
+    "the reviewer's language. Change a subject line and the routing genuinely changes.",
+    "",
+    "Coverage is deliberate — every branch of the policy is exercised: legal escalation,",
+    "security escalation, urgent reply, spam, and routine deferral."
+  ],
+  "account_email": "alex.chen@northwind.example",
+  "messages": [
+    {
+      "provider_message_id": "m-legal-indemnity",
+      "thread_id": "t-legal-indemnity",
+      "sender": "r.okafor@bramwellcounsel.example",
+      "sender_name": "Rachel Okafor · Bramwell Counsel",
+      "subject": "URGENT: indemnification clause in the Meridian contract needs sign-off today",
+      "body": "Alex,\n\nMeridian's counsel has pushed back on clause 11.4. They want mutual indemnification capped at 12 months of fees; our current draft is uncapped on their side only.\n\nTheir signature window closes at 17:00 today. I need your position on the cap before I can respond — this is a liability question, not a drafting one, so I do not want to answer it on your behalf.\n\nRachel",
+      "received_at": "2026-08-16T07:12:00+00:00",
+      "suggested_reply": "Rachel — acknowledged, and I'm not going to decide the cap unilaterally.\n\nLooping in our GC now. My instinct is that a 12-month mutual cap is acceptable if it excludes IP infringement and data-breach liability, but that needs legal sign-off before it becomes our position.\n\nYou'll have a definitive answer well before 17:00. If Meridian pushes for a response sooner, tell them the point is with our GC — do not signal a direction.",
+      "rationale": [
+        "Contract liability language — routed to legal rather than answered directly.",
+        "Hard external deadline today at 17:00, so it ranks above everything else in the inbox.",
+        "Outside counsel is explicitly asking for a decision the COO should not make alone."
+      ]
+    },
+    {
+      "provider_message_id": "m-security-phish",
+      "thread_id": "t-security-phish",
+      "sender": "soc@northwind.example",
+      "sender_name": "Northwind SOC",
+      "subject": "Credential phishing campaign targeting finance — act immediately",
+      "body": "Nine finance staff received a convincing spoof of our expenses portal at 06:40. Two entered credentials before we pulled the DNS record.\n\nBoth accounts are force-reset and sessions revoked. We need a decision on whether to notify all staff now or after we finish scoping — and whether this crosses the breach-notification threshold.\n\n— SOC on-call",
+      "received_at": "2026-08-16T07:04:00+00:00",
+      "suggested_reply": "Confirmed — treat this as an active incident.\n\nNotify all staff now. A short, plain warning beats a perfect one sent an hour late, and the attacker still has a working template.\n\nOn the notification threshold: that is a legal determination, not a security one. Escalating to the chief of staff to convene GC and the DPO within the hour.",
+      "rationale": [
+        "Credential compromise with confirmed victims — the security path, not the ops path.",
+        "Escalated to the chief of staff because the breach-notification question needs legal and the DPO.",
+        "Two accounts already entered credentials, so containment is time-critical."
+      ]
+    },
+    {
+      "provider_message_id": "m-ops-outage",
+      "thread_id": "t-ops-outage",
+      "sender": "priya.nair@northwind.example",
+      "sender_name": "Priya Nair · Platform",
+      "subject": "Billing service outage — enterprise tenants failing since 06:20",
+      "body": "The billing service is returning 503 for all enterprise tenants. Started 06:20, still ongoing. Root cause looks like connection-pool exhaustion after last night's deploy.\n\nWe are rolling back. Meridian and Calloway have both opened tickets. I need to know what we are telling customers and whether we are declaring a public incident.\n\nPriya",
+      "received_at": "2026-08-16T07:22:00+00:00",
+      "suggested_reply": "Priya — thanks for the clear summary.\n\nDeclare the public incident now and post to the status page; two enterprise tickets already means our customers know before we've told them, which is the worst order.\n\nRoll back first, root-cause after. Please send me a customer-facing line I can forward to Meridian and Calloway directly, and set a 30-minute update cadence until we're green.",
+      "rationale": [
+        "Active customer-facing outage — the most urgent operational item in the inbox.",
+        "Named enterprise accounts are already affected, so this carries revenue risk.",
+        "Held for approval because the reply commits Northwind to a public incident declaration."
+      ]
+    },
+    {
+      "provider_message_id": "m-finance-wire",
+      "thread_id": "t-finance-wire",
+      "sender": "d.mensah@northwind.example",
+      "sender_name": "Daniel Mensah · Finance",
+      "subject": "Urgent: supplier changed bank details on a $340k invoice — mismatch with our records",
+      "body": "Calloway Logistics emailed new wire instructions for invoice INV-88213 ($340,000), due tomorrow. The account name does not match the entity we have on file.\n\nI have not paid it. Requesting your approval to hold payment and verify by phone using the number we already hold on file, not the one in the email.\n\nDaniel",
+      "received_at": "2026-08-16T07:31:00+00:00",
+      "suggested_reply": "Daniel — hold the payment. You made the right call.\n\nApproved: verify by phone using the number we hold on file only. Do not use any contact detail that arrived in that email thread.\n\nA mid-invoice change of bank details with a name mismatch is the standard shape of supplier-invoice fraud. Please also send the headers to the SOC — if they spoofed Calloway to us, they are likely running the same play elsewhere.",
+      "rationale": [
+        "Payment-detail change with an entity mismatch — a classic supplier-fraud signal.",
+        "$340k is due tomorrow, so the decision window is short.",
+        "The draft approves holding payment, which is why it waits for a human."
+      ]
+    },
+    {
+      "provider_message_id": "m-customer-churn",
+      "thread_id": "t-customer-churn",
+      "sender": "helena.vos@meridiangroup.example",
+      "sender_name": "Helena Vos · Meridian Group",
+      "subject": "ASAP — we need to talk before our renewal decision on Friday",
+      "body": "Alex,\n\nCandidly: we are close to not renewing. The billing failures this quarter have cost my team real hours, and the last two QBRs were rescheduled by your side.\n\nI would rather fix this than leave. But I need to hear a plan from you, not an account manager, before Friday.\n\nHelena",
+      "received_at": "2026-08-16T07:38:00+00:00",
+      "suggested_reply": "Helena — thank you for telling me directly rather than just leaving. That's a courtesy I don't take for granted.\n\nYou're right on both counts, and the rescheduled QBRs are mine to own.\n\nI'm blocking time with you before Friday — I'll send two slots within the hour. I'll come with the incident history, what we've changed structurally, and a commitment on QBR cadence I'll be personally accountable for. No account manager.",
+      "rationale": [
+        "Named renewal risk from a senior counterpart, with a Friday decision deadline.",
+        "Explicitly asks for the COO rather than the account team — delegating would make it worse.",
+        "Reply is drafted but held: a retention commitment should not go out unread."
+      ]
+    },
+    {
+      "provider_message_id": "m-legal-gdpr",
+      "thread_id": "t-legal-gdpr",
+      "sender": "dpo@northwind.example",
+      "sender_name": "Ines Duarte · Data Protection",
+      "subject": "GDPR subject access request from a former employee — 30-day clock started",
+      "body": "We received a subject access request on 14 August. Statutory deadline is 13 September.\n\nThe scope includes internal messages that mention the requester, some of which relate to their exit. I need legal review on what is in scope before we produce anything.\n\nIves",
+      "received_at": "2026-08-16T06:52:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Statutory GDPR obligation with a fixed 30-day clock — a compliance matter, not an operational one.",
+        "Scope questions on an employee exit need legal review before any disclosure.",
+        "Routed to the legal team rather than answered from the COO's desk."
+      ]
+    },
+    {
+      "provider_message_id": "m-board-deck",
+      "thread_id": "t-board-deck",
+      "sender": "t.abara@northwind.example",
+      "sender_name": "Tomi Abara · Chief of Staff",
+      "subject": "Board deck — your two slides on operational resilience",
+      "body": "Board pack goes out Monday. I need your two slides on operational resilience by end of Thursday to leave time for review.\n\nHappy to draft a first pass from the QBR material if that's easier — just say the word.\n\nTomi",
+      "received_at": "2026-08-16T06:41:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Internal, with a Thursday deadline that leaves comfortable slack.",
+        "No risk signals and no external commitment — safe to hold below today's urgent work.",
+        "Deferred rather than answered: it needs your input, not an acknowledgement."
+      ]
+    },
+    {
+      "provider_message_id": "m-vendor-renewal",
+      "thread_id": "t-vendor-renewal",
+      "sender": "accounts@atlaslogistics.example",
+      "sender_name": "Atlas Logistics",
+      "subject": "Annual service agreement — renewal quote for your review",
+      "body": "Please find our renewal quote for the 2027 service year attached. Pricing is held at last year's rate for 30 days.\n\nNo action needed until you have had a chance to review with procurement.",
+      "received_at": "2026-08-16T06:20:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Vendor correspondence with a 30-day window and no decision required today.",
+        "Belongs with procurement before it needs the COO at all.",
+        "Deferred and labelled so it resurfaces rather than disappears."
+      ]
+    },
+    {
+      "provider_message_id": "m-hiring-offer",
+      "thread_id": "t-hiring-offer",
+      "sender": "s.lindqvist@northwind.example",
+      "sender_name": "Sara Lindqvist · People",
+      "subject": "VP Operations candidate — compensation approval when you have a moment",
+      "body": "The panel is unanimous on Marcus for VP Operations. Compensation lands within the approved band.\n\nHe has a competing process running but told us we are his first choice. I would like to move this week.\n\nSara",
+      "received_at": "2026-08-16T06:05:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Internal approval within an already-agreed compensation band.",
+        "Competing offer creates mild time pressure, but no same-day deadline.",
+        "Deferred behind the outage, the contract, and the security incident."
+      ]
+    },
+    {
+      "provider_message_id": "m-internal-fyi",
+      "thread_id": "t-internal-fyi",
+      "sender": "facilities@northwind.example",
+      "sender_name": "Facilities",
+      "subject": "Floor 4 fit-out starts Monday — noise between 09:00 and 11:00",
+      "body": "The building team begins the floor 4 fit-out on Monday. Expect noise between 09:00 and 11:00 for roughly three weeks.\n\nQuiet rooms on floor 2 are bookable as usual. No action needed.",
+      "received_at": "2026-08-16T05:58:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Purely informational, explicitly marked as needing no action.",
+        "Automated sender with no deadline and no business value at stake.",
+        "Deferred — the lowest-value item the copilot handled this morning."
+      ]
+    },
+    {
+      "provider_message_id": "m-analyst-brief",
+      "thread_id": "t-analyst-brief",
+      "sender": "research@harrowanalysts.example",
+      "sender_name": "Harrow Analysts",
+      "subject": "Invitation: operational benchmarking briefing, September",
+      "body": "We are convening operations leaders in September for a closed-door benchmarking briefing.\n\nPlaces are limited but there is no deadline to confirm before the end of the month.",
+      "received_at": "2026-08-16T05:44:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "External invitation with a month-long response window.",
+        "No risk signal and no commitment attached.",
+        "Deferred for a calendar review rather than an inbox decision."
+      ]
+    },
+    {
+      "provider_message_id": "m-travel-itinerary",
+      "thread_id": "t-travel-itinerary",
+      "sender": "no-reply@travelconcierge.example",
+      "sender_name": "Travel Concierge",
+      "subject": "Your itinerary for the Rotterdam site visit is confirmed",
+      "body": "Your Rotterdam itinerary is confirmed. Flights, transfers, and hotel are booked as requested.\n\nNo action is required. Reply to this message only if something needs changing.",
+      "received_at": "2026-08-16T05:30:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Automated confirmation from a no-reply sender — treated as vendor traffic.",
+        "Nothing to decide and nothing at risk.",
+        "Deferred with a label so it stays searchable without occupying attention."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-webinar",
+      "thread_id": "t-spam-webinar",
+      "sender": "growth@peakscale.example",
+      "sender_name": "PeakScale Growth",
+      "subject": "Limited deal: subscribe now and get 40% discount on our COO masterclass",
+      "body": "Register now for an exclusive offer on our operations masterclass. This limited deal expires at midnight — subscribe today for a 40% discount on annual access.",
+      "received_at": "2026-08-16T05:12:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Promotional vocabulary throughout — classified as spam.",
+        "The urgency is manufactured, and the copilot does not reward it.",
+        "Filed without a reply; no human attention spent."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-saas",
+      "thread_id": "t-spam-saas",
+      "sender": "hello@opsflowhq.example",
+      "sender_name": "OpsFlow HQ",
+      "subject": "Special offer for Northwind — subscribe to OpsFlow before Friday",
+      "body": "We noticed Northwind is scaling operations. Subscribe now and we will register your team at a permanent discount. This offer is only available until Friday.",
+      "received_at": "2026-08-16T04:57:00+00:00",
+      "suggested_reply": null,
+      "rationale": [
+        "Cold vendor outreach using the same promotional signals — classified as spam.",
+        "Personalized-looking, but structurally identical to bulk mail.",
+        "Filed automatically; nothing reaches the approval queue."
+      ]
+    }
+  ]
+}

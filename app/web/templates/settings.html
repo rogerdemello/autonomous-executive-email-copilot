@@ -1,0 +1,123 @@
+{% extends "_app.html" %}
+
+{% block title %}Settings — Executive Email Copilot{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block lede %}Your workspace, plan, and the people in it.{% endblock %}
+
+{% block main %}
+<div class="grid-2">
+  <div class="card">
+    <div class="card__head"><span class="card__title">Workspace</span></div>
+    <div class="card__body">
+      <dl class="kv">
+        <dt>Organization</dt>
+        <dd>{{ organization.name }}</dd>
+        <dt>Slug</dt>
+        <dd class="mono">{{ organization.slug }}</dd>
+        <dt>You</dt>
+        <dd>{{ current_user.email }}</dd>
+        <dt>Your role</dt>
+        <dd><span class="chip chip--accent">{{ current_user.role }}</span></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__head"><span class="card__title">Plan</span></div>
+    <div class="card__body">
+      {% if entitlement %}
+        <dl class="kv">
+          <dt>Plan</dt>
+          <dd>{{ entitlement.plan | title }}</dd>
+          <dt>Status</dt>
+          <dd>
+            <span class="chip {% if entitlement.active %}chip--good{% else %}chip--crit{% endif %}">
+              {{ "active" if entitlement.active else "inactive" }}
+            </span>
+          </dd>
+          <dt>Seats</dt>
+          <dd>{{ member_count }} of {{ entitlement.seats }}</dd>
+          {% if entitlement.expires_at %}
+            <dt>Renews</dt>
+            <dd>{{ entitlement.expires_at | short_time }}</dd>
+          {% endif %}
+        </dl>
+        {% if entitlement.features %}
+          <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px">
+            {% for feature in entitlement.features %}
+              <span class="chip chip--neutral">{{ feature_labels.get(feature, feature) }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="muted" style="margin: 0">No active license on this organization.</p>
+      {% endif %}
+      <a class="btn btn--sm" href="/pricing#contact" style="margin-top: 18px">Talk to sales</a>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 16px">
+  <div class="card__head">
+    <span class="card__title">Members</span>
+    <span class="chip chip--neutral">{{ members | length }}</span>
+  </div>
+  <div class="table-scroll">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Added</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+          <tr>
+            <td>{{ member.full_name or "—" }}</td>
+            <td class="mono">{{ member.email }}</td>
+            <td><span class="chip chip--neutral">{{ member.role }}</span></td>
+            <td class="when">{{ member.created_at | short_time }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 16px">
+  <div class="card__head">
+    <span class="card__title">Mailboxes</span>
+    <a class="btn btn--sm" href="/app/connect">Connect another</a>
+  </div>
+  {% if connections %}
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Provider</th>
+            <th>Connected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for conn in connections %}
+            <tr>
+              <td class="mono">{{ conn.account_email }}</td>
+              <td>{{ provider_labels.get(conn.provider, conn.provider) }}</td>
+              <td class="when">{{ conn.created_at | short_time }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <h3>No mailbox connected</h3>
+      <p>Connect one to give the copilot something to work on.</p>
+      <a class="btn btn--primary" href="/app/connect">Connect a mailbox</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

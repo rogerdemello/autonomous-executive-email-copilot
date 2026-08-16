@@ -14,6 +14,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.copilot.providers.base import MailProvider
+from app.copilot.providers.demo import DEMO_PROVIDER_KEY, DemoProvider
 from app.copilot.providers.fake import FakeProvider
 from app.copilot.providers.gmail import GmailProvider
 from app.copilot.providers.graph import MicrosoftGraphProvider
@@ -80,6 +81,8 @@ def build_provider(connection: dict) -> MailProvider:
     provider isn't a real one or no token is stored (e.g. dev/test connections).
     """
     provider_key = connection.get("provider")
+    if provider_key == DEMO_PROVIDER_KEY:
+        return DemoProvider()
     if provider_key not in ("google", "microsoft"):
         return FakeProvider()
 

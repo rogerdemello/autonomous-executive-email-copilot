@@ -1,0 +1,63 @@
+{% extends "_public.html" %}
+
+{% block title %}Sign in — Executive Email Copilot{% endblock %}
+
+{% block main %}
+<div class="auth">
+  <div class="auth__card">
+    <p class="eyebrow">Welcome back</p>
+    <h1>Sign in</h1>
+    <p class="auth__sub">Pick up your inbox where the copilot left it.</p>
+
+    {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+    {% if notice %}<div class="banner banner--ok">{{ notice }}</div>{% endif %}
+
+    <form method="post" action="/login" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <input type="hidden" name="next" value="{{ next_url }}" />
+
+      <div class="field">
+        <label for="email">Work email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="username"
+          required
+          value="{{ email or '' }}"
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <button class="btn btn--primary btn--block" type="submit">Sign in</button>
+    </form>
+
+    {% if sso_enabled %}
+      <div class="auth__rule">or</div>
+      <a class="btn btn--block" href="/auth/sso/login">Sign in with SSO</a>
+    {% endif %}
+
+    <p class="auth__alt">
+      No account yet? <a href="/signup">Start a free trial</a>
+    </p>
+
+    {% if demo_credentials %}
+      <div class="demo-hint">
+        <b>Demo workspace</b>
+        Sign in as <code>{{ demo_credentials.email }}</code> with password
+        <code>{{ demo_credentials.password }}</code> to walk a pre-loaded executive inbox.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

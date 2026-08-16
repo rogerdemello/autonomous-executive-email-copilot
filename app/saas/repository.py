@@ -421,6 +421,8 @@ class ProcessedMessageRepository:
         risk_tag: str | None,
         deadline_minutes: int | None,
         business_value: float | None,
+        sender_name: str | None = None,
+        received_at: str | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             existing = (
@@ -435,6 +437,7 @@ class ProcessedMessageRepository:
             if existing:
                 existing.thread_id = thread_id
                 existing.sender = sender
+                existing.sender_name = sender_name
                 existing.subject = subject
                 existing.body_preview = body_preview
                 existing.sender_role = sender_role
@@ -442,6 +445,7 @@ class ProcessedMessageRepository:
                 existing.risk_tag = risk_tag
                 existing.deadline_minutes = deadline_minutes
                 existing.business_value = business_value
+                existing.received_at = received_at
                 existing.synced_at = _now_iso()
                 session.flush()
                 return existing.to_dict()
@@ -451,6 +455,7 @@ class ProcessedMessageRepository:
                 provider_message_id=provider_message_id,
                 thread_id=thread_id,
                 sender=sender,
+                sender_name=sender_name,
                 subject=subject,
                 body_preview=body_preview,
                 sender_role=sender_role,
@@ -458,6 +463,7 @@ class ProcessedMessageRepository:
                 risk_tag=risk_tag,
                 deadline_minutes=deadline_minutes,
                 business_value=business_value,
+                received_at=received_at,
             )
             session.add(msg)
             session.flush()
@@ -477,7 +483,11 @@ class ProcessedMessageRepository:
                 query = query.filter(ProcessedMessage.connection_id == connection_id)
             total = query.count()
             rows = (
-                query.order_by(ProcessedMessage.synced_at.desc())
+                query.order_by(
+                    ProcessedMessage.received_at.desc().nullslast(),
+                    ProcessedMessage.synced_at.desc(),
+                    ProcessedMessage.id.asc(),
+                )
                 .offset(safe_offset)
                 .limit(safe_limit)
                 .all()

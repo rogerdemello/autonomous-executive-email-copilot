@@ -3,15 +3,12 @@ from __future__ import annotations
 import logging
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
-    HTMLResponse,
     JSONResponse,
-    RedirectResponse,
     Response,
     StreamingResponse,
 )
@@ -89,6 +86,7 @@ from .core.models import (
     StateSnapshot,
     TasksResponse,
 )
+from .core.paths import STATIC_DIR
 from .core.repositories import EpisodeRepository, TeamSettingsRepository, UserPreferenceRepository
 from .core.security import is_valid_identifier, rate_limiter, resolve_auth
 from .live_api import dashboard_router
@@ -213,6 +211,12 @@ app.include_router(mailbox_router)
 app.include_router(inbox_router)
 app.include_router(marketing_router)
 
+from .web.routes import (  # noqa: E402
+    _LoginRedirect,
+    login_redirect_handler,
+    web_router,
+)
+
 runtime_env = ExecutiveEmailEnv()
 
 
@@ -314,52 +318,15 @@ def _metric_path(request) -> str:
     return getattr(route, "path", None) or request.url.path
 
 
-# Dashboard static files setup
-dashboard_dist = Path(__file__).parent.parent / "dashboard" / "dist"
-if dashboard_dist.exists():
-    app.mount("/dashboard", StaticFiles(directory=str(dashboard_dist), html=True), name="dashboard")
+# The web UI. Static assets first, then the page router — mounting /static as a
+# real StaticFiles app means the stylesheet is served with correct caching and
+# content types without a handler of our own.
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.include_router(web_router)
 
-
-@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
-def root() -> Response:
-    # When the dashboard build is present (the deployed/container case), the app's
-    # starting page is the dashboard. Otherwise (API-only / no build) fall back to
-    # a small landing page that points at the API surface.
-    if dashboard_dist.exists():
-        return RedirectResponse(url="/dashboard/", status_code=307)
-    return HTMLResponse(
-        """
-<!doctype html>
-<html lang=\"en\">
-    <head>
-        <meta charset=\"utf-8\" />
-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-        <title>Autonomous Executive Email Copilot</title>
-        <style>
-            body { font-family: Segoe UI, Arial, sans-serif; margin: 2rem; line-height: 1.5; }
-            h1 { margin-bottom: 0.25rem; }
-            .muted { color: #555; margin-bottom: 1.25rem; }
-            ul { padding-left: 1.25rem; }
-            code { background: #f3f3f3; padding: 0.15rem 0.35rem; border-radius: 4px; }
-        </style>
-    </head>
-    <body>
-        <h1>Autonomous Executive Email Copilot</h1>
-        <div class=\"muted\">Server is running. The dashboard build is not present.</div>
-        <p>Available endpoints:</p>
-        <ul>
-            <li><a href=\"/dashboard/\">/dashboard/</a> - operations dashboard (when built)</li>
-            <li><a href=\"/docs\">/docs</a> - interactive API docs</li>
-            <li><a href=\"/health\">/health</a> - health check</li>
-            <li><a href=\"/tasks\">/tasks</a> - task metadata and schemas</li>
-            <li><code>POST /grader</code> - trajectory scoring</li>
-            <li><code>POST /baseline</code> - baseline execution</li>
-            <li><code>POST /leaderboard</code> - aggregate benchmarks</li>
-        </ul>
-    </body>
-</html>
-"""
-    )
+# An anonymous visitor hitting a page behind the session gets the login form
+# with their destination preserved, rather than a 401 they cannot act on.
+app.add_exception_handler(_LoginRedirect, login_redirect_handler)
 
 
 @app.get("/favicon.ico", include_in_schema=False)

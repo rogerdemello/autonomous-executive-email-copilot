@@ -1,0 +1,194 @@
+{% extends "_public.html" %}
+
+{% block title %}Executive Email Copilot — the corner-office inbox that runs itself{% endblock %}
+
+{% block main %}
+<section class="wrap hero" style="border-top: 0">
+  <div>
+    <p class="eyebrow">Autonomous Executive Email Copilot</p>
+    <h1>The corner-office inbox that <span class="soft">runs itself.</span></h1>
+    <p class="lede">
+      An agent that triages, prioritizes, drafts, and escalates high-stakes email — with your
+      sign-off where it matters, and a benchmark behind every decision.
+    </p>
+    <div class="cta">
+      <a class="btn btn--primary" href="/signup">Start free trial</a>
+      <a class="btn" href="/#how">See how it works</a>
+    </div>
+    <p class="note">No card to start · <b>14-day trial</b> · SSO &amp; audit log on Business+</p>
+  </div>
+
+  <div
+    class="triage"
+    role="img"
+    aria-label="A mailbox where the copilot has triaged four incoming emails: a client reply, a legal escalation, an internal deferral, and one still being decided."
+  >
+    <div class="triage__bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="triage__title">Live triage</span>
+    </div>
+    <div class="mail">
+      <span class="mail__from">Priya Nair · Northwind</span>
+      <span class="chip chip--reply">Reply</span>
+      <span class="mail__subj">Re: renewal terms for Q3 — needs a number today</span>
+    </div>
+    <div class="mail">
+      <span class="mail__from">Legal — outside counsel</span>
+      <span class="chip chip--escalate">Escalate</span>
+      <span class="mail__subj">Draft indemnification clause · flagged: legal</span>
+    </div>
+    <div class="mail">
+      <span class="mail__from">All-hands logistics</span>
+      <span class="chip chip--defer">Defer</span>
+      <span class="mail__subj">Room booking for the offsite — low priority</span>
+    </div>
+    <div class="mail">
+      <span class="mail__from">CFO · budget review</span>
+      <span class="chip chip--wait">Deciding…</span>
+      <span class="mail__subj">Q3 forecast — awaiting your approval to reply</span>
+    </div>
+    <div class="triage__foot">
+      <span class="pulse"></span> Copilot working the inbox · 2 actions held for approval
+    </div>
+  </div>
+</section>
+
+<section id="how" class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">What it does</p>
+    <h2>Built for the people whose inbox can't wait.</h2>
+  </div>
+  <div class="pillars">
+    <div class="pillar">
+      <span class="mark">01 · TRIAGE</span>
+      <h3>Reads the room, not just the subject</h3>
+      <p>
+        Classifies, prioritizes, and drafts across a high-volume mailbox — weighing deadlines,
+        business value, and risk so nothing critical slips.
+      </p>
+    </div>
+    <div class="pillar">
+      <span class="mark">02 · CONTROL</span>
+      <h3>Approvals where they matter</h3>
+      <p>
+        Replies and escalations pause for a human. Legal, finance, and security tags route to the
+        right owner automatically.
+      </p>
+    </div>
+    <div class="pillar">
+      <span class="mark">03 · TRUST</span>
+      <h3>Tenant-isolated &amp; audited</h3>
+      <p>
+        Every organization's data stays its own. SSO, a full audit log, and encrypted mailbox
+        tokens — designed for procurement.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="proof" class="proof">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Measured, not guessed</p>
+      <h2>Every policy is scored before it touches a real inbox.</h2>
+    </div>
+    <div class="scores">
+      <div class="table-wrap">
+        <table class="bench">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th style="text-align: right">Heuristic</th>
+              <th style="text-align: right">Multi-agent</th>
+              <th style="text-align: right">LLM (gpt-4o)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="task">Classification</td>
+              <td class="num lead">1.00</td>
+              <td class="num">0.80</td>
+              <td class="num">0.17</td>
+            </tr>
+            <tr>
+              <td class="task">Prioritization</td>
+              <td class="num lead">1.00</td>
+              <td class="num lead">1.00</td>
+              <td class="num lead">1.00</td>
+            </tr>
+            <tr>
+              <td class="task">Full management</td>
+              <td class="num lead">0.67</td>
+              <td class="num">0.09</td>
+              <td class="num">0.62</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <p style="margin-top: 0" class="muted">
+          Scores are bounded to the open interval <span class="mono">(0,1)</span>, deterministic
+          across seeds, and reproducible from a single command. The frontier LLM is competitive on
+          full management and honestly weaker on narrow classification — a finding, not a slogan.
+        </p>
+        <div class="statline">
+          <div class="stat">
+            <div class="n">3×3×3</div>
+            <div class="l">tasks × personas × seeds</div>
+          </div>
+          <div class="stat">
+            <div class="n">≈$0.009</div>
+            <div class="l">per managed episode</div>
+          </div>
+          <div class="stat">
+            <div class="n">100%</div>
+            <div class="l">actions audit-logged</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">Security &amp; compliance</p>
+    <h2>Answers ready before procurement asks.</h2>
+  </div>
+  <div class="pillars">
+    <div class="pillar">
+      <span class="mark">DATA</span>
+      <h3>Encrypted at rest, scoped per tenant</h3>
+      <p>
+        Mailbox OAuth tokens are sealed with authenticated encryption. Every customer row carries
+        its organization id, and all access goes through tenant-scoped repositories.
+      </p>
+    </div>
+    <div class="pillar">
+      <span class="mark">ACCESS</span>
+      <h3>SSO and least privilege</h3>
+      <p>
+        OIDC single sign-on with RS256 id_token verification. Three ranked roles — owner, admin,
+        member — with no path to grant a role above your own.
+      </p>
+    </div>
+    <div class="pillar">
+      <span class="mark">RECORDS</span>
+      <h3>Audit log, export, and erasure</h3>
+      <p>
+        Every security-relevant action is appended to a per-organization audit log. Owners can
+        export their tenant's full data bundle, or purge it outright.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap close">
+  <h2>Give every executive an inbox that runs itself.</h2>
+  <p>Start a free trial today, or walk through a rollout across your leadership team with us.</p>
+  <div class="cta" style="justify-content: center">
+    <a class="btn btn--primary" href="/signup">Start free trial</a>
+    <a class="btn" href="/pricing">See pricing</a>
+  </div>
+</section>
+{% endblock %}

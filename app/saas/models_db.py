@@ -237,6 +237,7 @@ class ProcessedMessage(Base):
     provider_message_id = Column(String(255), nullable=False)
     thread_id = Column(String(255), nullable=True)
     sender = Column(String(320), nullable=True)
+    sender_name = Column(String(255), nullable=True)
     subject = Column(Text, nullable=True)
     body_preview = Column(Text, nullable=True)
     sender_role = Column(String(32), nullable=True)
@@ -244,6 +245,9 @@ class ProcessedMessage(Base):
     risk_tag = Column(String(32), nullable=True)
     deadline_minutes = Column(Integer, nullable=True)
     business_value = Column(Float, nullable=True)
+    # When the provider says the message arrived, as opposed to when we pulled
+    # it. The inbox orders and timestamps on this; synced_at is an ops detail.
+    received_at = Column(String(50), nullable=True)
     synced_at = Column(String(50), nullable=False, default=_now_iso)
 
     def to_dict(self) -> dict:
@@ -254,6 +258,7 @@ class ProcessedMessage(Base):
             "provider_message_id": self.provider_message_id,
             "thread_id": self.thread_id,
             "sender": self.sender,
+            "sender_name": self.sender_name,
             "subject": self.subject,
             "body_preview": self.body_preview,
             "sender_role": self.sender_role,
@@ -261,6 +266,7 @@ class ProcessedMessage(Base):
             "risk_tag": self.risk_tag,
             "deadline_minutes": self.deadline_minutes,
             "business_value": self.business_value,
+            "received_at": self.received_at,
             "synced_at": self.synced_at,
         }
 

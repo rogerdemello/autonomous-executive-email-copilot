@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" data-theme="{{ theme or '' }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Executive Email Copilot{% endblock %}</title>
+    <meta
+      name="description"
+      content="{% block description %}An executive email copilot that triages, drafts, and escalates high-stakes mail — with your sign-off where it matters.{% endblock %}"
+    />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230e6e62'/><text x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%2306110f' text-anchor='middle'>EC</text></svg>"
+    />
+    <script>
+      // Apply the saved theme before first paint so a dark-mode user never
+      // sees a white flash on navigation.
+      (function () {
+        try {
+          var t = localStorage.getItem("ec-theme");
+          if (t) document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {
+          /* private mode: fall back to prefers-color-scheme */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    {% block body %}{% endblock %}
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

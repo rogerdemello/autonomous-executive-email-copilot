@@ -1,0 +1,71 @@
+{% extends "_app.html" %}
+
+{% block title %}Approvals — Executive Email Copilot{% endblock %}
+{% block heading %}Approvals{% endblock %}
+{% block lede %}Actions that reach the outside world wait here for a human.{% endblock %}
+
+{% block main %}
+{% if not actions %}
+  <div class="card">
+    <div class="empty">
+      <h3>Nothing waiting on you</h3>
+      <p>
+        Replies and escalations pause here before they are sent. Classifications and deferrals apply
+        on their own — they only ever add a label.
+      </p>
+      <a class="btn" href="/app/inbox">Back to the inbox</a>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ actions | length }} awaiting approval</span>
+    </div>
+    {% for item in actions %}
+      <div class="action-block">
+        <div class="action-block__head">
+          <span class="action-block__what">
+            {{ action_labels.get(item.action.action_type, item.action.action_type) }}
+          </span>
+          <span class="chip chip--{{ item.message.priority_hint }}">{{ item.message.priority_hint }}</span>
+          {% if item.message.risk_tag and item.message.risk_tag != 'none' %}
+            <span class="chip chip--brass">{{ item.message.risk_tag }}</span>
+          {% endif %}
+          {% if item.action.escalate_to %}
+            <span class="chip chip--accent">→ {{ item.action.escalate_to | replace('_', ' ') }}</span>
+          {% endif %}
+        </div>
+
+        <p style="margin: 0 0 4px">
+          <strong>{{ item.message.subject }}</strong>
+        </p>
+        <p class="muted" style="margin: 0 0 12px; font-size: 0.86rem">
+          from {{ item.message.sender }} · {{ item.message.received_at | short_time }}
+        </p>
+
+        {% if item.action.content %}<div class="draft">{{ item.action.content }}</div>{% endif %}
+
+        {% if can_manage %}
+          <div class="actions-row">
+            <form method="post" action="/app/actions/{{ item.action.id }}/approve">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+              <button class="btn btn--primary btn--sm" type="submit">
+                {% if item.action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
+              </button>
+            </form>
+            <form method="post" action="/app/actions/{{ item.action.id }}/reject">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+              <button class="btn btn--sm btn--danger" type="submit">Reject</button>
+            </form>
+            <a class="btn btn--sm" href="/app/inbox?message={{ item.message.id }}">Open message</a>
+          </div>
+        {% else %}
+          <p class="muted" style="margin: 0; font-size: 0.85rem">
+            Approving needs the admin role or higher.
+          </p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

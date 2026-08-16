@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Column, Float, Integer, String, Text, create_engine, func, inspect
+from sqlalchemy import Column, Float, Integer, String, Text, create_engine, func, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -212,7 +212,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 
 
 class SchemaVersion(Base):
@@ -261,9 +261,35 @@ def get_session():
         session.close()
 
 
+def _add_column_if_missing(table: str, column: str, ddl_type: str) -> None:
+    """Additively add a column, skipping it when it is already there.
+
+    ``create_all`` creates missing *tables* but never alters existing ones, so a
+    new column on a table that already exists in a deployed database is
+    invisible to it. ``ADD COLUMN`` is the one schema change both SQLite and
+    PostgreSQL accept cheaply and without a table rewrite; the inspector check
+    stands in for ``IF NOT EXISTS``, which SQLite does not support here.
+    """
+    inspector = inspect(engine)
+    if table not in inspector.get_table_names():
+        return  # create_all will build it complete
+    existing = {col["name"] for col in inspector.get_columns(table)}
+    if column in existing:
+        return
+    with engine.begin() as connection:
+        connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
+
+
 def _run_migration(version: int) -> None:
     """Execute a single migration step for the given version number."""
     if version == 1:
+        return
+    if version == 2:
+        # Carry the message's real provider timestamp and display name through
+        # to the UI. Without these every message in the inbox renders with the
+        # sync time, so a mailbox looks like it arrived in one instant.
+        _add_column_if_missing("saas_processed_messages", "received_at", "VARCHAR(50)")
+        _add_column_if_missing("saas_processed_messages", "sender_name", "VARCHAR(255)")
         return
 
 

@@ -1,5 +1,8 @@
-"""Mail providers: the read/write seam every backend (fake, Gmail, Graph) implements."""
+"""Mail providers: the read/write seam every backend implements.
+
+``demo`` and ``fake`` need no credentials; ``gmail`` and ``graph`` need OAuth.
+"""
 
 from __future__ import annotations
 
-__all__ = ["base", "fake"]
+__all__ = ["base", "demo", "fake", "gmail", "graph"]
