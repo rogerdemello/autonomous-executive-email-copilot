@@ -94,11 +94,23 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 0  # 0 disables rate limiting
 
     # --- Commercial SaaS layer (accounts, tenants, licensing) ---
+    # Deployment environment: "development" (default) | "production". In
+    # production the app hard-fails at startup on unsafe config (e.g. a missing
+    # AUTH_SECRET_KEY) instead of silently using an insecure default.
+    environment: str = "development"
     # Secret used to sign session tokens and license keys (HS256). Leave unset
     # for local dev/tests (a clearly-marked, non-production fallback is used and
     # a warning is logged). MUST be set to a long random value in production —
     # rotating it invalidates all outstanding tokens and licenses.
     auth_secret_key: str | None = None
+
+    # --- SSO (OIDC single sign-on) ---
+    # Server-level OpenID Connect. When issuer + client id/secret are set, the
+    # "Sign in with SSO" flow is available (/auth/sso/login). id_tokens are
+    # verified against the issuer's JWKS. Per-organization SSO is a follow-up.
+    oidc_issuer: str | None = None  # e.g. https://accounts.google.com
+    oidc_client_id: str | None = None
+    oidc_client_secret: str | None = None
     # Lifetime of an issued login token, in minutes (default 12h).
     access_token_ttl_minutes: int = 720
     # Lifetime of a password-reset link, in minutes (default 1h).
@@ -187,6 +199,19 @@ class Settings(BaseSettings):
     def auth_secret_is_dev(self) -> bool:
         """True when no real AUTH_SECRET_KEY is configured (dev fallback in use)."""
         return not (self.auth_secret_key or "").strip()
+
+    @property
+    def is_production(self) -> bool:
+        return (self.environment or "").strip().lower() == "production"
+
+    @property
+    def sso_enabled(self) -> bool:
+        """True when server-level OIDC SSO is fully configured."""
+        return bool(
+            (self.oidc_issuer or "").strip()
+            and (self.oidc_client_id or "").strip()
+            and (self.oidc_client_secret or "").strip()
+        )
 
     @property
     def resolved_app_public_url(self) -> str:

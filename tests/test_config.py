@@ -120,3 +120,51 @@ def test_build_chat_client_native_azure_block(monkeypatch):
     headers = {k.lower(): v for k, v in client.default_headers.items()}
     assert headers.get("api-key") == "az-native"
     assert dict(client.default_query).get("api-version") == "2024-12-01-preview"
+
+
+# --------------------------------------------------------------------------- #
+# Production safety gate
+# --------------------------------------------------------------------------- #
+def test_is_production_reflects_environment(monkeypatch):
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    assert get_settings().is_production is False
+    monkeypatch.setenv("ENVIRONMENT", "Production")  # case/space insensitive
+    assert get_settings().is_production is True
+
+
+def test_production_startup_rejects_dev_auth_secret(monkeypatch):
+    """ENVIRONMENT=production must hard-fail when AUTH_SECRET_KEY is unset.
+
+    The dev fallback is a publicly-known constant; booting production with it
+    would let anyone forge session tokens and license keys.
+    """
+    import anyio
+    from fastapi import FastAPI
+
+    from env.api import lifespan
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("AUTH_SECRET_KEY", raising=False)
+
+    async def _boot() -> None:
+        async with lifespan(FastAPI()):
+            pass
+
+    with pytest.raises(RuntimeError, match="AUTH_SECRET_KEY must be set"):
+        anyio.run(_boot)
+
+
+def test_production_startup_accepts_real_auth_secret(monkeypatch):
+    import anyio
+    from fastapi import FastAPI
+
+    from env.api import lifespan
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("AUTH_SECRET_KEY", "a-long-random-production-secret-value")
+
+    async def _boot() -> None:
+        async with lifespan(FastAPI()):
+            pass
+
+    anyio.run(_boot)  # must not raise

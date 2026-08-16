@@ -113,6 +113,16 @@ async def lifespan(_app: FastAPI):
         "Starting Autonomous Executive Email Copilot API (log_level=%s)", get_settings().log_level
     )
     if get_settings().auth_secret_is_dev:
+        # ENVIRONMENT=production promises a hard failure rather than a silent
+        # insecure default: booting a real deployment with the well-known dev
+        # secret would let anyone forge session tokens and license keys.
+        if get_settings().is_production:
+            raise RuntimeError(
+                "AUTH_SECRET_KEY must be set when ENVIRONMENT=production. It signs "
+                "session tokens and license keys; the development fallback is a "
+                "publicly-known constant. Generate one with: "
+                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+            )
         logger.warning(
             "AUTH_SECRET_KEY is not set — using an insecure development signing "
             "secret. Set AUTH_SECRET_KEY to a long random value in production; "

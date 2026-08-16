@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+import uuid
 
 from ..config import get_settings
 from . import licensing, passwords, tokens
@@ -90,6 +91,47 @@ class AuthService:
             candidate = f"{base}-{suffix}"
             suffix += 1
         return candidate
+
+    def login_or_provision_sso(self, *, email: str, full_name: str) -> dict:
+        """Resolve an SSO-verified identity to a user, provisioning on first sight.
+
+        Existing user -> logged in. New user with self-serve signup enabled ->
+        a fresh org (named from the email domain) + owner + trial. New user with
+        signup disabled -> rejected (an operator must invite them first).
+        """
+        settings = get_settings()
+        email = email.lower().strip()
+        record = self.users.get_by_email_global(email)
+        if record:
+            if record.get("status") == "disabled":
+                raise AuthError("This account has been disabled.", 403)
+            self.users.touch_login(record["id"])
+            record.pop("password_hash", None)
+            return record
+
+        if not settings.signup_enabled:
+            raise AuthError("No account for this identity; ask an admin to invite you.", 403)
+
+        domain = email.split("@", 1)[-1].split(".")[0] if "@" in email else "workspace"
+        org = self.orgs.create(name=domain.capitalize(), slug=self._unique_slug(domain))
+        # SSO users authenticate via the IdP; store an unusable random password.
+        user = self.users.create(
+            org_id=org["id"],
+            email=email,
+            password_hash=passwords.hash_password(uuid.uuid4().hex + uuid.uuid4().hex),
+            full_name=(full_name or "").strip(),
+            role=ROLE_OWNER,
+        )
+        _key, terms = licensing.mint_license(org["id"], "trial", settings.resolved_auth_secret)
+        self.licenses.upsert(
+            org_id=org["id"],
+            key_id=terms.key_id,
+            plan=terms.plan,
+            seats=terms.seats,
+            features=list(terms.features),
+            expires_at_iso=terms.expires_at_iso,
+        )
+        return user
 
     # -- authentication -----------------------------------------------------
     def authenticate(self, *, email: str, password: str) -> dict:

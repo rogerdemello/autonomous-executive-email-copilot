@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 
 from ..config import get_settings
 from . import rbac
@@ -49,6 +50,7 @@ PUBLIC_SAAS_PREFIXES = (
     "/auth/login",
     "/auth/forgot-password",
     "/auth/reset-password",
+    "/auth/sso",
     "/billing/contact-sales",
 )
 
@@ -189,6 +191,94 @@ def reset_password(body: ResetPasswordRequest, request: Request) -> dict:
         ip=_client_ip(request),
     )
     return {"status": "ok"}
+
+
+# --------------------------------------------------------------------------- #
+# SSO (OIDC single sign-on)
+# --------------------------------------------------------------------------- #
+@auth_router.get("/sso/status")
+def sso_status() -> dict:
+    """Whether server-level SSO is configured (drives the login UI button)."""
+    return {"enabled": get_settings().sso_enabled}
+
+
+@auth_router.get("/sso/login", include_in_schema=False)
+def sso_login(request: Request) -> RedirectResponse:
+    """Begin the OIDC flow: redirect the browser to the identity provider."""
+    settings = get_settings()
+    if not settings.sso_enabled:
+        raise HTTPException(status_code=404, detail="SSO is not configured on this server")
+    import secrets
+
+    from . import oidc
+
+    try:
+        config = oidc.fetch_discovery(settings.oidc_issuer or "")
+        nonce = secrets.token_urlsafe(16)
+        state = oidc.sign_state(nonce=nonce)
+        url = oidc.build_authorize_url(
+            config=config,
+            client_id=settings.oidc_client_id or "",
+            redirect=oidc.redirect_uri(str(request.base_url).rstrip("/")),
+            state=state,
+            nonce=nonce,
+        )
+    except oidc.OIDCError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return RedirectResponse(url=url, status_code=307)
+
+
+@auth_router.get("/sso/callback", include_in_schema=False)
+def sso_callback(request: Request) -> RedirectResponse:
+    """OIDC redirect target: verify the id_token, provision/log in, hand back a
+    session token to the dashboard."""
+    settings = get_settings()
+    if not settings.sso_enabled:
+        raise HTTPException(status_code=404, detail="SSO is not configured on this server")
+    from . import oidc
+
+    params = request.query_params
+    code, state = params.get("code"), params.get("state")
+    if params.get("error") or not code or not state:
+        raise HTTPException(status_code=400, detail="SSO was cancelled or returned no code")
+    try:
+        nonce = oidc.verify_state(state).get("nonce")
+        config = oidc.fetch_discovery(settings.oidc_issuer or "")
+        token_response = oidc.exchange_code(
+            config=config,
+            code=code,
+            client_id=settings.oidc_client_id or "",
+            client_secret=settings.oidc_client_secret or "",
+            redirect=oidc.redirect_uri(str(request.base_url).rstrip("/")),
+        )
+        id_token = token_response.get("id_token")
+        if not id_token:
+            raise oidc.OIDCError("token response contained no id_token")
+        identity = oidc.verify_id_token(
+            id_token,
+            jwks=oidc.fetch_jwks(config),
+            issuer=settings.oidc_issuer or "",
+            audience=settings.oidc_client_id or "",
+            nonce=nonce,
+        )
+    except oidc.OIDCError as exc:
+        raise HTTPException(status_code=401, detail=f"SSO sign-in failed: {exc}") from exc
+
+    try:
+        user = _auth.login_or_provision_sso(email=identity.email, full_name=identity.name)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    token, _ttl = _auth.issue_token(user)
+    _audit.record(
+        action="auth.sso_login",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        detail={"email": user["email"]},
+        ip=_client_ip(request),
+    )
+    dashboard = f"{settings.resolved_app_public_url}/dashboard/?sso_token={token}"
+    return RedirectResponse(url=dashboard, status_code=307)
 
 
 # --------------------------------------------------------------------------- #
