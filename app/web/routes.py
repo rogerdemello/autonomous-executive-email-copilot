@@ -17,6 +17,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -206,9 +207,29 @@ def _safe_next(raw: str | None) -> str:
 
     An attacker-supplied ``?next=https://evil.example`` would otherwise turn our
     login page into a credible open redirect for phishing.
+
+    Parsed rather than prefix-matched, because the interesting bypasses are all
+    about what a *browser* considers the authority, not what ``startswith``
+    does: ``/\\evil.example`` is normalized to ``//evil.example`` by every major
+    browser, and control characters are how header injection is attempted.
+    Starlette happens to percent-encode both when it builds the ``Location``
+    header, so neither is exploitable today — this does not depend on that.
     """
-    if not raw or not raw.startswith("/") or raw.startswith("//"):
-        return "/app/inbox"
+    default = "/app/inbox"
+    if not raw:
+        return default
+    # Control characters are never legitimate here and are the raw material for
+    # header injection.
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in raw):
+        return default
+    # Browsers treat a backslash as a path separator when parsing the authority.
+    if "\\" in raw:
+        return default
+    parts = urlsplit(raw)
+    if parts.scheme or parts.netloc:
+        return default
+    if not raw.startswith("/") or raw.startswith("//"):
+        return default
     return raw
 
 
@@ -252,11 +273,16 @@ def pricing(request: Request) -> HTMLResponse:
 # Authentication
 # --------------------------------------------------------------------------- #
 def _demo_credentials() -> dict | None:
-    """Credentials to advertise on the login page, when a demo user exists.
+    """Credentials to advertise on the login page — never in production.
 
-    Shown only if the seeded demo account is actually present, so a production
-    deployment never displays a hint for an account nobody can use.
+    Two conditions, and the order matters. ``ENVIRONMENT=production`` blocks this
+    outright: if someone seeds the demo workspace on a public deployment, this
+    would otherwise print a working password on an unauthenticated page. Only
+    then do we check the account exists, so a non-production instance without the
+    demo shows no hint for an account nobody can use.
     """
+    if get_settings().is_production:
+        return None
     if not _users.get_by_email_global(DEMO_OWNER_EMAIL):
         return None
     return {"email": DEMO_OWNER_EMAIL, "password": DEMO_OWNER_PASSWORD}
@@ -694,6 +720,4 @@ def settings_page(request: Request) -> HTMLResponse:
 # --------------------------------------------------------------------------- #
 async def login_redirect_handler(request: Request, exc: Exception) -> Response:
     next_url = getattr(exc, "next_url", "/app/inbox")
-    from urllib.parse import quote
-
     return RedirectResponse(url=f"/login?next={quote(next_url, safe='/?=&')}", status_code=303)
