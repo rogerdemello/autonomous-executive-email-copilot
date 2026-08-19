@@ -120,6 +120,23 @@ class TestConnectFlow:
         assert resp.status_code == 200, resp.text
         assert resp.json()["authorize_url"].startswith("https://accounts.google.com/")
 
+    def test_connect_without_redirect_base_env_derives_from_request(self, client, monkeypatch):
+        """The previously untested default: no OAUTH_REDIRECT_BASE_URL. The
+        redirect_uri used to come out *relative* ('/mailbox/oauth/callback'),
+        which every provider rejects — while the UI showed 'Ready'."""
+        from urllib.parse import parse_qs, urlsplit
+
+        monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "cid")
+        monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET", "csecret")
+        monkeypatch.delenv("OAUTH_REDIRECT_BASE_URL", raising=False)
+        data = _signup(client)
+        resp = client.post("/mailbox/connect/google", headers=_hdr(data["access_token"]))
+        assert resp.status_code == 200, resp.text
+        query = parse_qs(urlsplit(resp.json()["authorize_url"]).query)
+        redirect = query["redirect_uri"][0]
+        # Absolute, on the request's own host, both legs derivable identically.
+        assert redirect == "http://testserver/mailbox/oauth/callback"
+
     def test_member_cannot_connect(self, client, monkeypatch):
         monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "cid")
         monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET", "csecret")

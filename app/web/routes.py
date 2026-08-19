@@ -560,7 +560,10 @@ def connect_provider(request: Request, provider_key: str, csrf_token: str = Form
     _require_manage(user)
     try:
         authorize_url = _mailbox_service.start_connect(
-            org_id=user["org_id"], user_id=user["id"], provider_key=provider_key
+            org_id=user["org_id"],
+            user_id=user["id"],
+            provider_key=provider_key,
+            request_base_url=str(request.base_url).rstrip("/"),
         )
     except MailboxError as exc:
         context = _app_context(request, user, "connect")

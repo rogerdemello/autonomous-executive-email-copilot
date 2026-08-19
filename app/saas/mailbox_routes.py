@@ -37,13 +37,17 @@ def list_connections(user: dict = Depends(get_current_user)) -> dict:
 @mailbox_router.post("/connect/{provider}")
 def connect(
     provider: str,
+    request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
     """Begin an OAuth connect; returns the provider consent URL for the client
     to redirect to (``window.location = authorize_url``)."""
     try:
         url = _service.start_connect(
-            org_id=actor["org_id"], user_id=actor["id"], provider_key=provider
+            org_id=actor["org_id"],
+            user_id=actor["id"],
+            provider_key=provider,
+            request_base_url=str(request.base_url).rstrip("/"),
         )
     except MailboxError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

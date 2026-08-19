@@ -111,10 +111,18 @@ def redirect_uri(request_base_url: str | None = None) -> str:
     """The registered OAuth callback URL.
 
     Prefers ``OAUTH_REDIRECT_BASE_URL``; otherwise derives from the request's
-    base URL. Must exactly match what's registered with the provider.
+    base URL. Must exactly match what's registered with the provider — and it
+    must be absolute: with no base at all this used to return the *relative*
+    string ``/mailbox/oauth/callback``, which every provider rejects with
+    invalid_request while our UI still showed the provider as "Ready".
     """
     settings = get_settings()
     base = (settings.oauth_redirect_base_url or request_base_url or "").rstrip("/")
+    if not base:
+        raise RuntimeError(
+            "Cannot build an OAuth redirect URI: set OAUTH_REDIRECT_BASE_URL "
+            "or pass the request's base URL."
+        )
     return f"{base}/mailbox/oauth/callback"
 
 

@@ -62,8 +62,21 @@ class MailboxService:
     def list_connections(self, org_id: str) -> list[dict]:
         return self.repo.list_for_org(org_id)
 
-    def start_connect(self, *, org_id: str, user_id: str, provider_key: str) -> str:
-        """Return the provider consent URL to redirect the user to."""
+    def start_connect(
+        self,
+        *,
+        org_id: str,
+        user_id: str,
+        provider_key: str,
+        request_base_url: str | None = None,
+    ) -> str:
+        """Return the provider consent URL to redirect the user to.
+
+        ``request_base_url`` matters: without ``OAUTH_REDIRECT_BASE_URL`` set,
+        the callback URL is derived from the request — the same derivation
+        :meth:`complete_callback` uses, so the two legs of the flow always
+        present the identical redirect_uri to the provider.
+        """
         provider = oauth.get_provider(provider_key)
         if provider is None:
             raise MailboxError(f"Unknown provider: {provider_key}", 404)
@@ -78,7 +91,7 @@ class MailboxService:
         return oauth.build_authorize_url(
             provider,
             client_id=client_id or "",
-            redirect=oauth.redirect_uri(),
+            redirect=oauth.redirect_uri(request_base_url),
             state=state,
         )
 
