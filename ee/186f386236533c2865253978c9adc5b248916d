@@ -1,0 +1,59 @@
+tests/test_gmail_provider.py
+  s_f0cdcdb3c6f87a::t_3b0304a42971ff 70-72
+  s_f0cdcdb3c6f87a::t_0c26c85c1d97da 73
+app/copilot/providers/gmail.py
+  s_f0cdcdb3c6f87a::t_98e26f75ffa3d8 133
+  s_f0cdcdb3c6f87a::t_3c21a99399f1ca 54-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "ee186f386236533c2865253978c9adc5b248916d",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:2b7d7a4a09d28477db034a081b09e72fe38f38a5da49044b574027ce17374ba1",
+      "total_additions": 22,
+      "total_deletions": 2,
+      "accepted_lines": 276,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:2b7d7a4a09d28477db034a081b09e72fe38f38a5da49044b574027ce17374ba1",
+      "stats": {
+        "total_additions": 22,
+        "total_deletions": 2,
+        "accepted_lines": 276,
+        "overriden_lines": 0,
+        "files": {
+          "app/copilot/providers/gmail.py": {
+            "total_additions": 17,
+            "total_deletions": 1,
+            "accepted_lines": 17,
+            "overriden_lines": 0
+          },
+          "tests/test_gmail_provider.py": {
+            "total_additions": 5,
+            "total_deletions": 1,
+            "accepted_lines": 259,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
