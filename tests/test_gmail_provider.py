@@ -67,6 +67,10 @@ class TestGmailProvider:
         assert msgs[0].sender_name == "Alex Vance"
         assert msgs[0].subject == "Quarterly review"
         assert "full plain-text body" in msgs[0].body
+        # Gmail's internalDate is epoch milliseconds; stored raw, the UI would
+        # render '1690000000000' as the arrival time and mixed-provider sorting
+        # (Graph stores ISO) would compare apples to oranges.
+        assert msgs[0].received_at == "2023-07-22T04:26:40+00:00"
 
     def test_401_triggers_single_refresh_and_retry(self):
         state = {"n": 0}

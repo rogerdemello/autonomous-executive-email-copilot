@@ -51,6 +51,22 @@ def _decode_b64url(data: str) -> str:
         return ""
 
 
+def _internal_date_to_iso(internal_date: str) -> str:
+    """Gmail's ``internalDate`` (epoch milliseconds, as a string) → ISO-8601 UTC.
+
+    Everything downstream — the inbox's ordering column, ``_short_time`` in the
+    web UI, mixed-provider sorting against Graph's ISO timestamps — assumes ISO.
+    Stored raw, a real Gmail inbox renders '1723800000000' as the arrival time.
+    """
+    try:
+        millis = int(internal_date)
+    except (TypeError, ValueError):
+        return internal_date or ""
+    from datetime import datetime, timezone
+
+    return datetime.fromtimestamp(millis / 1000, tz=timezone.utc).isoformat()
+
+
 def _header(headers: list[dict], name: str) -> str:
     for h in headers:
         if h.get("name", "").lower() == name.lower():
@@ -114,7 +130,7 @@ class GmailProvider(MailProvider):
             subject=_header(headers, "Subject"),
             body=_extract_body(payload) or msg.get("snippet", ""),
             references=references,
-            received_at=msg.get("internalDate", ""),
+            received_at=_internal_date_to_iso(msg.get("internalDate", "")),
         )
 
     @staticmethod
