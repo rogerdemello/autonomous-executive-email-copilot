@@ -46,21 +46,25 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 - [ ] bandit + pip-audit wired into CI -> deferred to Phase 3 (CI pipeline).
 - [ ] request-size limits -> deferred (handled at the ASGI server / reverse-proxy layer; revisit if needed).
 
-## Phase 3 — Deployment & CI/CD ✅ COMPLETE (release pipeline deferred)
-- [x] Multi-stage Dockerfile that **builds the dashboard** (Node stage → dist copied into Python runtime) so `/dashboard` serves; non-root user; layer-cached deps; healthcheck; unified on port 7860; `.dockerignore`. Fixed DEPLOYMENT_GUIDE port refs.
-- [x] Fixed the dashboard build (never compiled): vite-env.d.ts + unused-symbol errors. Fixed `app/main.py` undefined `app` export.
-- [x] `docker-compose.yml` for one-command local bring-up.
-- [x] CI: parallel jobs — lint (ruff), test matrix (3.10/3.11/3.12) + coverage gate (70%, current 77%, Codecov), typecheck (mypy, informational), security (bandit blocking + pip-audit informational), frontend (npm ci + tsc + build), docker build + smoke (`/health`, `/docs`, `/dashboard/`), inference smoke.
+## Phase 3 — Deployment & CI/CD ✅ COMPLETE (as built then; see note)
+> **Superseded in part.** The React dashboard this phase built and shipped was
+> **removed** when the product moved to the server-rendered UI in `app/web`
+> (see CHANGELOG). Today's reality: the Dockerfile is **single-stage** (no Node
+> toolchain), everything runs on port **8000**, and CI has no frontend job.
+> The durable outcomes of this phase are the ones below.
+- [x] `docker-compose.yml` for one-command local bring-up; non-root container user; healthcheck; `.dockerignore`.
+- [x] CI: parallel jobs — lint (ruff), test matrix (3.10/3.11/3.12) + coverage gate (Codecov), typecheck (mypy, informational), security (bandit blocking + pip-audit informational), docker build + smoke (`/health`, `/docs`, `/`, `/login`), inference smoke.
 - [ ] Release pipeline (changelog, semver tags, GHCR publish, SBOM) — **deferred**; needs repo settings/secrets and a tagging convention.
 - [ ] Pinned base-image digests and a Windows CI leg — deferred (tag-pinned for now).
 
-> Note: Docker image build verified via the dashboard build + CI; not built locally (daemon was down). Run `docker compose up --build` to verify end-to-end.
-
-## Phase 4 — Frontend & UX polish ✅ COMPLETE (a11y pass deferred)
-- [x] vitest + @testing-library/react (jsdom); eslint flat config + prettier; api + Inbox tests (6 passing). CI frontend job runs eslint + prettier + vitest + tsc + build.
-- [x] Robust API layer (`dashboard/src/api.ts`): timeouts (AbortController), retry/backoff, typed `ApiError`; Inbox + App refactored onto it.
-- [x] Live `/ws/dashboard` WebSocket via `useDashboardSocket` (ping/pong + capped-backoff reconnect); App shows Live/Connected/Disconnected.
-- [ ] Dedicated accessibility & responsive pass — deferred (semantic/ARIA + mobile layout audit not yet done).
+## Phase 4 — Frontend & UX polish ✅ COMPLETE (superseded)
+> **Superseded.** This phase polished the React dashboard (vitest, eslint,
+> `dashboard/src/api.ts`, `useDashboardSocket`) — all of which was later
+> deleted along with the dashboard itself. The product UI is now
+> server-rendered Jinja under `app/web` with no bundler and no Node tooling;
+> its coverage lives in `tests/test_web_pages.py`. The `/ws/dashboard`
+> WebSocket API outlived its frontend and remains tested (`tests/test_dashboard.py`).
+- [ ] Dedicated accessibility & responsive pass on the server-rendered UI — still open.
 
 ## Phase 5 — Benchmark & simulation rigor ✅ CORE COMPLETE (additive items deferred)
 - [x] Documented `strict_unit_interval` + `atan` reward transform in grader.py; property tests (open-unit + monotonicity sweeps) for both; hard-task weight check. (Used dependency-free sweeps instead of hypothesis.)
@@ -101,7 +105,7 @@ Bar: Async, multi-provider, function-calling LLM integration. The system works w
 - [x] Refactored `LLMAgent` to use `OpenAIProvider` internally instead of raw `OpenAI` client.
 - [ ] Convert `LLMAgent.get_action()` → `async def`. All internal LLM calls use `await provider.agenerate()`.
 - [ ] Convert `Planner.plan()` → async. `HybridPolicy.next_action()` → async.
-- [ ] Add `GET /step/stream` SSE endpoint for real-time agent execution trace.
+- [x] `POST /step/stream` SSE endpoint for real-time agent execution trace. *(app/main.py)*
 - [ ] `asyncio.Lock` for cache access instead of thread lock.
 - [ ] `inference.py` top-level `asyncio.run(main())`.
 

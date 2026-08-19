@@ -17,10 +17,9 @@ docker compose up --build
 
 Then:
 
-- API: `http://localhost:8000/`
+- Product UI (landing → login → inbox): `http://localhost:8000/`
 - Health: `http://localhost:8000/health`
-- Docs: `http://localhost:8000/docs`
-- Dashboard: `http://localhost:8000/dashboard/`
+- API docs: `http://localhost:8000/docs`
 
 The container declares a `/health` healthcheck, so orchestrators (Docker,
 Kubernetes, ECS, Cloud Run, etc.) get readiness signals for free.
@@ -60,12 +59,13 @@ config is required.
 
 1. Push this repo to GitHub.
 2. In Render: **New → Blueprint**, select the repo. Render reads `render.yaml`
-   and provisions one Docker **web service** (FastAPI + the bundled dashboard).
+   and provisions one Docker **web service** (FastAPI, which also serves the
+   server-rendered product UI — no separate frontend).
 3. Set any secrets (provider keys, `API_AUTH_TOKEN`, `CORS_ORIGINS`) in the
    service's **Environment** tab — they are declared `sync: false` so they live
    in Render, not git.
 4. Render health-checks `/health` and serves the app at the assigned URL; the
-   dashboard is at `/dashboard/`.
+   product UI is the root (`/` → `/login` → `/app/inbox`).
 
 The default SQLite store sits on the container's ephemeral disk and resets on
 redeploy. For durable data, set `DATABASE_URL` to a Postgres URL (e.g. a Render
@@ -97,5 +97,5 @@ Metrics are exposed at `/metrics`; see the ops [runbook](docs/RUNBOOK.md).
 ruff check . && ruff format --check .     # lint/format
 python -m pytest -q                        # tests
 docker build -t exec-email-copilot .       # image builds
-python inference.py --task easy_classification --max-steps 20   # CLI runner (no key needed)
+python research/inference.py --task easy_classification --max-steps 20   # CLI runner (no key needed)
 ```
