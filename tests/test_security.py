@@ -50,9 +50,7 @@ def test_sensitive_reads_require_the_token_when_configured(monkeypatch):
     monkeypatch.setenv("API_AUTH_TOKEN", "s3cret")
     for path in ("/approval/pending", "/episodes", "/preferences/users", "/dashboard/state"):
         assert client.get(path).status_code == 401, path
-        assert (
-            client.get(path, headers={"Authorization": "Bearer s3cret"}).status_code == 200
-        ), path
+        assert client.get(path, headers={"Authorization": "Bearer s3cret"}).status_code == 200, path
 
 
 def test_sensitive_reads_stay_open_without_a_token(monkeypatch):
