@@ -540,7 +540,10 @@ automated tooling work with zero setup:
 - `API_AUTH_TOKEN` — when set, mutating routes require `Authorization: Bearer <token>` or `X-API-Key`.
 - `CORS_ORIGINS` — comma-separated allowed origins (default `*`).
 - `RATE_LIMIT_PER_MINUTE` — per-IP request cap (default `0` = disabled).
-- `REQUIRE_APPROVAL` — gate `reply`/`escalate` behind human approval (default off).
+- `REQUIRE_APPROVAL` — **benchmark simulator only**: routes the sim agent's
+  `reply`/`escalate` through the in-memory approval store (default off). The
+  *product's* approval gate is not a setting — outbound actions from a real
+  mailbox are always held for a human (`app/copilot/pipeline.py`).
 - `LOG_LEVEL` — structured logs; every response carries an `X-Request-ID`.
 - `ENVIRONMENT=production` — refuses to start without `AUTH_SECRET_KEY`, rather than
   silently signing sessions and licenses with the well-known development secret.

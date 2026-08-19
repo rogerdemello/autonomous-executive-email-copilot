@@ -72,5 +72,8 @@ so they live on the product side and the benchmark imports up into them.
   have to special-case exact `0.0`/`1.0`.
 - **Opt-in security**: the API runs open by default (frictionless local/eval use);
   auth, CORS limits, and rate limiting activate only when configured.
-- **HITL approval is opt-in** (`REQUIRE_APPROVAL`): the raw agent acts directly;
-  the product path can require human approval for reply/escalate.
+- **Two approval gates, deliberately different.** In the *benchmark simulator*
+  HITL approval is opt-in (`REQUIRE_APPROVAL`) so unattended evaluation runs
+  stay unattended. In the *product* the gate is an invariant, not a setting:
+  every outbound action from a real mailbox (reply, escalate) is held for a
+  human (`app/copilot/pipeline.py`), unconditionally.
