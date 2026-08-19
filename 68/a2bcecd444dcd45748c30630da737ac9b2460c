@@ -1,0 +1,101 @@
+app/core/config.py
+  s_f0cdcdb3c6f87a::t_a61d64c00229f5 174-179
+helm/exec-email-copilot/values.yaml
+  s_f0cdcdb3c6f87a::t_0fbea3aed645c1 65-67,79-84,91,97-100,105
+  s_f0cdcdb3c6f87a::t_b9f128f03865af 113-115,117,120-122,124,126
+  s_f0cdcdb3c6f87a::t_04a65690195e9c 40-44,53,58
+helm/exec-email-copilot/templates/deployment.yaml
+  s_f0cdcdb3c6f87a::t_3b8bfbdd673869 75-78
+  s_f0cdcdb3c6f87a::t_6ff6e187491fae 114
+  s_f0cdcdb3c6f87a::t_b0b7478de29783 30-51
+helm/exec-email-copilot/Chart.yaml
+  s_f0cdcdb3c6f87a::t_b631d4ca5c0455 15
+.dockerignore
+  s_f0cdcdb3c6f87a::t_04ccd94eab816c 24-32
+.github/workflows/ci.yml
+  s_f0cdcdb3c6f87a::t_119891656c1cfc 121-132
+helm/README.md
+  s_f0cdcdb3c6f87a::t_2e522fe3970e39 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "68a2bcecd444dcd45748c30630da737ac9b2460c",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:73d0c45d0ccc3aa2494358b71e526223f2c78b4a3db8605cf9ba53cfd88610d1",
+      "total_additions": 140,
+      "total_deletions": 12,
+      "accepted_lines": 642,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:73d0c45d0ccc3aa2494358b71e526223f2c78b4a3db8605cf9ba53cfd88610d1",
+      "stats": {
+        "total_additions": 140,
+        "total_deletions": 12,
+        "accepted_lines": 642,
+        "overriden_lines": 0,
+        "files": {
+          ".dockerignore": {
+            "total_additions": 9,
+            "total_deletions": 0,
+            "accepted_lines": 39,
+            "overriden_lines": 0
+          },
+          ".github/workflows/ci.yml": {
+            "total_additions": 13,
+            "total_deletions": 0,
+            "accepted_lines": 127,
+            "overriden_lines": 0
+          },
+          "app/core/config.py": {
+            "total_additions": 6,
+            "total_deletions": 0,
+            "accepted_lines": 364,
+            "overriden_lines": 0
+          },
+          "helm/README.md": {
+            "total_additions": 53,
+            "total_deletions": 0,
+            "accepted_lines": 53,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/Chart.yaml": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/templates/deployment.yaml": {
+            "total_additions": 27,
+            "total_deletions": 1,
+            "accepted_lines": 27,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/values.yaml": {
+            "total_additions": 31,
+            "total_deletions": 10,
+            "accepted_lines": 31,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
