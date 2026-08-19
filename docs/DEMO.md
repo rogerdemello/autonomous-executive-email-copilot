@@ -252,7 +252,7 @@ Yes. One container, SQLite by default, `DATABASE_URL` for Postgres. There is a
 Helm chart under `helm/` and a Render blueprint.
 
 **"How is this tested?"**
-768 tests. The demo path you just walked is covered end to end in
+794 tests. The demo path you just walked is covered end to end in
 `tests/test_web_pages.py`, including the session gate, CSRF, and that approving
 actually transitions the action and records an audit entry.
 
