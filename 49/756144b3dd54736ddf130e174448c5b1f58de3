@@ -1,0 +1,95 @@
+app/web/static/app.css
+  s_f0cdcdb3c6f87a::t_85568377801c77 364
+tests/test_gmail_provider.py
+  s_f0cdcdb3c6f87a::t_a48cb40933e5ae 219-233,236-254
+app/saas/provider_factory.py
+  s_f0cdcdb3c6f87a::t_70dc86848ea6f4 23,29-42
+  s_f0cdcdb3c6f87a::t_8b3a3114e1eda2 91-97,101-105,115-117,121-130,135
+app/web/templates/connect.html
+  s_f0cdcdb3c6f87a::t_df5da4ee325b62 29-31
+app/web/routes.py
+  s_f0cdcdb3c6f87a::t_45c12d634cca4b 763-766
+  s_f0cdcdb3c6f87a::t_b0bae467a03bd9 36
+  s_f0cdcdb3c6f87a::t_498805e0fa0c73 624-625
+app/saas/processing_routes.py
+  s_f0cdcdb3c6f87a::t_a8515de07df67a 74-82
+  s_f0cdcdb3c6f87a::t_94bbd723a6ac21 41-45
+  s_f0cdcdb3c6f87a::t_8ed8f09b934d52 19
+  s_f0cdcdb3c6f87a::t_3d4ac0d6f5395c 158-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "49756144b3dd54736ddf130e174448c5b1f58de3",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:5d2b54113a03b2a388aa61b164195f473c5bac952759bdf6686207b1524b7959",
+      "total_additions": 105,
+      "total_deletions": 21,
+      "accepted_lines": 2807,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:5d2b54113a03b2a388aa61b164195f473c5bac952759bdf6686207b1524b7959",
+      "stats": {
+        "total_additions": 105,
+        "total_deletions": 21,
+        "accepted_lines": 2807,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/processing_routes.py": {
+            "total_additions": 19,
+            "total_deletions": 6,
+            "accepted_lines": 161,
+            "overriden_lines": 0
+          },
+          "app/saas/provider_factory.py": {
+            "total_additions": 41,
+            "total_deletions": 10,
+            "accepted_lines": 135,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 7,
+            "total_deletions": 2,
+            "accepted_lines": 875,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1378,
+            "overriden_lines": 0
+          },
+          "app/web/templates/connect.html": {
+            "total_additions": 3,
+            "total_deletions": 0,
+            "accepted_lines": 3,
+            "overriden_lines": 0
+          },
+          "tests/test_gmail_provider.py": {
+            "total_additions": 34,
+            "total_deletions": 3,
+            "accepted_lines": 255,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
