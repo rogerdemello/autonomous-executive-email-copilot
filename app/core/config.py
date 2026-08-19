@@ -171,6 +171,12 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Observability: OTLP trace export target (e.g. http://tempo:4318).
+    # Must be a declared field — model_config uses extra="ignore", so before
+    # this existed the env var was silently swallowed and OTLP could never be
+    # enabled despite being documented and set by the Helm chart.
+    otel_exporter_otlp_endpoint: str | None = None
+
     @property
     def cors_origin_list(self) -> list[str]:
         """CORS origins as a list; '*' (or empty) means allow all."""

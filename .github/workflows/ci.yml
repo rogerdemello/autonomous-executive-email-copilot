@@ -117,3 +117,16 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Inference (baseline fallback, no provider key)
         run: python research/inference.py --task easy_classification --max-steps 20
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Lint the chart
+        run: helm lint helm/exec-email-copilot
+      - name: Render templates (defaults, and with persistence enabled)
+        run: |
+          helm template smoke helm/exec-email-copilot > /dev/null
+          helm template smoke helm/exec-email-copilot \
+            --set persistence.enabled=true --set ingress.enabled=true > /dev/null

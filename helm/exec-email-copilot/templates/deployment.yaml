@@ -27,6 +27,28 @@ spec:
       serviceAccountName: {{ include "exec-email-copilot.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.persistence.enabled }}
+      initContainers:
+        # First boot on an empty volume: seed it from the image's packaged
+        # data/ tree (tasks.yaml, scenarios, the demo mailbox). DATA_DIR
+        # replaces the whole data root, so an unseeded volume would hide the
+        # fixtures, not just the database.
+        - name: seed-data
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f {{ .Values.persistence.mountPath }}/tasks.yaml ]; then
+                cp -r /app/data/. {{ .Values.persistence.mountPath }}/
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -50,6 +72,10 @@ spec:
                 secretKeyRef:
                   name: {{ $secretName }}
                   key: GOOGLE_API_KEY
+            {{- if .Values.persistence.enabled }}
+            - name: DATA_DIR
+              value: {{ .Values.persistence.mountPath | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -85,7 +111,7 @@ spec:
           {{- if .Values.persistence.enabled }}
           volumeMounts:
             - name: data
-              mountPath: /data
+              mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
       {{- if .Values.persistence.enabled }}
       volumes:

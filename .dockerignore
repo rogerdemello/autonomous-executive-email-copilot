@@ -21,6 +21,15 @@ data/*.db
 artifacts
 leaderboard*.csv
 
+# Not needed at runtime — keep the image small. (reports/ and telemetry/ are
+# importable packages and MUST ship; tests and docs are not.)
+tests
+docs
+build
+*.egg-info
+.hypothesis
+helm
+
 # Local env and editor files
 .env
 .env.*
