@@ -16,8 +16,8 @@ from app.copilot.providers.base import MailProvider
 
 from . import provider_factory
 from .deps import get_current_user, require_role
-from .provider_factory import BrokenConnectionError
 from .models_db import ROLE_ADMIN
+from .provider_factory import BrokenConnectionError
 from .repository import (
     MailboxRepository,
     ProcessedMessageRepository,
@@ -76,9 +76,7 @@ def sync(body: SyncRequest, actor: dict = Depends(require_role(ROLE_ADMIN))) -> 
         try:
             provider = build_provider(conn)
         except BrokenConnectionError as exc:
-            results.append(
-                {"connection_id": conn["id"], "status": "error", "error": exc.message}
-            )
+            results.append({"connection_id": conn["id"], "status": "error", "error": exc.message})
             continue
         try:
             results.append(
