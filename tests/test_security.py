@@ -43,6 +43,24 @@ def test_reads_open_even_when_token_configured(monkeypatch):
     assert client.get("/tasks").status_code == 200
 
 
+def test_sensitive_reads_require_the_token_when_configured(monkeypatch):
+    """Pending approvals, episode/preference stores, and the live sim state are
+    not anonymous reads on a locked-down deployment — /approval/pending used to
+    be a cross-tenant read with no credential at all."""
+    monkeypatch.setenv("API_AUTH_TOKEN", "s3cret")
+    for path in ("/approval/pending", "/episodes", "/preferences/users", "/dashboard/state"):
+        assert client.get(path).status_code == 401, path
+        assert (
+            client.get(path, headers={"Authorization": "Bearer s3cret"}).status_code == 200
+        ), path
+
+
+def test_sensitive_reads_stay_open_without_a_token(monkeypatch):
+    monkeypatch.delenv("API_AUTH_TOKEN", raising=False)
+    assert client.get("/approval/pending").status_code == 200
+    assert client.get("/episodes").status_code == 200
+
+
 # --- CORS ---
 
 

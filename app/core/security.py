@@ -60,6 +60,27 @@ def request_is_authorized(
 # path). Multi-tenant tokens carry their own configured label instead.
 DEFAULT_TENANT = "default"
 
+# Benchmark/simulator surfaces whose *reads* expose state that should not be
+# anonymous once an operator has configured a token: pending approvals,
+# episode and preference stores, learning examples, the live sim state. The
+# open-by-default posture is unchanged — with no token configured, everything
+# stays open for local/eval use.
+SENSITIVE_READ_PREFIXES = (
+    "/approval",
+    "/episodes",
+    "/preferences",
+    "/feedback",
+    "/learning",
+    "/replay",
+    "/dashboard",
+    "/alerts",
+    "/state",
+)
+
+
+def is_sensitive_read(path: str) -> bool:
+    return any(path == p or path.startswith(p + "/") for p in SENSITIVE_READ_PREFIXES)
+
 
 def resolve_auth(
     method: str,
@@ -67,6 +88,8 @@ def resolve_auth(
     tenant_tokens: dict[str, str] | None,
     authorization: str | None,
     api_key_header: str | None,
+    *,
+    enforce_reads: bool = False,
 ) -> tuple[bool, str | None]:
     """Authorize a request and resolve its tenant in one pass.
 
@@ -76,7 +99,9 @@ def resolve_auth(
     and preserve today's byte-identical default behavior.
 
     Auth is open when neither the single ``configured_token`` nor any
-    ``tenant_tokens`` are configured, or when the method is non-mutating. When a
+    ``tenant_tokens`` are configured, or when the method is non-mutating —
+    unless ``enforce_reads`` is set, which callers pass for paths whose reads
+    are as sensitive as writes (see :data:`SENSITIVE_READ_PREFIXES`). When a
     credential is required, the presented token must match either the single
     ``configured_token`` (-> :data:`DEFAULT_TENANT`) or one of the configured
     ``tenant_tokens`` (-> its mapped label).
@@ -88,7 +113,7 @@ def resolve_auth(
     tenant_tokens = tenant_tokens or {}
     if not configured_token and not tenant_tokens:
         return True, None
-    if method.upper() not in MUTATING_METHODS:
+    if method.upper() not in MUTATING_METHODS and not enforce_reads:
         return True, None
     presented = extract_bearer_token(authorization, api_key_header)
     if presented is None:

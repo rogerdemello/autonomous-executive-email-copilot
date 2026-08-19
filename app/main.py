@@ -88,7 +88,7 @@ from .core.models import (
 )
 from .core.paths import STATIC_DIR
 from .core.repositories import EpisodeRepository, TeamSettingsRepository, UserPreferenceRepository
-from .core.security import is_valid_identifier, rate_limiter, resolve_auth
+from .core.security import is_sensitive_read, is_valid_identifier, rate_limiter, resolve_auth
 from .live_api import dashboard_router
 
 configure_logging()
@@ -247,6 +247,11 @@ async def _gateway_middleware(request, call_next):
             settings.tenant_token_map,
             request.headers.get("Authorization"),
             request.headers.get("X-API-Key"),
+            # With a token configured, reads of the benchmark surface (pending
+            # approvals, episodes, preferences, live sim state) need it too —
+            # /approval/pending would otherwise be an anonymous read on a
+            # locked-down deployment.
+            enforce_reads=is_sensitive_read(path),
         )
 
         rate_key = f"tenant:{tenant}" if tenant else _client_key(request)
@@ -261,7 +266,11 @@ async def _gateway_middleware(request, call_next):
         # The SaaS/product API self-authenticates with per-user session tokens, so
         # it must bypass the operator API_AUTH_TOKEN gate (it enforces its own auth
         # via route dependencies). Public auth endpoints are a subset of these.
-        if not authorized and any(path.startswith(p) for p in SAAS_SELF_AUTH_PREFIXES):
+        # Segment-aware on purpose: a raw startswith let /approval/* ride the
+        # /app prefix straight past the operator token gate.
+        if not authorized and any(
+            path == p or path.startswith(p + "/") for p in SAAS_SELF_AUTH_PREFIXES
+        ):
             authorized = True
 
         if not authorized:

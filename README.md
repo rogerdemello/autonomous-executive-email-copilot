@@ -538,7 +538,10 @@ All configuration is environment-driven (see [.env.example](.env.example), loade
 via `app/core/config.py`). Security controls are **opt-in** so local dev, tests, and
 automated tooling work with zero setup:
 
-- `API_AUTH_TOKEN` — when set, mutating routes require `Authorization: Bearer <token>` or `X-API-Key`.
+- `API_AUTH_TOKEN` — when set, mutating routes **and reads of the benchmark
+  surface** (`/approval`, `/episodes`, `/preferences`, `/dashboard`, …) require
+  `Authorization: Bearer <token>` or `X-API-Key`. The product API and web UI
+  authenticate per-user and are unaffected.
 - `CORS_ORIGINS` — comma-separated allowed origins (default `*`).
 - `RATE_LIMIT_PER_MINUTE` — per-IP request cap (default `0` = disabled).
 - `REQUIRE_APPROVAL` — **benchmark simulator only**: routes the sim agent's
