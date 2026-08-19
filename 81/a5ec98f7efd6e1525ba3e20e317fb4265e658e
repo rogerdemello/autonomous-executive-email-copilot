@@ -1,0 +1,67 @@
+docs/ROADMAP.md
+  s_f0cdcdb3c6f87a::t_bef22678888491 108
+  s_f0cdcdb3c6f87a::t_daae0353302506 49-56,60-67
+DEPLOYMENT_GUIDE.md
+  s_f0cdcdb3c6f87a::t_b72519fbf16c88 20,22
+  s_f0cdcdb3c6f87a::t_a9e96027ce90b6 62-63
+  s_f0cdcdb3c6f87a::t_a33af66f01f227 100
+  s_f0cdcdb3c6f87a::t_705a5ec40c6e99 68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "81a5ec98f7efd6e1525ba3e20e317fb4265e658e",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:b3da7b44b2dac2513e38843c91ab04c433fe23bb8a4ffddad385baa0b6a4d053",
+      "total_additions": 23,
+      "total_deletions": 25,
+      "accepted_lines": 426,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:b3da7b44b2dac2513e38843c91ab04c433fe23bb8a4ffddad385baa0b6a4d053",
+      "stats": {
+        "total_additions": 23,
+        "total_deletions": 25,
+        "accepted_lines": 426,
+        "overriden_lines": 0,
+        "files": {
+          ".pre-commit-config.yaml": {
+            "total_additions": 0,
+            "total_deletions": 6,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "DEPLOYMENT_GUIDE.md": {
+            "total_additions": 6,
+            "total_deletions": 6,
+            "accepted_lines": 101,
+            "overriden_lines": 0
+          },
+          "docs/ROADMAP.md": {
+            "total_additions": 17,
+            "total_deletions": 13,
+            "accepted_lines": 305,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
