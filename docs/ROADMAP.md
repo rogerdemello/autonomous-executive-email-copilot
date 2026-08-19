@@ -171,10 +171,10 @@ Bar: LLM observability, evaluation, and prompt management at production quality.
 Bar: Deployable on Kubernetes with distributed caching, async DB, and performance SLAs.
 
 ### 10.1 Helm chart
-- [ ] `deploy/helm/exec-email-copilot/` — Deployment, Service, Ingress, ConfigMap, Secret, HPA, PDB, ServiceMonitor.
+- [ ] `helm/exec-email-copilot/` — Deployment, Service, Ingress, ConfigMap, Secret, HPA, PDB, ServiceMonitor.
 - [ ] `values.yaml` with sensible defaults. `values.prod.yaml` / `values.staging.yaml` overrides.
 - [ ] Helm template validation in CI.
-- [ ] `deploy/helm/README.md` — install, upgrade, rollback instructions.
+- [ ] `helm/README.md` — install, upgrade, rollback instructions.
 
 ### 10.2 Async SQLAlchemy
 - [ ] Add async engine (`aiosqlite` dev, `asyncpg` prod). `AsyncSession`, `async_sessionmaker`, `get_async_session()`.
@@ -183,7 +183,7 @@ Bar: Deployable on Kubernetes with distributed caching, async DB, and performanc
 - [ ] Keep sync path as fallback for minimal-dependency deployments.
 
 ### 10.3 Redis distributed cache
-- [ ] `app/llm/cache.py` — async Redis client with `get_or_compute()`, TTL, namespace isolation.
+- [ ] `app/llm/cache/` — async Redis client with `get_or_compute()`, TTL, namespace isolation.
 - [ ] Replace in-memory `_response_cache` dict with Redis-backed cache L2 (memory as L1).
 - [ ] No-op when `REDIS_URL` unset — full backward compatibility.
 - [ ] Cache hit/miss Prometheus counters.

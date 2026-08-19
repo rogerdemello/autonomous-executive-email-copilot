@@ -15,7 +15,7 @@ from app.copilot.policy import BaselinePolicy
 from app.core.models import Action, Observation
 
 # Actions that touch the outside world (send/forward) always pause for a human.
-# Mirrors research.sim.approval.ApprovalRequestStore.check_approval_required.
+# Mirrors app.core.approval.check_approval_required (the simulator's store).
 _APPROVAL_REQUIRED = {"reply", "escalate"}
 
 

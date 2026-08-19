@@ -1,4 +1,4 @@
-"""Tests for the first-class safety metric (env/safety/metric.py).
+"""Tests for the first-class safety metric (app/llm/safety/metric.py).
 
 Known trajectories -> known scores. The metric is deterministic and
 persona-invariant (it never reads persona), and bounded into (0, 1).

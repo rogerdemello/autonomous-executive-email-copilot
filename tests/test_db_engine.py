@@ -1,4 +1,4 @@
-"""Tests for database engine configuration (env/db.py).
+"""Tests for database engine configuration (app/core/db.py).
 
 Covers the optional ``DATABASE_URL`` / Postgres support without requiring a live
 Postgres server: we test the pure ``build_engine_kwargs`` builder directly and

@@ -1,9 +1,13 @@
-"""Guard the import isolation of the gold-free product package.
+"""Guard the import isolation of the gold-free copilot package.
 
-`env/product/*` is the real-inbox runtime. To keep the deterministic benchmark
-untouchable and the package reusable, it must NOT import the tenant/DB layer
-(`app.saas`), the grader, or the simulator (`research.sim.environment`). Mirrors
+`app/copilot` is the reusable real-inbox engine (providers, enrichment,
+policy). To keep the deterministic benchmark untouchable and the package
+reusable, it must NOT import the tenant/DB layer (`app.saas`), the grader, or
+the simulator (`research.sim.environment`). Mirrors
 tests/test_connector_isolation.py.
+
+NOTE: the scanned directory must exist — this guard previously pointed at the
+pre-restructure ``env/product`` path and passed vacuously over zero files.
 """
 
 from __future__ import annotations
@@ -11,7 +15,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-_PRODUCT_DIR = Path(__file__).resolve().parent.parent / "env" / "product"
+_PRODUCT_DIR = Path(__file__).resolve().parent.parent / "app" / "copilot"
 _FORBIDDEN = ("app.saas", "research.sim.grader", "research.sim.environment")
 
 
@@ -28,12 +32,14 @@ def _imported_modules(path: Path) -> set[str]:
 
 
 def test_product_package_does_not_import_saas_grader_or_env():
+    files = list(_PRODUCT_DIR.rglob("*.py"))
+    assert files, f"nothing to guard — {_PRODUCT_DIR} is missing or empty"
     offenders: list[str] = []
-    for py in _PRODUCT_DIR.rglob("*.py"):
+    for py in files:
         for module in _imported_modules(py):
             if any(module == f or module.startswith(f + ".") for f in _FORBIDDEN):
                 offenders.append(f"{py.relative_to(_PRODUCT_DIR.parent.parent)} imports {module}")
-    assert not offenders, "env/product must stay isolated:\n" + "\n".join(offenders)
+    assert not offenders, "app/copilot must stay isolated:\n" + "\n".join(offenders)
 
 
 def test_shared_policy_behavior_is_frozen_for_the_benchmark():

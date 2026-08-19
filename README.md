@@ -464,7 +464,10 @@ Read metrics:
 curl -s http://localhost:8000/metrics
 ```
 
-### 8) Dashboard Router
+### 8) Simulator live-state API
+
+A WebSocket + REST view of the running simulator (the React dashboard that
+once consumed it was removed; the API remains for external tooling):
 
 Endpoints:
 

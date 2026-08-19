@@ -1,4 +1,4 @@
-"""Tests for centralized configuration (env/config.py)."""
+"""Tests for centralized configuration (app/core/config.py)."""
 
 from __future__ import annotations
 

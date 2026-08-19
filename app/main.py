@@ -140,7 +140,7 @@ async def lifespan(_app: FastAPI):
     logger.info("Shutting down Autonomous Executive Email Copilot API")
 
 
-# Single-source the API version from the package (env/__init__.py, which tracks
+# Single-source the API version from the package (app/__init__.py, which tracks
 # pyproject's version) so /version and the OpenAPI version never drift.
 from app import __version__ as API_VERSION  # noqa: E402
 

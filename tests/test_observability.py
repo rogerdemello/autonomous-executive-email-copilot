@@ -16,7 +16,7 @@ def test_version_endpoint():
     assert resp.status_code == 200
     body = resp.json()
     assert body["name"] == "autonomous-executive-email-copilot"
-    # Single-sourced from the package version (env/__init__.py / pyproject).
+    # Single-sourced from the package version (app/__init__.py / pyproject).
     assert body["version"] == __version__
 
 

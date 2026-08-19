@@ -1,4 +1,4 @@
-"""Tests for repository layer (env/repositories.py).
+"""Tests for repository layer (app/core/repositories.py).
 
 Tests EpisodeRepository, UserPreferenceRepository, and TeamSettingsRepository
 against the live SQLite database (data/episodes.db).

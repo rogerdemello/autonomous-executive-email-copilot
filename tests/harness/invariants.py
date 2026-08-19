@@ -1,8 +1,8 @@
 """Reusable invariant assertions + canonical rollout helpers.
 
 Every later advancement imports from here so the invariant contract is defined
-exactly once. Assertions mirror the production transforms in ``env/utils.py``
-(``strict_unit_interval``, ``epsilon=1e-6``) and ``env/grader.py``.
+exactly once. Assertions mirror the production transforms in ``app/core/utils.py``
+(``strict_unit_interval``, ``epsilon=1e-6``) and ``research/sim/grader.py``.
 """
 
 from __future__ import annotations
