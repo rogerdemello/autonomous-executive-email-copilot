@@ -22,7 +22,6 @@ _EXPECTED = [
     "app.llm",
     "app.llm.providers",
     "app.llm.prompts",
-    "app.llm.cache",
     "app.llm.safety",
     "app.saas",
     "app.web",

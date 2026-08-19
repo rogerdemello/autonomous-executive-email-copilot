@@ -197,6 +197,59 @@ class CircuitBreakingProvider(LLMProvider):
                     ) from e2
             raise
 
+    async def agenerate(
+        self,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        temperature: float = 0.2,
+        max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> LLMResponse:
+        """Async twin of :meth:`generate`, with the same breaker semantics.
+
+        Must be defined here: the base class's ``agenerate`` default calls the
+        *synchronous* ``generate()``, so without this override every async
+        caller through the (always-on) circuit wrapper blocked the event loop
+        and the wrapped provider's real async client was unreachable.
+        """
+        provider = self._get_active_provider()
+        try:
+            response = await provider.agenerate(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format=response_format,
+                tools=tools,
+            )
+            self._breaker.on_success()
+            return response
+        except AllProvidersFailedError:
+            raise
+        except Exception as e:
+            self._breaker.on_failure()
+            if provider is self._secondary:
+                raise AllProvidersFailedError(
+                    f"Secondary provider {self._secondary.provider_name} also failed: {e}"
+                ) from e
+            if self._secondary is not None:
+                logger.info("Primary failed, trying secondary: %s", self._secondary.provider_name)
+                try:
+                    return await self._secondary.agenerate(
+                        messages=messages,
+                        model=model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        response_format=response_format,
+                        tools=tools,
+                    )
+                except Exception as e2:
+                    raise AllProvidersFailedError(
+                        f"Primary and secondary both failed: {e}, {e2}"
+                    ) from e2
+            raise
+
     def generate_stream(
         self,
         messages: list[dict[str, Any]],

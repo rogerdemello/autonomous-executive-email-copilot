@@ -19,6 +19,7 @@ __all__ = [
     "CircuitBreaker",
     "CircuitBreakingProvider",
     "AllProvidersFailedError",
+    "explicit_model",
 ]
 
 
@@ -55,45 +56,59 @@ def auto_detect_provider(with_circuit_breaker: bool = True) -> LLMProvider:
     return provider
 
 
-def _detect_provider(settings) -> LLMProvider:
+def explicit_model(settings) -> str | None:
+    """``MODEL_NAME`` only when the operator actually set it.
 
+    The pydantic default (``gpt-4o-mini``) is an *OpenAI* model name. Passing
+    it unconditionally to every constructor overrode the Anthropic, Gemini and
+    Ollama defaults with a model those providers 404 on — an Anthropic key
+    alone could never work without also setting MODEL_NAME.
+    """
+    if "model_name" in settings.model_fields_set:
+        return settings.model_name
+    return None
+
+
+def _detect_provider(settings) -> LLMProvider:
     explicit = (settings.llm_provider or "").strip().lower()
     if explicit and explicit in _provider_registry:
         kwargs = _resolve_provider_kwargs(explicit, settings)
         return _provider_registry[explicit](**kwargs)
 
-    if settings.anthropic_api_key:
-        from .anthropic_provider import AnthropicProvider
-
-        return AnthropicProvider(
-            api_key=settings.anthropic_api_key,
-            model=settings.model_name,
-            timeout_seconds=30.0,
-        )
-
-    if settings.google_api_key:
-        from .gemini_provider import GeminiProvider
-
-        return GeminiProvider(
-            api_key=settings.google_api_key,
-            model=settings.model_name,
-            timeout_seconds=30.0,
-        )
-
+    # OpenAI/Azure first: it is the one complete implementation (tools,
+    # streaming, async), so with several keys configured a deployment must not
+    # silently switch providers. An explicit LLM_PROVIDER always wins above.
     if settings.azure_openai_endpoint and settings.azure_openai_deployment_name:
         return _build_openai_provider(settings)
 
     if settings.openai_api_key:
         return _build_openai_provider(settings)
 
+    model = explicit_model(settings)
+
+    if settings.anthropic_api_key:
+        from .anthropic_provider import AnthropicProvider
+
+        kwargs = {"api_key": settings.anthropic_api_key, "timeout_seconds": 30.0}
+        if model:
+            kwargs["model"] = model
+        return AnthropicProvider(**kwargs)
+
+    if settings.google_api_key:
+        from .gemini_provider import GeminiProvider
+
+        kwargs = {"api_key": settings.google_api_key, "timeout_seconds": 30.0}
+        if model:
+            kwargs["model"] = model
+        return GeminiProvider(**kwargs)
+
     if settings.ollama_base_url:
         from .ollama_provider import OllamaProvider
 
-        return OllamaProvider(
-            base_url=settings.ollama_base_url,
-            model=settings.model_name,
-            timeout_seconds=30.0,
-        )
+        kwargs = {"base_url": settings.ollama_base_url, "timeout_seconds": 30.0}
+        if model:
+            kwargs["model"] = model
+        return OllamaProvider(**kwargs)
 
     if settings.resolved_api_key:
         return _build_openai_provider(settings)
@@ -122,18 +137,49 @@ def _maybe_wrap_circuit_breaker(provider: LLMProvider, settings) -> LLMProvider:
         failure_threshold=3,
         recovery_timeout=30.0,
     )
-    return CircuitBreakingProvider(primary=provider, breaker=breaker)
+    return CircuitBreakingProvider(
+        primary=provider,
+        secondary=_detect_secondary(provider, settings),
+        breaker=breaker,
+    )
+
+
+def _detect_secondary(primary: LLMProvider, settings) -> LLMProvider | None:
+    """A failover provider from *other* configured credentials, if any.
+
+    The documented failover ("if primary is open, try secondary") was never
+    wired — the wrapper was always constructed with secondary=None. This picks
+    the first configured provider of a different family than the primary.
+    """
+    primary_family = primary.provider_name.split("+")[0]
+    try:
+        # The secondary always runs its own family's default model: MODEL_NAME
+        # names a model in the *primary's* family, and a cross-family failover
+        # asked for it would 404 at exactly the moment failover matters.
+        if primary_family != "openai" and (
+            settings.openai_api_key
+            or (settings.azure_openai_endpoint and settings.azure_openai_deployment_name)
+        ):
+            return OpenAIProvider(timeout_seconds=30.0)
+        if primary_family != "anthropic" and settings.anthropic_api_key:
+            from .anthropic_provider import AnthropicProvider
+
+            return AnthropicProvider(api_key=settings.anthropic_api_key, timeout_seconds=30.0)
+    except Exception:  # a broken secondary must never break primary detection
+        return None
+    return None
 
 
 def _resolve_provider_kwargs(name: str, settings) -> dict:
-    base = {
-        "model": settings.model_name,
-        "temperature": 0.2,
-        "timeout_seconds": 30.0,
-    }
+    base: dict = {"temperature": 0.2, "timeout_seconds": 30.0}
+    # Each provider class carries its own sensible model default; MODEL_NAME
+    # overrides it only when the operator set it (see _explicit_model).
+    model = explicit_model(settings)
     if name == "openai":
         base["model"] = settings.model_name
-    elif name == "anthropic":
+    elif model:
+        base["model"] = model
+    if name == "anthropic":
         base["api_key"] = settings.anthropic_api_key or settings.resolved_api_key or ""
     elif name == "gemini":
         base["api_key"] = settings.google_api_key or settings.resolved_api_key or ""

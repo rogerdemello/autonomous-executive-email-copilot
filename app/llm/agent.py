@@ -21,7 +21,14 @@ from app.core.models import (
 )
 
 from .parsing import extract_json_object
-from .providers import LLMProvider, LLMResponse, ProviderCapability, calculate_cost
+from .prompts.registry import registry
+from .providers import (
+    AllProvidersFailedError,
+    LLMProvider,
+    LLMResponse,
+    ProviderCapability,
+    calculate_cost,
+)
 from .providers.openai_provider import OpenAIProvider
 from .safety.guardrails import (
     FORBIDDEN_ESCALATION_TARGETS,
@@ -112,23 +119,10 @@ async def _acache_response(
         _cache_response(observation, response, max_entries)
 
 
-# System prompt for AI Chief of Staff
-SYSTEM_PROMPT = """You are an AI Chief of Staff helping an executive manage their inbox efficiently.
-
-Your role is to make optimal email management decisions based on:
-- Email priority (high/medium/low)
-- Business value (0-1 scale)
-- Deadline urgency
-- Risk level
-- Persona preferences (strict_ceo/balanced/chill_manager)
-
-Use the available tools to take the appropriate action. Guidelines:
-- For high-value, high-urgency emails → reply immediately
-- For legal/security risks → escalate immediately
-- For low-value spam → classify and skip
-- For unknown senders → defer initially
-- Match reply tone to sender role (client: professional, internal: concise, vendor: brief)
-"""
+# System prompt for the AI Chief of Staff. The text lives in the prompt
+# registry (single source); this module used to carry its own byte-copy, which
+# is exactly how the two drifted apart.
+SYSTEM_PROMPT = registry.template("system_prompt")
 
 
 def _build_user_prompt(observation: Observation) -> str:
@@ -311,6 +305,28 @@ class LLMAgent:
                 )
         return self._provider
 
+    @staticmethod
+    def _models_for(provider: LLMProvider, settings) -> tuple[str, str]:
+        """The (small, large) model pair appropriate for this provider family.
+
+        ``MODEL_NAME``/``LARGER_MODEL`` name OpenAI models. Forcing them onto a
+        non-OpenAI provider overrides its own default with one it 404s on, and
+        the "retry with a larger model" escalation would hand Anthropic
+        ``gpt-4o``. Non-OpenAI families use the operator's explicit MODEL_NAME
+        when set, else the provider's own default — and never cross-family
+        escalation (the retry simply reuses the same model once).
+        """
+        family = provider.provider_name.split("+")[0]
+        if family in ("openai", "azure"):
+            return settings.model_name, settings.larger_model
+        from .providers import explicit_model
+
+        chosen = explicit_model(settings)
+        if chosen is None:
+            inner = getattr(provider, "_primary", provider)
+            chosen = getattr(inner, "_model", None) or settings.model_name
+        return chosen, chosen
+
     def _call_llm_with_fallback(
         self,
         provider: LLMProvider,
@@ -352,6 +368,12 @@ class LLMAgent:
 
                 llm_response = provider.generate(**gen_kwargs)
 
+            except AllProvidersFailedError:
+                # Every provider (and any failover) is down or circuit-open.
+                # Retrying with a larger model would hit the same open circuit;
+                # report it distinctly so the caller falls straight back to the
+                # deterministic baseline.
+                return None, None, 0.0, "", current_model, "fallback_all_providers_failed"
             except Exception as e:
                 error_str = str(e).lower()
                 if "timeout" in error_str or "timed out" in error_str:
@@ -443,6 +465,12 @@ class LLMAgent:
 
                 llm_response = await provider.agenerate(**gen_kwargs)
 
+            except AllProvidersFailedError:
+                # Every provider (and any failover) is down or circuit-open.
+                # Retrying with a larger model would hit the same open circuit;
+                # report it distinctly so the caller falls straight back to the
+                # deterministic baseline.
+                return None, None, 0.0, "", current_model, "fallback_all_providers_failed"
             except Exception as e:
                 error_str = str(e).lower()
                 if "timeout" in error_str or "timed out" in error_str:
@@ -715,7 +743,7 @@ class LLMAgent:
             return self._fallback_response("provider_error", start_time)
 
         settings = get_settings()
-        small_model = settings.model_name
+        small_model, large_model = self._models_for(provider, settings)
         use_tools = provider.supports(ProviderCapability.TOOLS) or provider.supports(
             ProviderCapability.FUNCTION_CALLING
         )
@@ -725,7 +753,7 @@ class LLMAgent:
                 provider=provider,
                 observation=obs,
                 small_model=small_model,
-                large_model=settings.larger_model,
+                large_model=large_model,
                 confidence_threshold=settings.confidence_threshold,
                 use_tools=use_tools,
                 start_time=start_time,
@@ -775,7 +803,7 @@ class LLMAgent:
             return self._fallback_response("provider_error", start_time)
 
         settings = get_settings()
-        small_model = settings.model_name
+        small_model, large_model = self._models_for(provider, settings)
         use_tools = provider.supports(ProviderCapability.TOOLS) or provider.supports(
             ProviderCapability.FUNCTION_CALLING
         )
@@ -791,7 +819,7 @@ class LLMAgent:
             provider=provider,
             observation=obs,
             small_model=small_model,
-            large_model=settings.larger_model,
+            large_model=large_model,
             confidence_threshold=settings.confidence_threshold,
             use_tools=use_tools,
             start_time=start_time,

@@ -49,6 +49,13 @@ otel = [
   "opentelemetry-exporter-otlp-proto-http>=1.30.0",
 ]
 
+# Non-OpenAI LLM SDKs. The provider classes import these lazily, so the
+# extras are only needed when the matching key/LLM_PROVIDER is configured.
+providers = [
+  "anthropic>=0.40.0",
+  "google-generativeai>=0.8.0",
+]
+
 redis = [
   "redis>=5.0.0",
 ]
@@ -63,7 +70,7 @@ loadtest = [
 ]
 
 all = [
-  "autonomous-executive-email-copilot[otel,redis,async_db,loadtest]",
+  "autonomous-executive-email-copilot[otel,providers,redis,async_db,loadtest]",
 ]
 
 [project.scripts]

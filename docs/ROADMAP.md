@@ -268,38 +268,36 @@ Bar: The project presents itself as a world-class portfolio piece — documentat
 
 ---
 
-## Known defects in the LLM layer
+## Known defects in the LLM layer — CLEARED (provider-layer overhaul)
 
-Found while building the product drafter (`app/llm/drafter.py`) and recorded here
-rather than fixed, because the drafter routes around all of them by using the
-OpenAI/Azure provider — the only complete implementation. Anything that moves the
-product onto a second provider has to clear this list first.
+Found while building the product drafter (`app/llm/drafter.py`), recorded here,
+and since fixed. Kept as a ledger; `tests/test_provider_layer.py` pins each fix.
 
-- [ ] **Anthropic tool-calling is broken end to end.** `app/llm/agent.py` passes
-  OpenAI-shaped `TOOL_DEFINITIONS` (`{"type": "function", "function": {...}}`)
-  straight through to `anthropic_provider.py`, which expects
-  `{"name", "description", "input_schema"}`. Separately, the provider sets
-  `arguments=str(block.input)` — a Python dict repr with single quotes — and
-  `app/llm/tools.py` then calls `json.loads` on it, which cannot succeed.
-- [ ] **Non-OpenAI providers get the wrong model name.** `_detect_provider` in
-  `app/llm/providers/__init__.py` passes `settings.model_name` (default
-  `gpt-4o-mini`) to the Anthropic, Gemini and Ollama constructors, overriding
-  their own defaults. An Anthropic key alone yields a 404 unless `MODEL_NAME` is
-  also set.
-- [ ] **`CircuitBreakingProvider` defines no `agenerate`.** Async callers fall
-  through to the base class, which calls the *synchronous* `generate()` — so an
-  async request blocks the event loop. The `AsyncOpenAI` client is unreachable
-  through auto-detection.
-- [ ] **`app/llm/cache/redis_cache.py` cannot run.** It does `async with
-  self._lock` where `_lock` is a `threading.Lock`, which has no `__aenter__`.
-  Raises `TypeError` the first time `REDIS_URL` is set. `semantic_cache.py` is
-  likewise unreferenced.
-- [ ] **Two approval systems.** The simulator's `ApprovalRequestStore`
-  (`app/core/approval.py`) is process-global and not tenant-scoped, and
-  `REQUIRE_APPROVAL` drives only that one. The product uses its own DB-backed
-  gate (`app/copilot/pipeline.py` → `saas_proposed_actions`). The two should be
-  reconciled before `REQUIRE_APPROVAL` is documented as a product setting.
-- [ ] **Dead prompt duplication.** `app/llm/prompts/registry.py` holds byte-copies
-  of `SYSTEM_PROMPT` (`agent.py`) and `PLANNER_SYSTEM_PROMPT` (`llm/policy.py`);
-  only the newer `executive_draft` prompt there is actually used. The planner
-  copy also has broken `{{...}}` escaping for its own `.replace`-based renderer.
+- [x] **Anthropic tool-calling** — the provider now translates OpenAI-shaped
+  tools to `{"name", "description", "input_schema"}` at its boundary, uses the
+  top-level `system` param (no more fake user turn), and serializes tool-call
+  arguments with `json.dumps` so the shared parser can read them.
+- [x] **Non-OpenAI model names** — `MODEL_NAME` overrides only when explicitly
+  set (`model_fields_set`); each provider otherwise runs its own default, and
+  the agent's larger-model retry no longer hands `gpt-4o` to Anthropic.
+  Detection precedence puts OpenAI/Azure (the complete implementation) first;
+  `LLM_PROVIDER` still wins outright.
+- [x] **`CircuitBreakingProvider.agenerate`** — implemented with the same
+  breaker semantics; async callers reach the real async clients (Ollama also
+  gained the `_get_async_client` override it was missing — its async requests
+  used to go to api.openai.com). Failover to a secondary provider family is
+  now actually constructed, and the agent maps `AllProvidersFailedError`
+  straight to the deterministic fallback.
+- [x] **`app/llm/cache/`** — deleted. It was unreachable, and `redis_cache.py`
+  raised `TypeError` on first use (`async with` on a `threading.Lock`).
+  Redis/semantic caching remains future work (Phase 10) and starts fresh.
+- [x] **Two approval systems** — reconciled by documentation and gating, not
+  merging: `REQUIRE_APPROVAL` is documented as simulator-only everywhere, the
+  product gate is unconditional (`app/copilot/pipeline.py`), and the simulator
+  approval endpoints now require the operator token when one is configured.
+- [x] **Prompt duplication** — the registry is the single source;
+  `agent.py`/`llm/policy.py` read their system prompts from it, and the
+  divergent truncated planner copy is gone.
+- [x] **Capability-flag honesty** (found during the fix) — Anthropic and Gemini
+  no longer advertise `STREAMING` they don't implement, and Gemini reports real
+  token usage from `usage_metadata` instead of `$0.0000`.

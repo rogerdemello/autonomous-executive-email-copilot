@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from .base import LLMProvider, LLMResponse, ProviderCapability
+from .base import LLMProvider, LLMResponse
 
 
 class GeminiProvider(LLMProvider):
@@ -23,9 +23,11 @@ class GeminiProvider(LLMProvider):
 
     @property
     def capabilities(self) -> set[str]:
-        return {
-            ProviderCapability.STREAMING,
-        }
+        # Deliberately empty: no streaming implementation exists (advertising
+        # STREAMING here made callers pick a path that raised), no tool
+        # calling, and response_format is accepted but not honoured — the
+        # agent's JSON fallback path relies on the prompt alone with Gemini.
+        return set()
 
     def generate(
         self,
@@ -70,7 +72,21 @@ class GeminiProvider(LLMProvider):
         latency_ms = int((time.time() - start_time) * 1000)
 
         content = raw.text if raw.text else None
+        # Report real token counts — usage=None reads as "$0.0000 per episode"
+        # downstream, which is silently wrong rather than honestly unknown.
         usage = None
+        meta = getattr(raw, "usage_metadata", None)
+        if meta is not None:
+            from app.core.models import TokenUsage
+
+            prompt_tokens = getattr(meta, "prompt_token_count", 0) or 0
+            completion_tokens = getattr(meta, "candidates_token_count", 0) or 0
+            usage = TokenUsage(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=getattr(meta, "total_token_count", 0)
+                or (prompt_tokens + completion_tokens),
+            )
 
         return LLMResponse(
             content=content,

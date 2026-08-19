@@ -32,3 +32,16 @@ class OllamaProvider(OpenAIProvider):
 
     def _get_client(self) -> OpenAI:
         return self._client
+
+    def _get_async_client(self):
+        # Must be overridden alongside _get_client: the parent's async client
+        # is built from the OpenAI settings, so an async call on a "local"
+        # Ollama provider would silently send the prompt to api.openai.com
+        # (or 401) instead of localhost.
+        from openai import AsyncOpenAI
+
+        return AsyncOpenAI(
+            base_url=self._base_url,
+            api_key="ollama",
+            timeout=self._timeout_seconds,
+        )

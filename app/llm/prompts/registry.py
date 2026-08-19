@@ -52,6 +52,18 @@ class PromptRegistry:
     def list_versions(self, name: str) -> list[str]:
         return [p.version for p in self._versions.get(name, [])]
 
+    def template(self, name: str) -> str:
+        """The registered template text, or raise — for prompts that MUST exist.
+
+        ``agent.py`` and ``llm/policy.py`` read their system prompts from here
+        (this registry is the single source; they used to hold their own
+        copies, which drifted).
+        """
+        prompt = self._prompts.get(name)
+        if prompt is None:
+            raise KeyError(f"prompt {name!r} is not registered")
+        return prompt.template
+
 
 registry = PromptRegistry()
 
@@ -85,17 +97,29 @@ registry.register(
         template="""You are a Strategic Planner for an AI Chief of Staff helping an executive manage their inbox.
 
 Your role is to analyze the current inbox state and output a HIGH-LEVEL STRATEGY (not specific actions).
+Think of this as setting the game plan before the executor does the actual work.
 
 Available strategies:
-1. PRIORITIZE_URGENT
-2. BATCH_REPLY
-3. ESCALATE_CRITICAL
-4. DEFER_LOW_VALUE
-5. MONITOR
+1. PRIORITIZE_URGENT: Focus on high-priority, high-value emails with approaching deadlines
+2. BATCH_REPLY: Process multiple similar emails (e.g., all client responses) together
+3. ESCALATE_CRITICAL: Immediately escalate legal/security risk emails
+4. DEFER_LOW_VALUE: Defer low-priority, low-value emails to save time for critical tasks
+5. MONITOR: Wait and see if more important emails arrive (conservative approach)
 
-Respond with a JSON object: {{"strategy": "STRATEGY_NAME", "reason": "..."}}
+Consider:
+- Current time remaining
+- Email priorities, deadlines, and business values
+- Risk tags (legal/security need immediate escalation)
+- Persona preferences (strict_ceo: urgent focus, balanced: mix, chill_manager: relaxed)
+- Remaining interruptions that could bring new urgent emails
+
+Output ONLY valid JSON with these fields:
+- strategy: "prioritize_urgent" | "batch_reply" | "escalate_critical" | "defer_low_value" | "monitor"
+- reasoning: Brief explanation of why this strategy is optimal right now
+- confidence: 0.0-1.0 (how certain you are this is the right strategy)
+- key_emails: List of email IDs this strategy should focus on
 """,
-        description="Default planner system prompt for strategy selection",
+        description="Planner system prompt for strategy selection (canonical copy)",
         tags=["planner", "strategy"],
     )
 )
