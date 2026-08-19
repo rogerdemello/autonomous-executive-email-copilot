@@ -90,3 +90,24 @@ def test_dashboard_default_task_reset():
 def test_dashboard_router_has_websocket():
     ws_routes = [r.path for r in dashboard_router.routes]
     assert any("/ws/dashboard" in r for r in ws_routes)
+
+
+def test_eval_endpoints_work_on_a_default_install():
+    """These used to import the optional async_db extra and 500 with
+    ModuleNotFoundError on a requirements.txt install. They must serve from
+    the same episode store as /episodes, with no optional dependency."""
+    resp = client.get("/dashboard/eval/results")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "total" in body and "episodes" in body
+
+    resp = client.get("/dashboard/eval/summary")
+    assert resp.status_code == 200
+    assert "summary" in resp.json()
+
+
+def test_eval_results_filters_and_paginates():
+    resp = client.get("/dashboard/eval/results", params={"task_id": "easy_classification"})
+    assert resp.status_code == 200
+    assert all(e["task_id"] == "easy_classification" for e in resp.json()["episodes"])
+    assert client.get("/dashboard/eval/results", params={"limit": 0}).status_code == 422

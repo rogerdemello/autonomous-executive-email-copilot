@@ -95,46 +95,38 @@ async def dashboard_reset(
     return obs.model_dump()
 
 
-@dashboard_router.get("/dashboard/eval/results")
-async def eval_results(
-    task_id: str | None = Query(None),
-    limit: int = Query(50, ge=1, le=500),
-    offset: int = Query(0, ge=0),
-) -> dict[str, Any]:
-    from .core.db_async import AsyncEpisodeRepository
+# The eval endpoints read the episode store through the *sync* repository, in a
+# worker thread (plain ``def``). The async repository lives behind the optional
+# ``async_db`` extra, and importing it here made both endpoints 500 with
+# ModuleNotFoundError on a requirements.txt install.
 
-    repo = AsyncEpisodeRepository()
-    episodes = await repo.list(task_id=task_id, limit=limit, offset=offset)
-    return {
-        "total": len(episodes),
-        "episodes": [
-            {
-                "episode_id": e.episode_id,
-                "task_id": e.task_id,
-                "seed": e.seed,
-                "persona": e.persona,
-                "score": e.score,
-                "total_reward": e.total_reward,
-                "steps": e.steps,
-                "created_at": str(e.created_at),
-            }
-            for e in episodes
-        ],
-    }
+
+@dashboard_router.get("/dashboard/eval/results")
+def eval_results(
+    task_id: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=500),
+) -> dict[str, Any]:
+    from .core.repositories import EpisodeRepository
+
+    result = EpisodeRepository().list_episodes(
+        filters={"task_id": task_id} if task_id else None, page=page, limit=limit
+    )
+    return {"total": result.get("total", 0), "episodes": result.get("episodes", [])}
 
 
 @dashboard_router.get("/dashboard/eval/summary")
-async def eval_summary() -> dict[str, Any]:
-    from app.core.db_async import AsyncEpisodeRepository
+def eval_summary() -> dict[str, Any]:
+    from statistics import mean, stdev
 
-    repo = AsyncEpisodeRepository()
-    episodes = await repo.list(limit=500)
+    from .core.repositories import EpisodeRepository
+
+    episodes = EpisodeRepository().list_episodes(page=1, limit=500).get("episodes", [])
     if not episodes:
         return {"summary": {}}
 
-    scores = [e.score for e in episodes if e.score is not None]
-    rewards = [e.total_reward for e in episodes if e.total_reward is not None]
-    from statistics import mean, stdev
+    scores = [e["score"] for e in episodes if e.get("score") is not None]
+    rewards = [e["total_reward"] for e in episodes if e.get("total_reward") is not None]
 
     return {
         "summary": {
@@ -144,8 +136,8 @@ async def eval_summary() -> dict[str, Any]:
             "avg_reward": mean(rewards) if rewards else None,
             "best_score": max(scores) if scores else None,
             "by_task": {
-                task: sum(1 for e in episodes if e.task_id == task)
-                for task in {e.task_id for e in episodes}
+                task: sum(1 for e in episodes if e["task_id"] == task)
+                for task in {e["task_id"] for e in episodes}
             },
         }
     }
