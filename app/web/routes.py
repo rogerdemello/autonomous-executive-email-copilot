@@ -28,7 +28,7 @@ from app.core.config import get_settings
 from app.core.paths import TEMPLATES_DIR
 from app.saas import licensing, oauth
 from app.saas.auth import AuthError, AuthService
-from app.saas.billing import BillingService
+from app.saas.billing import BillingError, BillingService
 from app.saas.deps import SESSION_COOKIE
 from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
@@ -805,6 +805,13 @@ def activity(request: Request) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "activity")
     can_view = role_at_least(user["role"], ROLE_ADMIN)
+    if can_view:
+        # Role decides who may look; the plan decides whether the feature
+        # exists at all. Renders as an error page with the upgrade path.
+        try:
+            _billing.require_feature(user["org_id"], licensing.FEATURE_AUDIT_LOG)
+        except BillingError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     context["can_view"] = can_view
     context["entries"] = _audit.list_for_org(user["org_id"], limit=100) if can_view else []
     context["actor_names"] = {

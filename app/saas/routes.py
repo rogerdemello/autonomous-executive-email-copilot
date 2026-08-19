@@ -14,7 +14,7 @@ from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
 
-from . import rbac
+from . import licensing, rbac
 from .auth import AuthError, AuthService
 from .billing import BillingError, BillingService
 from .data_lifecycle import DataLifecycleService
@@ -292,6 +292,14 @@ def sso_callback(request: Request) -> RedirectResponse:
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
+    # Plan gate, not an auth gate: the IdP verified who they are; the license
+    # decides whether SSO sign-in is part of what this org bought. (Trials
+    # include it — a fresh SSO-provisioned org must be able to sign in.)
+    try:
+        _billing.require_feature(user["org_id"], licensing.FEATURE_SSO)
+    except BillingError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
     token, _ttl = _auth.issue_token(user)
     _audit.record(
         action="auth.sso_login",
@@ -445,6 +453,10 @@ def remove_member(
 
 @org_router.get("/audit-log")
 def audit_log(actor: dict = Depends(require_role(ROLE_ADMIN))) -> dict:
+    try:
+        _billing.require_feature(actor["org_id"], licensing.FEATURE_AUDIT_LOG)
+    except BillingError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     return {"entries": _audit.list_for_org(actor["org_id"])}
 
 

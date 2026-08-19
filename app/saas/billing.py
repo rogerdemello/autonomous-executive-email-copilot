@@ -118,6 +118,31 @@ class BillingService:
             return False
         return ent["seats_used"] < ent["seats"]
 
+    def require_active(self, org_id: str) -> dict:
+        """The org's entitlement, or a 402 :class:`BillingError` if lapsed.
+
+        Gates the value loop (sync, approve) — never sign-in or settings, which
+        an admin needs precisely when the plan has expired.
+        """
+        ent = self.current_entitlement(org_id)
+        if not ent["is_valid"]:
+            raise BillingError(
+                "Your plan has expired. Activate a license (Settings) or contact "
+                "sales to continue.",
+                402,
+            )
+        return ent
+
+    def require_feature(self, org_id: str, feature: str) -> None:
+        """Raise a 403 :class:`BillingError` unless the plan grants ``feature``."""
+        ent = self.current_entitlement(org_id)
+        if feature not in ent.get("features", []):
+            raise BillingError(
+                f"This feature ({feature}) is not included in your current plan. "
+                "Contact sales to upgrade.",
+                403,
+            )
+
     def capture_lead(
         self,
         *,

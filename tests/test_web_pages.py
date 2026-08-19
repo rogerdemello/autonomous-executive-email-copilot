@@ -617,3 +617,80 @@ class TestMissingReferences:
         response = client.get("/app/inbox?message=no-such-message")
         assert response.status_code == 200
         assert "Copilot" in response.text
+
+
+# --------------------------------------------------------------------------- #
+# Plan enforcement
+# --------------------------------------------------------------------------- #
+class TestPlanEnforcement:
+    """The license terms are enforced, not decorative: an expired plan stops
+    the value loop (sync, approve), and a plan without a feature loses the
+    feature. Sign-in and settings stay open — an admin needs those exactly
+    when the plan has lapsed."""
+
+    @staticmethod
+    def _org_id(email: str) -> str:
+        from app.saas.repository import UserRepository
+
+        return UserRepository().get_by_email_global(email)["org_id"]
+
+    @staticmethod
+    def _rewrite_license(org_id: str, *, features: list[str] | None = None, expired: bool = False):
+        from datetime import datetime, timedelta, timezone
+
+        from app.saas.repository import LicenseRepository
+
+        repo = LicenseRepository()
+        row = repo.get_active_for_org(org_id)
+        assert row, "signup should have minted a trial license"
+        delta = timedelta(days=-1) if expired else timedelta(days=14)
+        repo.upsert(
+            org_id=org_id,
+            key_id=row["key_id"],
+            plan=row["plan"],
+            seats=row["seats"],
+            features=row["features"] if features is None else features,
+            expires_at_iso=(datetime.now(timezone.utc) + delta).isoformat(),
+        )
+
+    def test_expired_plan_blocks_sync(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        self._rewrite_license(self._org_id(email), expired=True)
+
+        page = client.get("/app/connect").text
+        response = client.post("/app/sync", data={"csrf_token": csrf_from(page)})
+        assert response.status_code == 402
+        assert "expired" in response.text.lower()
+
+    def test_expired_plan_blocks_approve_but_not_reject(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        actions = ProposedActionRepository().list_for_org(org_id, status="proposed")["actions"]
+        assert len(actions) >= 2
+        self._rewrite_license(org_id, expired=True)
+
+        page = client.get("/app/approvals").text
+        approve = client.post(
+            f"/app/actions/{actions[0]['id']}/approve", data={"csrf_token": csrf_from(page)}
+        )
+        assert approve.status_code == 402
+
+        # Rejection only records a decision; it stays available.
+        reject = client.post(
+            f"/app/actions/{actions[1]['id']}/reject", data={"csrf_token": csrf_from(page)}
+        )
+        assert reject.status_code == 303
+
+    def test_plan_without_audit_log_loses_the_activity_page(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        self._rewrite_license(
+            self._org_id(email), features=["approvals", "analytics"]
+        )  # a Team-shaped plan
+
+        response = client.get("/app/activity")
+        assert response.status_code == 403
+        assert "not included in your current plan" in response.text
+
+        # The rest of the app is untouched.
+        assert client.get("/app/inbox").status_code == 200
+        assert client.get("/app/settings").status_code == 200

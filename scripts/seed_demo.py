@@ -94,6 +94,19 @@ def main() -> int:
         # Clear prior triage so a rehearsal starts exactly where a first run
         # does — otherwise last session's approvals are still decided.
         _purge_messages(owner["org_id"])
+        # Re-mint the trial: an expired plan blocks sync and approvals (by
+        # design), and a demo workspace older than the trial window would
+        # otherwise 402 on stage. Most recently issued license wins.
+        from app.core.config import get_settings
+        from app.saas import licensing
+        from app.saas.billing import BillingService
+
+        key, _terms = licensing.mint_license(
+            org["id"], "trial", get_settings().resolved_auth_secret
+        )
+        BillingService().activate_license(
+            org_id=org["id"], license_key=key, actor_user_id=owner["id"]
+        )
     else:
         try:
             owner, org, _terms = auth.signup(

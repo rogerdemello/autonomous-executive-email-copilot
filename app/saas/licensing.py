@@ -43,13 +43,17 @@ class Plan:
 
 # Ordered from entry to enterprise. "enterprise" seats/price are negotiated.
 PLANS: dict[str, Plan] = {
+    # The trial is full-featured-minus-enterprise on purpose: an evaluation
+    # that can't test SSO or read the audit trail isn't an evaluation. The
+    # gate on a trial is the 14-day clock, which IS enforced (an expired
+    # entitlement blocks syncing and approvals).
     "trial": Plan(
         key="trial",
         name="Trial",
         seats=3,
-        features=(FEATURE_APPROVALS,),
+        features=(FEATURE_APPROVALS, FEATURE_ANALYTICS, FEATURE_AUDIT_LOG, FEATURE_SSO),
         price_display="Free for 14 days",
-        blurb="Evaluate the copilot on a single team with no commitment.",
+        blurb="Evaluate the full copilot on a single team with no commitment.",
     ),
     "team": Plan(
         key="team",

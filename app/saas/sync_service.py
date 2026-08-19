@@ -156,6 +156,20 @@ class InboxSyncService:
         self.orgs = OrganizationRepository()
         self.users = UserRepository()
 
+    def _require_active_plan(self, org_id: str) -> None:
+        """Sync and approve are the value loop; a lapsed plan stops them here.
+
+        Deliberately NOT enforced on sign-in, settings, or rejection - an admin
+        needs those exactly when the plan has expired. Imported lazily to keep
+        this module's import surface small.
+        """
+        from .billing import BillingError, BillingService
+
+        try:
+            BillingService().require_active(org_id)
+        except BillingError as exc:
+            raise ProcessingError(exc.message, exc.status_code) from exc
+
     def _draft_context(self, org_id: str, user_id: str):
         """Who the drafter writes as. Best-effort — defaults are always usable."""
         from app.llm.drafter import DraftContext
@@ -182,6 +196,7 @@ class InboxSyncService:
         provider: MailProvider,
         live_llm: bool | None = None,
     ) -> dict:
+        self._require_active_plan(org_id)
         connection = self.mailboxes.get(org_id, connection_id)
         if not connection:
             raise ProcessingError("Mailbox connection not found", 404)
@@ -316,6 +331,9 @@ class InboxSyncService:
 
     # -- approve / reject ---------------------------------------------------
     def approve(self, *, org_id: str, user_id: str, action_id: str, provider: MailProvider) -> dict:
+        # Approving dispatches an outbound write - part of the value loop the
+        # plan pays for. Rejection stays free: it only records a decision.
+        self._require_active_plan(org_id)
         action = self.actions.get(org_id, action_id)
         if not action:
             raise ProcessingError("Action not found", 404)
