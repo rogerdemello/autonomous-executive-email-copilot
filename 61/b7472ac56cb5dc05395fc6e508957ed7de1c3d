@@ -1,0 +1,81 @@
+tests/test_saas_mailbox.py
+  s_f0cdcdb3c6f87a::t_958d24f591aa15 123-139
+app/saas/mailbox.py
+  s_f0cdcdb3c6f87a::t_897cad689a65cf 65-79,94
+app/saas/oauth.py
+  s_f0cdcdb3c6f87a::t_d00c3826a98ab1 114-117,121-125
+app/saas/mailbox_routes.py
+  s_f0cdcdb3c6f87a::t_ce416c1d1a123f 40,47-50
+app/web/routes.py
+  s_f0cdcdb3c6f87a::t_606699601a5f28 563-566
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "61b7472ac56cb5dc05395fc6e508957ed7de1c3d",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:81048ddd7608e3fccae982e571a386dfae176a107fdc40d715584fb3f8fdb7e5",
+      "total_additions": 51,
+      "total_deletions": 6,
+      "accepted_lines": 1537,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:81048ddd7608e3fccae982e571a386dfae176a107fdc40d715584fb3f8fdb7e5",
+      "stats": {
+        "total_additions": 51,
+        "total_deletions": 6,
+        "accepted_lines": 1537,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/mailbox.py": {
+            "total_additions": 16,
+            "total_deletions": 3,
+            "accepted_lines": 167,
+            "overriden_lines": 0
+          },
+          "app/saas/mailbox_routes.py": {
+            "total_additions": 5,
+            "total_deletions": 1,
+            "accepted_lines": 5,
+            "overriden_lines": 0
+          },
+          "app/saas/oauth.py": {
+            "total_additions": 9,
+            "total_deletions": 1,
+            "accepted_lines": 223,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 878,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_mailbox.py": {
+            "total_additions": 17,
+            "total_deletions": 0,
+            "accepted_lines": 264,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
