@@ -161,7 +161,7 @@ class AuthService:
         settings = get_settings()
         ttl = int(settings.access_token_ttl_minutes) * 60
         token = tokens.encode(
-            {"sub": user["id"], "org": user["org_id"], "role": user["role"]},
+            {"typ": "session", "sub": user["id"], "org": user["org_id"], "role": user["role"]},
             settings.resolved_auth_secret,
             ttl_seconds=ttl,
         )
@@ -178,8 +178,12 @@ class AuthService:
             claims = tokens.decode(token, settings.resolved_auth_secret)
         except tokens.TokenError as exc:
             raise AuthError("Invalid or expired session.", 401) from exc
-        if claims.get("typ") == "license":
-            raise AuthError("A license key is not a session token.", 401)
+        # Allowlist, not denylist. Every token this app signs shares one secret,
+        # and several of the others also carry ``sub`` + ``org`` — a password
+        # reset token, or the OAuth ``state`` that is handed to Google in a URL
+        # query string. Only a token minted *as* a session may open one.
+        if claims.get("typ") != "session":
+            raise AuthError("Not a session token.", 401)
         org_id = claims.get("org")
         user_id = claims.get("sub")
         if not org_id or not user_id:

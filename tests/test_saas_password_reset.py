@@ -186,3 +186,40 @@ class TestWebResetFlow:
 
     def test_login_page_links_to_forgot_password(self, client):
         assert 'href="/forgot-password"' in client.get("/login").text
+
+
+class TestTokenTypeConfusion:
+    """Only a token minted as a session may open one.
+
+    Every token this app signs shares one secret; a reset token also carries
+    sub+org and used to be accepted by the session resolver — turning any
+    leaked reset *link* into a full sign-in.
+    """
+
+    def test_reset_token_is_not_a_session(self, client, outbox):
+        email, _, _ = _signup(client)
+        client.post("/auth/forgot-password", json={"email": email})
+        reset_token = _token_from(outbox.outbox[0].body)
+
+        resp = client.get("/auth/me", headers={"Authorization": f"Bearer {reset_token}"})
+        assert resp.status_code == 401
+
+    def test_oauth_state_token_is_not_a_session(self, client):
+        """The OAuth state is handed to the identity provider in a URL query
+        string; it must never double as a bearer credential."""
+        from app.saas import oauth
+
+        _, _, data = _signup(client)
+        me = client.get(
+            "/auth/me", headers={"Authorization": f"Bearer {data['access_token']}"}
+        ).json()
+        state = oauth.sign_state(
+            org_id=me["user"]["org_id"], user_id=me["user"]["id"], provider="google"
+        )
+        resp = client.get("/auth/me", headers={"Authorization": f"Bearer {state}"})
+        assert resp.status_code == 401
+
+    def test_real_session_still_works(self, client):
+        _, _, data = _signup(client)
+        resp = client.get("/auth/me", headers={"Authorization": f"Bearer {data['access_token']}"})
+        assert resp.status_code == 200
