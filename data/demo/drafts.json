@@ -1,0 +1,116 @@
+{
+  "_comment": "Model-written drafts, generated once by `python scripts/seed_demo.py --with-llm` and committed so the demo runs with no network and no API key. Keys hash message content + action; editing a message in inbox.json invalidates its draft by design.",
+  "version": 1,
+  "drafts": {
+    "1d505f1e89395a8538bf2f7b0c5c98cb": {
+      "body": "Helena, I understand your concerns and appreciate your candor. I will personally review the billing issues and rescheduling history with our team today to ensure we have a clear plan to address these gaps. I will follow up with you directly tomorrow to share the steps we’re taking and discuss how we can move forward effectively. Thank you for giving us the opportunity to resolve this.",
+      "rationale": [
+        "Helena has explicitly requested a response from Alex directly, not an account manager, so the reply confirms Alex's involvement.",
+        "The message acknowledges her concerns and commits to a specific next step (review today, follow-up tomorrow) before the renewal deadline on Friday."
+      ],
+      "confidence": 0.95,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "ASAP — we need to talk before our renewal decision on Friday"
+    },
+    "3307af957c065991c954f273dcd576a9": {
+      "body": "Legal team, we have a GDPR subject access request from a former employee, received 14 August. The statutory deadline is 13 September. Ines Duarte needs your review to confirm what internal messages are in scope, particularly those related to the requester's exit. Please advise on scope clarification as soon as possible.",
+      "rationale": [
+        "The legal team is responsible for determining scope and compliance in GDPR-related matters.",
+        "The request involves sensitive data tied to employment, requiring legal expertise to avoid missteps."
+      ],
+      "confidence": 0.0,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "GDPR subject access request from a former employee — 30-day clock started"
+    },
+    "359fbbe11521ccdf21bdf2869e807609": {
+      "body": "Marcus, proceed with riding it out for now, given the utility's four-hour restoration estimate and our eight-hour generator capacity. Monitor the situation closely, and if the restoration timeline extends or generator performance changes, escalate immediately for reassessment.",
+      "rationale": [
+        "The utility's quoted restoration time is well within our generator's fuel capacity, minimizing disruption.",
+        "Failover to Frankfurt introduces a write availability gap, which we can avoid unless the situation worsens."
+      ],
+      "confidence": 0.9,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Primary datacentre on generator power — utility outage in Rotterdam"
+    },
+    "3e653b5c6635f19f5a94b734594e5082": {
+      "body": "Rachel has flagged an urgent issue with the indemnification clause in the Meridian contract. Their counsel is requesting mutual indemnification capped at 12 months of fees, whereas our draft currently leaves their side uncapped. She needs a decision on whether to agree to the cap before their signature window closes at 17:00 today. Please review and advise on the liability implications so we can respond appropriately.",
+      "rationale": [
+        "This is a legal liability matter, not an operational or drafting decision, so it falls squarely within the legal team's expertise.",
+        "The urgency of the 17:00 deadline means this needs immediate attention from the appropriate team to avoid delays or risks."
+      ],
+      "confidence": 0.0,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "URGENT: indemnification clause in the Meridian contract needs sign-off today"
+    },
+    "4c1b58d471ff8cb12019bb34186b21e0": {
+      "body": "Ngozi,\n\nThank you for flagging this. I will follow up with our account team immediately to confirm the status of the Q2 service credits and ensure this is resolved before your finance close on Friday. You will receive an update shortly.\n\nAlex",
+      "rationale": [
+        "The sender indicates urgency and a specific deadline, so the reply commits to immediate follow-up and resolution.",
+        "The message avoids escalating the matter formally, so the reply acknowledges the issue and commits to action without defensiveness."
+      ],
+      "confidence": 0.0,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Service credits still unpaid — this is now urgent for our finance close"
+    },
+    "6c8ce4755a94a0ee7ed5ff915a81e4fa": {
+      "body": "James, please take this forward. Review the claim and correspondence in detail, and provide me with a recommendation on whether settlement or defense is the stronger position. Include any immediate risks or deadlines we need to address. I’ll need your input before making a decision.",
+      "rationale": [
+        "The message involves a legal claim, which is clearly within the legal team's domain.",
+        "The COO needs a recommendation from legal experts before deciding on a course of action."
+      ],
+      "confidence": 0.0,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Calloway Logistics has filed a claim — we need your instruction urgently"
+    },
+    "aba9949cc0b9278d2f1fcd378622ca22": {
+      "body": "Hold the payment immediately. Proceed with verification by phone using the number we have on file, not the one provided in the email. Confirm back once verification is complete.",
+      "rationale": [
+        "Aligns with standard fraud prevention protocols for mismatched payment details.",
+        "Protects the company from potential financial loss while ensuring due diligence."
+      ],
+      "confidence": 0.9,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Urgent: supplier changed bank details on a $340k invoice — mismatch with our records"
+    },
+    "d638e9f30d357dcfc3bcc4dd637a27ea": {
+      "body": "The annual data retention policy review has landed with Compliance for sign-off. Since this involves legal risk and no material changes are reported, I need Legal to confirm if the current policy remains compliant before I approve. Please review and advise by 25 September to allow time for sign-off before the deadline.",
+      "rationale": [
+        "Compliance flagged this as high priority and related to legal risk, making it appropriate to involve Legal.",
+        "Legal expertise is needed to confirm compliance before sign-off, ensuring due diligence."
+      ],
+      "confidence": 0.0,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Annual data retention policy review — sign-off needed by 30 September"
+    },
+    "f082594a889c0888f14099ee6165a1e9": {
+      "body": "SOC flagged a credential phishing incident targeting finance staff. Two accounts were compromised but secured. They need a decision on notifying staff now versus post-scoping, and whether this meets breach-notification criteria. Please confirm the approach and next steps.",
+      "rationale": [
+        "This ensures the Chief of Staff is looped in for a decision on communication and compliance, which aligns with their role.",
+        "The message is concise and focuses on the key decisions needed without overstepping authority."
+      ],
+      "confidence": 0.0,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Credential phishing campaign targeting finance — act immediately"
+    },
+    "f1283daa5974e2641f2af1614579c31e": {
+      "body": "SOC flagged three former contractor accounts still active, one with production database read access. They are revoking access now. Please ensure this incident is included in the board pack under security updates. Let me know if you need anything further from SOC on this.",
+      "rationale": [
+        "The SOC team is already handling the immediate security risk by revoking access, so no further action is required from me directly.",
+        "The board pack inclusion is a governance matter, which falls under the chief of staff's responsibilities."
+      ],
+      "confidence": 0.9,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Former contractor's credentials still active — revoke immediately"
+    },
+    "fbeaa5856e1eae325e73e13d669bbd50": {
+      "body": "Thanks for flagging this. Until the rollback is confirmed and the service is stable, we should not declare a public incident. For now, inform Meridian and Calloway that we are actively addressing the issue and will provide an update within the hour. Let me know immediately once the rollback is complete so we can reassess.",
+      "rationale": [
+        "This response prioritizes transparency with affected enterprise tenants while avoiding premature escalation to a public incident.",
+        "It ensures Priya has clear next steps and aligns with the urgency of resolving the outage quickly."
+      ],
+      "confidence": 0.9,
+      "model": "gpt-4o-2024-11-20",
+      "subject": "Billing service outage — enterprise tenants failing since 06:20"
+    }
+  }
+}
