@@ -40,7 +40,7 @@ def _signup(client, password="hunter2pass"):
 
 
 def _token_from(body: str) -> str:
-    match = re.search(r"reset_token=([^\s]+)", body)
+    match = re.search(r"[?&]token=([^\s]+)", body)
     assert match, f"no token in email body: {body}"
     return match.group(1)
 
@@ -111,3 +111,78 @@ class TestInviteEmail:
         )
         assert resp.status_code == 200, resp.text
         assert any(m.to == member_email and "temppass12" in m.body for m in outbox.outbox)
+
+
+CSRF_RE = re.compile(r'name="csrf_token" value="([^"]+)"')
+
+
+class TestWebResetFlow:
+    """The browser flow: /forgot-password form -> emailed link -> /reset-password."""
+
+    def test_full_web_reset_flow(self, client, outbox):
+        email, old_pw, _ = _signup(client)
+
+        page = client.get("/forgot-password")
+        assert page.status_code == 200
+        csrf = CSRF_RE.search(page.text).group(1)
+
+        resp = client.post("/forgot-password", data={"email": email, "csrf_token": csrf})
+        assert resp.status_code == 200
+        assert "reset link is on its way" in resp.text
+        assert len(outbox.outbox) == 1
+        link = re.search(r"https?://\S+/reset-password\?token=\S+", outbox.outbox[0].body)
+        assert link, f"no web reset link in email body: {outbox.outbox[0].body}"
+        token = _token_from(outbox.outbox[0].body)
+
+        # The emailed link renders the form (not a 404, not a dashboard).
+        form = client.get("/reset-password", params={"token": token})
+        assert form.status_code == 200
+        assert 'name="token"' in form.text
+        csrf = CSRF_RE.search(form.text).group(1)
+
+        resp = client.post(
+            "/reset-password",
+            data={"token": token, "password": "brand-new-pass1", "csrf_token": csrf},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/login?notice=reset"
+
+        assert (
+            client.post("/auth/login", json={"email": email, "password": old_pw}).status_code == 401
+        )
+        assert (
+            client.post(
+                "/auth/login", json={"email": email, "password": "brand-new-pass1"}
+            ).status_code
+            == 200
+        )
+
+    def test_unknown_email_renders_same_confirmation(self, client, outbox):
+        page = client.get("/forgot-password")
+        csrf = CSRF_RE.search(page.text).group(1)
+        resp = client.post(
+            "/forgot-password",
+            data={"email": "nobody@nowhere.example", "csrf_token": csrf},
+        )
+        assert resp.status_code == 200
+        assert "reset link is on its way" in resp.text  # indistinguishable from a hit
+        assert outbox.outbox == []
+
+    def test_reset_page_without_token_redirects_to_request_form(self, client):
+        resp = client.get("/reset-password", follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/forgot-password"
+
+    def test_bad_token_shows_error_not_crash(self, client):
+        form = client.get("/reset-password", params={"token": "junk"})
+        csrf = CSRF_RE.search(form.text).group(1)
+        resp = client.post(
+            "/reset-password",
+            data={"token": "junk", "password": "long-enough-pw1", "csrf_token": csrf},
+        )
+        assert resp.status_code == 400
+        assert "invalid or has expired" in resp.text
+
+    def test_login_page_links_to_forgot_password(self, client):
+        assert 'href="/forgot-password"' in client.get("/login").text

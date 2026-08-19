@@ -178,7 +178,7 @@ def forgot_password(body: ForgotPasswordRequest, request: Request) -> dict:
     exists); when it does, a reset link is emailed."""
     token = _auth.request_password_reset(body.email)
     if token:
-        link = f"{get_settings().resolved_app_public_url}/dashboard/?reset_token={token}"
+        link = f"{get_settings().resolved_app_public_url}/reset-password?token={token}"
         send_email(
             body.email,
             "Reset your Executive Email Copilot password",
@@ -246,8 +246,8 @@ def sso_login(request: Request) -> RedirectResponse:
 
 @auth_router.get("/sso/callback", include_in_schema=False)
 def sso_callback(request: Request) -> RedirectResponse:
-    """OIDC redirect target: verify the id_token, provision/log in, hand back a
-    session token to the dashboard."""
+    """OIDC redirect target: verify the id_token, provision/log in, set the
+    session cookie, and land the browser in the app."""
     settings = get_settings()
     if not settings.sso_enabled:
         raise HTTPException(status_code=404, detail="SSO is not configured on this server")
@@ -293,8 +293,13 @@ def sso_callback(request: Request) -> RedirectResponse:
         detail={"email": user["email"]},
         ip=_client_ip(request),
     )
-    dashboard = f"{settings.resolved_app_public_url}/dashboard/?sso_token={token}"
-    return RedirectResponse(url=dashboard, status_code=307)
+    # Land in the product signed in: the browser needs the session *cookie*,
+    # not a token in the URL (which would leak into history and referrers).
+    from app.web.session import set_session_cookie
+
+    response = RedirectResponse(url="/app/inbox", status_code=303)
+    set_session_cookie(response, token)
+    return response
 
 
 # --------------------------------------------------------------------------- #
@@ -345,7 +350,7 @@ def invite_member(
     )
     org = _orgs.get(org_id)
     org_name = org["name"] if org else "your team"
-    login_url = f"{get_settings().resolved_app_public_url}/dashboard/"
+    login_url = f"{get_settings().resolved_app_public_url}/login"
     send_email(
         member["email"],
         f"You've been invited to {org_name} on Executive Email Copilot",

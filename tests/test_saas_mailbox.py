@@ -174,8 +174,9 @@ class TestConnectFlow:
             params={"code": "auth-code-123", "state": state},
             follow_redirects=False,
         )
-        assert resp.status_code == 200
-        assert "ceo@acme.com" in resp.text
+        # Success lands the browser back in the product, not on a bare page.
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/app/inbox"
 
         # The connection should now be listed for the org, without token material.
         conns = client.get("/mailbox/connections", headers=_hdr(data["access_token"])).json()[

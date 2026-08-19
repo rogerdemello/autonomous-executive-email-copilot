@@ -170,12 +170,17 @@ class TestSSOFlow:
             params={"code": "auth-code", "state": state},
             follow_redirects=False,
         )
-        assert resp.status_code == 307
-        loc = resp.headers["location"]
-        assert "/dashboard/?sso_token=" in loc
-        token = loc.split("sso_token=")[-1]
+        # The browser lands signed in: session travels as an HttpOnly cookie,
+        # never as a token in the redirect URL (history/referrer leakage).
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/app/inbox"
+        assert "sso_token" not in resp.headers["location"]
+        from app.saas.deps import SESSION_COOKIE
 
-        # The issued session token works against an authenticated endpoint.
+        token = resp.cookies.get(SESSION_COOKIE)
+        assert token
+
+        # The cookie's session token works against an authenticated endpoint.
         me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert me.status_code == 200
         assert me.json()["user"]["role"] == "owner"  # provisioned as org owner

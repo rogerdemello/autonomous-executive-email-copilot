@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from . import oauth
 from .deps import get_current_user, require_role
@@ -51,7 +51,7 @@ def connect(
 
 
 @mailbox_router.get("/oauth/callback", include_in_schema=False)
-def oauth_callback(request: Request) -> HTMLResponse:
+def oauth_callback(request: Request) -> Response:
     """Public OAuth redirect target. Identity is carried in the signed state."""
     params = request.query_params
     error = params.get("error")
@@ -68,7 +68,28 @@ def oauth_callback(request: Request) -> HTMLResponse:
     except MailboxError as exc:
         logger.warning("Mailbox OAuth callback failed: %s", exc.message)
         return _result_page(False, exc.message)
-    return _result_page(True, f"Connected {conn['account_email']} ({conn['provider']}).")
+
+    # First sync right away, like the demo-connect path: a freshly connected
+    # mailbox that renders empty reads as broken. Best-effort — the inbox has a
+    # Sync button, so a slow or failing first pull must not turn success into
+    # an error page after the connection itself worked.
+    try:
+        from .provider_factory import build_provider
+        from .sync_service import InboxSyncService
+
+        InboxSyncService().sync(
+            org_id=conn["org_id"],
+            user_id=conn.get("connected_by") or "system",
+            connection_id=conn["id"],
+            provider=build_provider(conn),
+        )
+    except Exception:
+        logger.warning(
+            "First sync after connecting %s failed; the user can sync manually",
+            conn["id"],
+            exc_info=True,
+        )
+    return RedirectResponse(url="/app/inbox", status_code=303)
 
 
 @mailbox_router.delete("/connections/{connection_id}")
@@ -98,5 +119,5 @@ display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0
 <body><div class="card"><div class="icon">{icon}</div>
 <h2>{"Mailbox connected" if ok else "Connection failed"}</h2>
 <p style="color:#9aa7c7">{message}</p>
-<p><a href="/dashboard/">Return to the dashboard</a></p></div></body></html>"""
+<p><a href="/app/connect">Back to the app</a></p></div></body></html>"""
     return HTMLResponse(html, status_code=200 if ok else 400)

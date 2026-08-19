@@ -30,6 +30,7 @@ from app.saas import licensing, oauth
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingService
 from app.saas.deps import SESSION_COOKIE
+from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
 from app.saas.models_db import ROLE_ADMIN
 from app.saas.provider_factory import build_provider
@@ -288,8 +289,17 @@ def _demo_credentials() -> dict | None:
     return {"email": DEMO_OWNER_EMAIL, "password": DEMO_OWNER_PASSWORD}
 
 
+# Known post-redirect notices, keyed rather than free-text so the query string
+# can never be used to render attacker-chosen copy on the login page.
+_LOGIN_NOTICES = {
+    "reset": "Password updated. Sign in with your new password.",
+}
+
+
 @web_router.get("/login", response_class=HTMLResponse)
-def login_form(request: Request, next: str | None = None) -> HTMLResponse:
+def login_form(
+    request: Request, next: str | None = None, notice: str | None = None
+) -> HTMLResponse:
     if _current_user(request):
         return RedirectResponse(url=_safe_next(next), status_code=303)  # type: ignore[return-value]
     return _render(
@@ -299,6 +309,7 @@ def login_form(request: Request, next: str | None = None) -> HTMLResponse:
             "next_url": _safe_next(next),
             "sso_enabled": get_settings().sso_enabled,
             "demo_credentials": _demo_credentials(),
+            "notice": _LOGIN_NOTICES.get(notice or ""),
         },
     )
 
@@ -410,6 +421,83 @@ def logout(request: Request, csrf_token: str = Form("")) -> Response:
     response = RedirectResponse(url="/", status_code=303)
     clear_session_cookie(response)
     return response
+
+
+# --------------------------------------------------------------------------- #
+# Password reset
+# --------------------------------------------------------------------------- #
+@web_router.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_form(request: Request) -> HTMLResponse:
+    return _render(request, "forgot_password.html")
+
+
+@web_router.post("/forgot-password")
+def forgot_password_submit(
+    request: Request,
+    email: str = Form(""),
+    csrf_token: str = Form(""),
+) -> HTMLResponse:
+    verify_csrf(request, csrf_token)
+    token = _auth.request_password_reset(email)
+    if token:
+        settings = get_settings()
+        link = f"{settings.resolved_app_public_url}/reset-password?token={quote(token)}"
+        send_email(
+            email,
+            "Reset your Executive Email Copilot password",
+            "We received a request to reset your password. Use the link below "
+            f"(valid for {settings.password_reset_ttl_minutes} minutes):\n\n{link}\n\n"
+            "If you didn't request this, you can safely ignore this email.",
+        )
+        account = _users.get_by_email_global(email)
+        _audit.record(
+            action="auth.password_reset_requested",
+            org_id=account["org_id"] if account else None,
+            detail={"email": email, "surface": "web"},
+        )
+    # The confirmation is identical whether or not the account exists, so this
+    # form cannot be used to probe which emails are registered.
+    return _render(request, "forgot_password.html", {"sent": True, "email": email})
+
+
+@web_router.get("/reset-password", response_class=HTMLResponse)
+def reset_password_form(request: Request, token: str | None = None) -> Response:
+    if not token:
+        return RedirectResponse(url="/forgot-password", status_code=303)
+    return _render(request, "reset_password.html", {"token": token})
+
+
+@web_router.post("/reset-password")
+def reset_password_submit(
+    request: Request,
+    token: str = Form(""),
+    password: str = Form(""),
+    csrf_token: str = Form(""),
+) -> Response:
+    verify_csrf(request, csrf_token)
+    if len(password) < 8:
+        return _render(
+            request,
+            "reset_password.html",
+            {"token": token, "error": "Choose a password of at least 8 characters."},
+            status_code=400,
+        )
+    try:
+        user = _auth.reset_password(token, password)
+    except AuthError as exc:
+        return _render(
+            request,
+            "reset_password.html",
+            {"token": token, "error": exc.message},
+            status_code=exc.status_code,
+        )
+    _audit.record(
+        action="auth.password_reset",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        detail={"surface": "web"},
+    )
+    return RedirectResponse(url="/login?notice=reset", status_code=303)
 
 
 # --------------------------------------------------------------------------- #

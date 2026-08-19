@@ -829,6 +829,12 @@ footer {
   text-align: center;
 }
 
+.field__hint {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
 .auth__rule {
   display: flex;
   align-items: center;
