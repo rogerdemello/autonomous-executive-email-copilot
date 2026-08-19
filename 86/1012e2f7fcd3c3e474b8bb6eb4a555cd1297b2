@@ -1,0 +1,130 @@
+app/saas/routes.py
+  s_f0cdcdb3c6f87a::t_769d6011cc7825 249-250
+  s_f0cdcdb3c6f87a::t_51a921f26aaa39 296-302
+  s_f0cdcdb3c6f87a::t_3e2c0044179dd6 181
+  s_f0cdcdb3c6f87a::t_391c1272203a3c 353
+app/web/templates/reset_password.html
+  s_f0cdcdb3c6f87a::t_1a480687df97db 1-37
+app/web/static/app.css
+  s_f0cdcdb3c6f87a::t_041e491cf660fe 832-837
+app/web/routes.py
+  s_f0cdcdb3c6f87a::t_d9555cacd2381b 426-502
+  s_f0cdcdb3c6f87a::t_abb71db3681d50 33
+  s_f0cdcdb3c6f87a::t_96d0463f766dc9 292-298,300-302,312
+tests/test_saas_sso.py
+  s_f0cdcdb3c6f87a::t_bfc9faba33164e 173-181,183
+app/web/templates/forgot_password.html
+  s_f0cdcdb3c6f87a::t_eb4e5b211c8135 1-46
+app/web/templates/login.html
+  s_f0cdcdb3c6f87a::t_e324fbc0ee3aea 40
+tests/test_saas_mailbox.py
+  s_f0cdcdb3c6f87a::t_338490a0dd7c05 177-179
+tests/test_saas_password_reset.py
+  s_f0cdcdb3c6f87a::t_c69e0f4bf1229e 43
+  s_f0cdcdb3c6f87a::t_8bcaad1375a545 114-188
+app/saas/mailbox_routes.py
+  s_f0cdcdb3c6f87a::t_e5578339152d57 54
+  s_f0cdcdb3c6f87a::t_e2710976d465ce 71-92
+  s_f0cdcdb3c6f87a::t_0c82711fa492d8 13
+  s_f0cdcdb3c6f87a::t_5905ad5c62edba 122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "861012e2f7fcd3c3e474b8bb6eb4a555cd1297b2",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:a50bc0e328030f077e21f5c0b06bf68df2a86e0565201db5b3f094d2082d5439",
+      "total_additions": 305,
+      "total_deletions": 20,
+      "accepted_lines": 3495,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:a50bc0e328030f077e21f5c0b06bf68df2a86e0565201db5b3f094d2082d5439",
+      "stats": {
+        "total_additions": 305,
+        "total_deletions": 20,
+        "accepted_lines": 3495,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/mailbox_routes.py": {
+            "total_additions": 25,
+            "total_deletions": 4,
+            "accepted_lines": 25,
+            "overriden_lines": 0
+          },
+          "app/saas/routes.py": {
+            "total_additions": 11,
+            "total_deletions": 6,
+            "accepted_lines": 519,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 89,
+            "total_deletions": 1,
+            "accepted_lines": 825,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 6,
+            "total_deletions": 0,
+            "accepted_lines": 1377,
+            "overriden_lines": 0
+          },
+          "app/web/templates/forgot_password.html": {
+            "total_additions": 46,
+            "total_deletions": 0,
+            "accepted_lines": 46,
+            "overriden_lines": 0
+          },
+          "app/web/templates/login.html": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "app/web/templates/reset_password.html": {
+            "total_additions": 37,
+            "total_deletions": 0,
+            "accepted_lines": 37,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_mailbox.py": {
+            "total_additions": 3,
+            "total_deletions": 2,
+            "accepted_lines": 247,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_password_reset.py": {
+            "total_additions": 76,
+            "total_deletions": 1,
+            "accepted_lines": 188,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_sso.py": {
+            "total_additions": 11,
+            "total_deletions": 6,
+            "accepted_lines": 230,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
