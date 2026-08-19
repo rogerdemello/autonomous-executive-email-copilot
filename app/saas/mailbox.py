@@ -138,12 +138,17 @@ class MailboxService:
         conn = self.repo.get(org_id, connection_id)
         if not conn:
             return False
-        self.repo.delete(org_id, connection_id)
+        removed = self.repo.delete(org_id, connection_id) or {}
         self.audit.record(
             action="mailbox.disconnect",
             org_id=org_id,
             actor_user_id=user_id,
             target=connection_id,
-            detail={"provider": conn["provider"], "account_email": conn["account_email"]},
+            detail={
+                "provider": conn["provider"],
+                "account_email": conn["account_email"],
+                "messages_removed": removed.get("messages", 0),
+                "actions_removed": removed.get("actions", 0),
+            },
         )
         return True

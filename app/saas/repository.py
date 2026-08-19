@@ -354,7 +354,16 @@ class MailboxRepository:
             row.updated_at = _now_iso()
             return True
 
-    def delete(self, org_id: str, connection_id: str) -> bool:
+    def delete(self, org_id: str, connection_id: str) -> dict[str, int] | None:
+        """Delete the connection AND everything derived from it, in one
+        transaction. Returns the removed row counts, or None if not found.
+
+        The UI promises "processed messages and pending actions for this
+        mailbox are removed", and the dedup key includes ``connection_id`` —
+        leaving the rows behind both breaks that promise and duplicates the
+        whole inbox on reconnect (a fresh connection id means every message
+        looks new). Actions go first: they reference messages by FK.
+        """
         with get_session() as session:
             row = (
                 session.query(MailboxConnection)
@@ -365,9 +374,33 @@ class MailboxRepository:
                 .first()
             )
             if not row:
-                return False
+                return None
+            message_ids = (
+                session.query(ProcessedMessage.id)
+                .filter(
+                    ProcessedMessage.org_id == org_id,
+                    ProcessedMessage.connection_id == connection_id,
+                )
+                .subquery()
+            )
+            actions_removed = (
+                session.query(ProposedAction)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.message_id.in_(message_ids.select()),
+                )
+                .delete(synchronize_session=False)
+            )
+            messages_removed = (
+                session.query(ProcessedMessage)
+                .filter(
+                    ProcessedMessage.org_id == org_id,
+                    ProcessedMessage.connection_id == connection_id,
+                )
+                .delete(synchronize_session=False)
+            )
             session.delete(row)
-            return True
+            return {"messages": messages_removed, "actions": actions_removed}
 
     def get_with_tokens(self, org_id: str, connection_id: str) -> dict[str, Any] | None:
         """Server-internal read INCLUDING the encrypted token fields, for building

@@ -448,6 +448,40 @@ class TestMailboxManagement:
         assert response.status_code == 303
         assert MailboxRepository().list_for_org(org_id) == []
 
+    def test_disconnecting_removes_messages_and_actions_too(self, with_demo_mailbox):
+        """The UI promises cleanup, and reconnect must not duplicate the inbox.
+
+        Orphaned rows are worse than clutter: the pending badge keeps counting
+        actions whose mailbox is gone, approving one 404s, and a reconnect
+        mints a new connection id so every message is 'new' to the dedup key.
+        """
+        from app.saas.repository import (
+            MailboxRepository,
+            ProposedActionRepository,
+            UserRepository,
+        )
+
+        client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        connection = MailboxRepository().list_for_org(org_id)[0]
+        assert ProcessedMessageRepository().list_for_org(org_id)["total"] > 0
+
+        page = client.get("/app/connect").text
+        client.post(
+            f"/app/mailboxes/{connection['id']}/disconnect", data={"csrf_token": csrf_from(page)}
+        )
+
+        assert ProcessedMessageRepository().list_for_org(org_id)["total"] == 0
+        assert ProposedActionRepository().list_for_org(org_id)["total"] == 0
+
+        # Reconnecting starts clean: same message count as the first connect,
+        # not double.
+        page = client.get("/app/connect").text
+        client.post("/app/connect/demo", data={"csrf_token": csrf_from(page)})
+        from app.copilot.providers.demo import demo_message_count
+
+        assert ProcessedMessageRepository().list_for_org(org_id)["total"] == demo_message_count()
+
 
 # --------------------------------------------------------------------------- #
 # Role gating
