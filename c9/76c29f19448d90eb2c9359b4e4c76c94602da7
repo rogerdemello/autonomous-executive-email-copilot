@@ -1,0 +1,75 @@
+app/core/security.py
+  s_f0cdcdb3c6f87a::t_3ab4172fe3eadc 63-83,91-92,102-104,116
+app/main.py
+  s_f0cdcdb3c6f87a::t_b08d92eb292f3c 91
+  s_f0cdcdb3c6f87a::t_ae76535bc3ab90 250-254
+  s_f0cdcdb3c6f87a::t_0ff3e9d8209f06 269-273
+README.md
+  s_f0cdcdb3c6f87a::t_243da7064d53e1 541-544
+tests/test_security.py
+  s_f0cdcdb3c6f87a::t_a81e1101a593f3 46-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "c976c29f19448d90eb2c9359b4e4c76c94602da7",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:fc40b8b886d934a4da183f0d0cb24cf0b6ce6b14d56d01b6ca840cc6368e07eb",
+      "total_additions": 60,
+      "total_deletions": 5,
+      "accepted_lines": 280,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:fc40b8b886d934a4da183f0d0cb24cf0b6ce6b14d56d01b6ca840cc6368e07eb",
+      "stats": {
+        "total_additions": 60,
+        "total_deletions": 5,
+        "accepted_lines": 280,
+        "overriden_lines": 0,
+        "files": {
+          "README.md": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 4,
+            "overriden_lines": 0
+          },
+          "app/core/security.py": {
+            "total_additions": 27,
+            "total_deletions": 2,
+            "accepted_lines": 160,
+            "overriden_lines": 0
+          },
+          "app/main.py": {
+            "total_additions": 11,
+            "total_deletions": 2,
+            "accepted_lines": 11,
+            "overriden_lines": 0
+          },
+          "tests/test_security.py": {
+            "total_additions": 18,
+            "total_deletions": 0,
+            "accepted_lines": 105,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
