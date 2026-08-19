@@ -1,0 +1,74 @@
+tests/test_web_pages.py
+  s_f0cdcdb3c6f87a::t_b3a8624d1345a1 551-573
+app/main.py
+  s_f0cdcdb3c6f87a::t_4f0dbaa3b50ce8 332-337
+  s_f0cdcdb3c6f87a::t_4a5501e644878b 217
+app/web/routes.py
+  s_f0cdcdb3c6f87a::t_df7de23bf99acd 826-870
+app/web/templates/error.html
+  s_f0cdcdb3c6f87a::t_9e05926ce505de 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "1cf6ac57c0f40969c133b315803d829a5ee691ea",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:00c789f7cfed983245c863f42d085b49ec45c6df3343c53ddb61510ca1326214",
+      "total_additions": 101,
+      "total_deletions": 0,
+      "accepted_lines": 1490,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:00c789f7cfed983245c863f42d085b49ec45c6df3343c53ddb61510ca1326214",
+      "stats": {
+        "total_additions": 101,
+        "total_deletions": 0,
+        "accepted_lines": 1490,
+        "overriden_lines": 0,
+        "files": {
+          "app/main.py": {
+            "total_additions": 7,
+            "total_deletions": 0,
+            "accepted_lines": 7,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 45,
+            "total_deletions": 0,
+            "accepted_lines": 870,
+            "overriden_lines": 0
+          },
+          "app/web/templates/error.html": {
+            "total_additions": 26,
+            "total_deletions": 0,
+            "accepted_lines": 26,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 23,
+            "total_deletions": 0,
+            "accepted_lines": 587,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
