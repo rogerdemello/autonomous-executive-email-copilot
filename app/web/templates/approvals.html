@@ -34,6 +34,11 @@
           {% if item.action.escalate_to %}
             <span class="chip chip--accent">→ {{ item.action.escalate_to | replace('_', ' ') }}</span>
           {% endif %}
+          {% if item.action.draft_source == 'llm' %}
+            <span class="chip chip--accent" title="Wording written by the model. The decision itself is the deterministic policy's.">
+              model-drafted{% if item.action.draft_confidence %} · {{ '%.0f' % (item.action.draft_confidence * 100) }}%{% endif %}
+            </span>
+          {% endif %}
         </div>
 
         <p style="margin: 0 0 4px">
@@ -42,6 +47,13 @@
         <p class="muted" style="margin: 0 0 12px; font-size: 0.86rem">
           from {{ item.message.sender }} · {{ item.message.received_at | short_time }}
         </p>
+
+        {# Why this is here at all. Approving without it is approving blind. #}
+        {% if item.rationale %}
+          <ul class="rationale">
+            {% for point in item.rationale %}<li>{{ point }}</li>{% endfor %}
+          </ul>
+        {% endif %}
 
         {% if item.action.content %}<div class="draft">{{ item.action.content }}</div>{% endif %}
 

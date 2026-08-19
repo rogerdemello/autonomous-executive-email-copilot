@@ -1,6 +1,6 @@
 # Executive Email Copilot
 
-![Tests](https://img.shields.io/badge/tests-682%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-748%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-78%25-green)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
@@ -39,8 +39,8 @@ Open **http://localhost:8000** and walk:
 | `/pricing` | Plans, generated from the licensing registry so the copy can't drift |
 | `/login` | Sign in as `alex.chen@northwind.example` / `demo1234` |
 | `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
-| `/app/inbox` | 14 triaged messages, with the copilot's reasoning and its drafts |
-| `/app/approvals` | The 6 actions waiting on a human |
+| `/app/inbox` | 50 triaged messages, with the copilot's reasoning and its drafts |
+| `/app/approvals` | The 11 actions waiting on a human |
 | `/app/activity` | The audit trail of everything that just happened |
 
 [docs/DEMO.md](docs/DEMO.md) is a walkthrough script, including what is real and
@@ -49,8 +49,19 @@ what is simulated.
 **The demo mailbox is content, not theatre.** Its routing is computed by the same
 `BaselinePolicy` that runs against a real Gmail account, from the same inferred
 signals — edit a subject line in [data/demo/inbox.json](data/demo/inbox.json) and
-the decision genuinely changes. What is authored is the prose of the drafted
-replies, because the policy is a router, not a writer.
+the decision genuinely changes. Four messages are deliberate near-misses, because
+a classifier that never declines has not classified anything.
+
+To have the model write the prose too, run the seeder once with a key:
+
+```bash
+python scripts/seed_demo.py --fresh --with-llm
+```
+
+That generates every reply and escalation note through
+[`app/llm/drafter.py`](app/llm/drafter.py) and commits them to
+`data/demo/drafts.json`. Later runs replay them from disk, so the demo shows real
+model output with no network and no key.
 
 ## How it works
 
@@ -68,11 +79,23 @@ mailbox provider  ->  enrich  ->  policy  ->  proposals  ->  approval  ->  provi
   escalate, or defer. Deterministic; no credentials required.
 - **[`app/saas/sync_service.py`](app/saas/sync_service.py)** — persists per tenant,
   auto-applies low-risk actions, holds `reply` and `escalate` for a human.
+- **[`app/llm/drafter.py`](app/llm/drafter.py)** — writes the reply, or the
+  handover note for an escalation. It is handed a decision and asked only for
+  words.
 - **[`app/web`](app/web)** — the UI: Jinja templates and one stylesheet. No bundler.
 
-An LLM is optional. With a provider configured, the model-backed paths in
-[`app/llm`](app/llm) take over; with none, everything falls back to the
-deterministic heuristics — which is why the whole product runs offline.
+**Where the model is, and where it deliberately isn't.** Routing is
+deterministic: priority, risk, deadline and the choice between reply / escalate /
+defer / file are computed by code that runs identically with no provider
+configured. The model writes prose only. That split is the point — the decisions
+stay reproducible and testable, and a model outage costs you wording rather than
+triage. `LLM_DRAFTING_ENABLED=true` turns on live drafting for a real mailbox;
+already-generated drafts always replay from disk regardless.
+
+Inbound messages are scanned for prompt injection *before* they reach a provider,
+and a message that tries to rewrite the instructions is never sent to one — it
+falls back to fixture prose and still reaches a human. Generated drafts are
+scanned again on the way out.
 
 ## Project layout
 
@@ -533,7 +556,9 @@ provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.m
 
 ## Testing Coverage
 
-**682 tests pass at 78% coverage.** Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
+**748 tests pass at 78% coverage.** Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
+
+The drafter is tested for how it *fails* rather than how it writes ([tests/test_llm_drafter.py](tests/test_llm_drafter.py)): a missing key, a dead provider, a non-JSON answer, an injected message and a risky generation must each degrade to the fallback prose without raising, because all of them happen inside a request that is syncing someone's mailbox.
 
 ## Important Constraints
 

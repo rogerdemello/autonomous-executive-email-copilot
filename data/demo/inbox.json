@@ -9,10 +9,126 @@
     "the reviewer's language. Change a subject line and the routing genuinely changes.",
     "",
     "Coverage is deliberate — every branch of the policy is exercised: legal escalation,",
-    "security escalation, urgent reply, spam, and routine deferral."
+    "security escalation, urgent reply, spam, and routine deferral. The volume is the",
+    "point as much as the content: most of this mailbox is handled without a human, and",
+    "that ratio is only visible at scale.",
+    "",
+    "Four messages are deliberate near-misses, included because a classifier that never",
+    "declines is not a classifier:",
+    "  m-nearmiss-monday      'Monday', 'agenda', 'mandate', 'standard terms' — legal",
+    "                         vocabulary as substrings only; must stay unflagged.",
+    "  m-nearmiss-maintenance planned downtime that mentions billing; operational, not",
+    "                         financial, and routine despite the tag.",
+    "  m-nearmiss-invoice     a legitimate invoice next to the fraudulent one; the fraud",
+    "                         signal is the mid-invoice change of details, not the invoice.",
+    "  m-security-access      'contractor' must not match the 'contract' family — this is",
+    "                         a security matter, not a legal one."
   ],
   "account_email": "alex.chen@northwind.example",
   "messages": [
+    {
+      "provider_message_id": "m-legal-dispute",
+      "thread_id": "t-legal-dispute",
+      "sender": "j.whitfield@bramwellcounsel.example",
+      "sender_name": "James Whitfield · Bramwell Counsel",
+      "subject": "Calloway Logistics has filed a claim — we need your instruction urgently",
+      "body": "Alex,\n\nCalloway filed a claim this morning over the Q2 service credits. They are asserting breach of contract and seeking £480k.\n\nI have the correspondence. Before I respond I need to know whether you want to settle or defend. Do not reply to their counsel directly.\n\nJames",
+      "received_at": "2026-08-16T08:12:00+00:00",
+      "rationale": [
+        "Named legal claim with a figure attached — this is the highest-exposure item in the inbox.",
+        "Counsel explicitly asked the COO not to correspond directly, so answering would be actively harmful.",
+        "Escalated rather than answered: the copilot does not choose between settling and defending."
+      ]
+    },
+    {
+      "provider_message_id": "m-ops-datacentre",
+      "thread_id": "t-ops-datacentre",
+      "sender": "marcus.reid@northwind.example",
+      "sender_name": "Marcus Reid · Infrastructure",
+      "subject": "Primary datacentre on generator power — utility outage in Rotterdam",
+      "body": "Utility power dropped at 07:40. We are on generator with roughly eight hours of fuel. The utility is quoting four hours to restore.\n\nFailover to Frankfurt is ready but costs about ninety seconds of write availability. I need a decision on whether to pre-emptively fail over or ride it out.\n\nMarcus",
+      "received_at": "2026-08-16T07:52:00+00:00",
+      "suggested_reply": "Marcus — ride it out, but prepare the failover so it is a button press, not a project.\n\nEight hours of fuel against a four-hour restore estimate is enough margin, and ninety seconds of write loss is a real customer cost I do not want to pay on a maybe.\n\nTwo things: get a fuel top-up ordered now so we are not negotiating for it at hour six, and set a hard trigger — if the utility estimate slips past six hours, fail over without waiting to ask me.",
+      "rationale": [
+        "Active infrastructure incident with a decision only the COO can make.",
+        "The sender asked a direct either/or question, so a reply is the correct action rather than a label.",
+        "Held for approval: pre-authorising a failover trigger is an operational commitment."
+      ]
+    },
+    {
+      "provider_message_id": "m-security-access",
+      "thread_id": "t-security-access",
+      "sender": "soc@northwind.example",
+      "sender_name": "Northwind SOC",
+      "subject": "Former contractor's credentials still active — revoke immediately",
+      "body": "During the access review we found three contractor accounts still active sixty days after their engagements ended. One has production database read access.\n\nNo evidence of misuse yet. We are revoking now but you should know, and it needs to go in the board pack.\n\nSOC",
+      "received_at": "2026-08-16T07:47:00+00:00",
+      "rationale": [
+        "Standing access for departed contractors is a live security exposure, not a hygiene ticket.",
+        "Production data access raises this above the routine review findings.",
+        "Routed to the chief of staff because it needs to reach the board, not because it needs a reply."
+      ]
+    },
+    {
+      "provider_message_id": "m-customer-escalation",
+      "thread_id": "t-customer-escalation",
+      "sender": "n.oyelaran@calloway.example",
+      "sender_name": "Ngozi Oyelaran · Calloway Logistics",
+      "subject": "Service credits still unpaid — this is now urgent for our finance close",
+      "body": "Alex,\n\nThe Q2 service credits we agreed in June have not appeared. Our finance team closes on Friday and this is now blocking them.\n\nI have chased your account team three times. I would rather not make this a formal matter.\n\nNgozi",
+      "received_at": "2026-08-16T07:44:00+00:00",
+      "suggested_reply": "Ngozi — that is three chases too many, and I am sorry you had to make the fourth.\n\nI am taking this off the account team and onto me today. I will confirm the exact credit amount and the payment date before end of day, and if it cannot clear before your Friday close I will tell you that plainly rather than let you find out.\n\nYou should not have to escalate to get something we already agreed.",
+      "rationale": [
+        "A named client is one step from formalising a dispute over an agreement Northwind already made.",
+        "Repeated failed contact with the account team means routing it back there would repeat the failure.",
+        "Held for approval because it commits to a payment date on the company's behalf."
+      ]
+    },
+    {
+      "provider_message_id": "m-customer-churn",
+      "thread_id": "t-customer-churn",
+      "sender": "helena.vos@meridiangroup.example",
+      "sender_name": "Helena Vos · Meridian Group",
+      "subject": "ASAP — we need to talk before our renewal decision on Friday",
+      "body": "Alex,\n\nCandidly: we are close to not renewing. The billing failures this quarter have cost my team real hours, and the last two QBRs were rescheduled by your side.\n\nI would rather fix this than leave. But I need to hear a plan from you, not an account manager, before Friday.\n\nHelena",
+      "received_at": "2026-08-16T07:38:00+00:00",
+      "suggested_reply": "Helena — thank you for telling me directly rather than just leaving. That's a courtesy I don't take for granted.\n\nYou're right on both counts, and the rescheduled QBRs are mine to own.\n\nI'm blocking time with you before Friday — I'll send two slots within the hour. I'll come with the incident history, what we've changed structurally, and a commitment on QBR cadence I'll be personally accountable for. No account manager.",
+      "rationale": [
+        "Named renewal risk from a senior counterpart, with a Friday decision deadline.",
+        "Explicitly asks for the COO rather than the account team — delegating would make it worse.",
+        "Reply is drafted but held: a retention commitment should not go out unread."
+      ]
+    },
+    {
+      "provider_message_id": "m-finance-wire",
+      "thread_id": "t-finance-wire",
+      "sender": "d.mensah@northwind.example",
+      "sender_name": "Daniel Mensah · Finance",
+      "subject": "Urgent: supplier changed bank details on a $340k invoice — mismatch with our records",
+      "body": "Calloway Logistics emailed new wire instructions for invoice INV-88213 ($340,000), due tomorrow. The account name does not match the entity we have on file.\n\nI have not paid it. Requesting your approval to hold payment and verify by phone using the number we already hold on file, not the one in the email.\n\nDaniel",
+      "received_at": "2026-08-16T07:31:00+00:00",
+      "suggested_reply": "Daniel — hold the payment. You made the right call.\n\nApproved: verify by phone using the number we hold on file only. Do not use any contact detail that arrived in that email thread.\n\nA mid-invoice change of bank details with a name mismatch is the standard shape of supplier-invoice fraud. Please also send the headers to the SOC — if they spoofed Calloway to us, they are likely running the same play elsewhere.",
+      "rationale": [
+        "Payment-detail change with an entity mismatch — a classic supplier-fraud signal.",
+        "$340k is due tomorrow, so the decision window is short.",
+        "The draft approves holding payment, which is why it waits for a human."
+      ]
+    },
+    {
+      "provider_message_id": "m-ops-outage",
+      "thread_id": "t-ops-outage",
+      "sender": "priya.nair@northwind.example",
+      "sender_name": "Priya Nair · Platform",
+      "subject": "Billing service outage — enterprise tenants failing since 06:20",
+      "body": "The billing service is returning 503 for all enterprise tenants. Started 06:20, still ongoing. Root cause looks like connection-pool exhaustion after last night's deploy.\n\nWe are rolling back. Meridian and Calloway have both opened tickets. I need to know what we are telling customers and whether we are declaring a public incident.\n\nPriya",
+      "received_at": "2026-08-16T07:22:00+00:00",
+      "suggested_reply": "Priya — thanks for the clear summary.\n\nDeclare the public incident now and post to the status page; two enterprise tickets already means our customers know before we've told them, which is the worst order.\n\nRoll back first, root-cause after. Please send me a customer-facing line I can forward to Meridian and Calloway directly, and set a 30-minute update cadence until we're green.",
+      "rationale": [
+        "Active customer-facing outage — the most urgent operational item in the inbox.",
+        "Named enterprise accounts are already affected, so this carries revenue risk.",
+        "Held for approval because the reply commits Northwind to a public incident declaration."
+      ]
+    },
     {
       "provider_message_id": "m-legal-indemnity",
       "thread_id": "t-legal-indemnity",
@@ -44,48 +160,17 @@
       ]
     },
     {
-      "provider_message_id": "m-ops-outage",
-      "thread_id": "t-ops-outage",
-      "sender": "priya.nair@northwind.example",
-      "sender_name": "Priya Nair · Platform",
-      "subject": "Billing service outage — enterprise tenants failing since 06:20",
-      "body": "The billing service is returning 503 for all enterprise tenants. Started 06:20, still ongoing. Root cause looks like connection-pool exhaustion after last night's deploy.\n\nWe are rolling back. Meridian and Calloway have both opened tickets. I need to know what we are telling customers and whether we are declaring a public incident.\n\nPriya",
-      "received_at": "2026-08-16T07:22:00+00:00",
-      "suggested_reply": "Priya — thanks for the clear summary.\n\nDeclare the public incident now and post to the status page; two enterprise tickets already means our customers know before we've told them, which is the worst order.\n\nRoll back first, root-cause after. Please send me a customer-facing line I can forward to Meridian and Calloway directly, and set a 30-minute update cadence until we're green.",
+      "provider_message_id": "m-nearmiss-monday",
+      "thread_id": "t-nearmiss-monday",
+      "sender": "tomi.abara@northwind.example",
+      "sender_name": "Tomi Abara · Chief of Staff",
+      "subject": "Agenda for Monday's leadership offsite — standard terms, nothing contentious",
+      "body": "Draft agenda attached for Monday. The mandate is unchanged from last quarter and the standard terms apply for expenses.\n\nNo decisions needed from you before then — just flag if you want a slot moved.\n\nTomi",
+      "received_at": "2026-08-16T06:58:00+00:00",
       "rationale": [
-        "Active customer-facing outage — the most urgent operational item in the inbox.",
-        "Named enterprise accounts are already affected, so this carries revenue risk.",
-        "Held for approval because the reply commits Northwind to a public incident declaration."
-      ]
-    },
-    {
-      "provider_message_id": "m-finance-wire",
-      "thread_id": "t-finance-wire",
-      "sender": "d.mensah@northwind.example",
-      "sender_name": "Daniel Mensah · Finance",
-      "subject": "Urgent: supplier changed bank details on a $340k invoice — mismatch with our records",
-      "body": "Calloway Logistics emailed new wire instructions for invoice INV-88213 ($340,000), due tomorrow. The account name does not match the entity we have on file.\n\nI have not paid it. Requesting your approval to hold payment and verify by phone using the number we already hold on file, not the one in the email.\n\nDaniel",
-      "received_at": "2026-08-16T07:31:00+00:00",
-      "suggested_reply": "Daniel — hold the payment. You made the right call.\n\nApproved: verify by phone using the number we hold on file only. Do not use any contact detail that arrived in that email thread.\n\nA mid-invoice change of bank details with a name mismatch is the standard shape of supplier-invoice fraud. Please also send the headers to the SOC — if they spoofed Calloway to us, they are likely running the same play elsewhere.",
-      "rationale": [
-        "Payment-detail change with an entity mismatch — a classic supplier-fraud signal.",
-        "$340k is due tomorrow, so the decision window is short.",
-        "The draft approves holding payment, which is why it waits for a human."
-      ]
-    },
-    {
-      "provider_message_id": "m-customer-churn",
-      "thread_id": "t-customer-churn",
-      "sender": "helena.vos@meridiangroup.example",
-      "sender_name": "Helena Vos · Meridian Group",
-      "subject": "ASAP — we need to talk before our renewal decision on Friday",
-      "body": "Alex,\n\nCandidly: we are close to not renewing. The billing failures this quarter have cost my team real hours, and the last two QBRs were rescheduled by your side.\n\nI would rather fix this than leave. But I need to hear a plan from you, not an account manager, before Friday.\n\nHelena",
-      "received_at": "2026-08-16T07:38:00+00:00",
-      "suggested_reply": "Helena — thank you for telling me directly rather than just leaving. That's a courtesy I don't take for granted.\n\nYou're right on both counts, and the rescheduled QBRs are mine to own.\n\nI'm blocking time with you before Friday — I'll send two slots within the hour. I'll come with the incident history, what we've changed structurally, and a commitment on QBR cadence I'll be personally accountable for. No account manager.",
-      "rationale": [
-        "Named renewal risk from a senior counterpart, with a Friday decision deadline.",
-        "Explicitly asks for the COO rather than the account team — delegating would make it worse.",
-        "Reply is drafted but held: a retention commitment should not go out unread."
+        "Deliberate near-miss: 'Monday', 'agenda', 'mandate' and 'standard terms' all contain legal-vocabulary substrings.",
+        "Matched as whole words rather than substrings, so none of them fire and the risk tag stays clear.",
+        "Correctly filed as routine — an earlier substring-matching version escalated this to the legal team."
       ]
     },
     {
@@ -104,6 +189,19 @@
       ]
     },
     {
+      "provider_message_id": "m-hr-headcount",
+      "thread_id": "t-hr-headcount",
+      "sender": "sara.lindqvist@northwind.example",
+      "sender_name": "Sara Lindqvist · People",
+      "subject": "Q4 headcount plan — first draft for your review",
+      "body": "First cut of the Q4 plan attached: eleven roles, weighted toward platform engineering and two in customer success.\n\nNo action needed this week. I will bring the finished version to the leadership session.\n\nSara",
+      "received_at": "2026-08-16T06:48:00+00:00",
+      "rationale": [
+        "Internal planning document with an explicit 'no action this week'.",
+        "Deferred and labelled — the copilot does not manufacture urgency the sender did not claim."
+      ]
+    },
+    {
       "provider_message_id": "m-board-deck",
       "thread_id": "t-board-deck",
       "sender": "t.abara@northwind.example",
@@ -119,6 +217,33 @@
       ]
     },
     {
+      "provider_message_id": "m-nearmiss-maintenance",
+      "thread_id": "t-nearmiss-maintenance",
+      "sender": "marcus.reid@northwind.example",
+      "sender_name": "Marcus Reid · Infrastructure",
+      "subject": "Planned maintenance window Sunday 02:00-04:00 — billing service included",
+      "body": "Routine patching this Sunday. The billing service is in scope, so invoice generation pauses for the window and catches up automatically afterwards.\n\nNo customer impact expected. Sending for visibility only.\n\nMarcus",
+      "received_at": "2026-08-16T06:34:00+00:00",
+      "rationale": [
+        "Deliberate near-miss: mentions both the billing service and scheduled downtime.",
+        "Tagged operational rather than financial — the message is about the maintenance, and only mentions billing in passing.",
+        "Routine despite the operational tag: planned work with no customer impact does not need a human."
+      ]
+    },
+    {
+      "provider_message_id": "m-finance-forecast",
+      "thread_id": "t-finance-forecast",
+      "sender": "d.mensah@northwind.example",
+      "sender_name": "Daniel Mensah · Finance",
+      "subject": "Rolling forecast refreshed — Q4 revenue up 3% on plan",
+      "body": "Forecast refreshed with September actuals. Revenue is tracking 3% ahead of plan, mostly from the enterprise tier.\n\nThe deck is in the usual folder. Happy to walk you through it whenever suits.\n\nDaniel",
+      "received_at": "2026-08-16T06:26:00+00:00",
+      "rationale": [
+        "Financial vocabulary, but positive news with an open-ended offer to discuss.",
+        "No deadline and no decision requested, so it defers rather than interrupting."
+      ]
+    },
+    {
       "provider_message_id": "m-vendor-renewal",
       "thread_id": "t-vendor-renewal",
       "sender": "accounts@atlaslogistics.example",
@@ -131,6 +256,33 @@
         "Vendor correspondence with a 30-day window and no decision required today.",
         "Belongs with procurement before it needs the COO at all.",
         "Deferred and labelled so it resurfaces rather than disappears."
+      ]
+    },
+    {
+      "provider_message_id": "m-ops-postmortem",
+      "thread_id": "t-ops-postmortem",
+      "sender": "priya.nair@northwind.example",
+      "sender_name": "Priya Nair · Platform",
+      "subject": "Post-incident review scheduled for Thursday — your input optional",
+      "body": "Booking the review for Thursday 14:00. Draft timeline is in the doc already.\n\nYour attendance is optional; I will send the summary either way.\n\nPriya",
+      "received_at": "2026-08-16T06:16:00+00:00",
+      "rationale": [
+        "Follow-up to an incident already being handled, with attendance explicitly optional.",
+        "Deferred: the underlying incident is where the attention belongs, not the review invite."
+      ]
+    },
+    {
+      "provider_message_id": "m-nearmiss-invoice",
+      "thread_id": "t-nearmiss-invoice",
+      "sender": "accounts@atlaslogistics.example",
+      "sender_name": "Atlas Logistics · Accounts",
+      "subject": "Invoice ATL-40912 for July haulage — payment due 30 September",
+      "body": "Please find invoice ATL-40912 for July haulage, £18,430, payable on the usual thirty-day terms to the account we have used since 2023.\n\nNo change to our banking details. Remittance advice appreciated.\n\nAtlas Accounts",
+      "received_at": "2026-08-16T06:12:00+00:00",
+      "rationale": [
+        "Deliberate contrast with the fraudulent wire request: same financial vocabulary, entirely different shape.",
+        "No change of banking details, no urgency, an established supplier and a normal payment window.",
+        "Filed for the finance team rather than flagged — the fraud signal is the mid-invoice change, not the invoice."
       ]
     },
     {
@@ -164,6 +316,19 @@
       ]
     },
     {
+      "provider_message_id": "m-legal-policy-review",
+      "thread_id": "t-legal-policy-review",
+      "sender": "compliance@northwind.example",
+      "sender_name": "Northwind Compliance",
+      "subject": "Annual data retention policy review — sign-off needed by 30 September",
+      "body": "The retention policy is due its annual review. Nothing has changed materially; the schedule and the deletion windows are as approved last year.\n\nSign-off needed by the end of the month.\n\nCompliance",
+      "received_at": "2026-08-16T05:52:00+00:00",
+      "rationale": [
+        "Compliance vocabulary raises the risk tag, so this is routed to the legal team rather than answered.",
+        "A genuine sign-off obligation with a real date, even though nothing is contentious."
+      ]
+    },
+    {
       "provider_message_id": "m-analyst-brief",
       "thread_id": "t-analyst-brief",
       "sender": "research@harrowanalysts.example",
@@ -176,6 +341,32 @@
         "External invitation with a month-long response window.",
         "No risk signal and no commitment attached.",
         "Deferred for a calendar review rather than an inbox decision."
+      ]
+    },
+    {
+      "provider_message_id": "m-vendor-quote",
+      "thread_id": "t-vendor-quote",
+      "sender": "quotes@meridiangroup.example",
+      "sender_name": "Meridian Group · Commercial",
+      "subject": "Revised quote for the observability platform, valid 30 days",
+      "body": "Revised pricing attached following last week's call: £94k annually on a two-year term, which is 12% below the original.\n\nValid for thirty days. No rush from our side.\n\nMeridian Commercial",
+      "received_at": "2026-08-16T05:40:00+00:00",
+      "rationale": [
+        "Vendor pricing with a month-long validity window and no pressure applied.",
+        "Business value scored lower for a vendor sender, so it ranks below the customer traffic."
+      ]
+    },
+    {
+      "provider_message_id": "m-internal-allhands",
+      "thread_id": "t-internal-allhands",
+      "sender": "comms@northwind.example",
+      "sender_name": "Northwind Communications",
+      "subject": "All-hands moved to Thursday 16:00 — calendar updated",
+      "body": "The all-hands has moved to Thursday at 16:00 to avoid the customer advisory board. Calendars are already updated.\n\nNo action needed.\n\nComms",
+      "received_at": "2026-08-16T05:36:00+00:00",
+      "rationale": [
+        "Pure logistics with the calendar already updated on the sender's side.",
+        "Auto-filed with a label — the worst case for a misfiled notice is a missed calendar entry."
       ]
     },
     {
@@ -194,6 +385,32 @@
       ]
     },
     {
+      "provider_message_id": "m-hr-review-cycle",
+      "thread_id": "t-hr-review-cycle",
+      "sender": "sara.lindqvist@northwind.example",
+      "sender_name": "Sara Lindqvist · People",
+      "subject": "Performance review cycle opens Monday — your directs listed",
+      "body": "The cycle opens Monday and closes on the 30th. Your seven directs are listed in the tool.\n\nReminder emails will follow; nothing needed from you today.\n\nSara",
+      "received_at": "2026-08-16T05:22:00+00:00",
+      "rationale": [
+        "Process notification with a deadline two weeks out and an explicit 'nothing today'.",
+        "Deferred rather than surfaced — reminders are already scheduled by the sender."
+      ]
+    },
+    {
+      "provider_message_id": "m-board-minutes",
+      "thread_id": "t-board-minutes",
+      "sender": "corpsec@northwind.example",
+      "sender_name": "Northwind Company Secretary",
+      "subject": "July board minutes circulated for approval at the next meeting",
+      "body": "July minutes attached. Please read before the next meeting; approval happens in the session rather than by email.\n\nCompany Secretary",
+      "received_at": "2026-08-16T05:18:00+00:00",
+      "rationale": [
+        "Governance material where the approval mechanism is explicitly a meeting, not this inbox.",
+        "Deferred: replying would not advance anything the sender asked for."
+      ]
+    },
+    {
       "provider_message_id": "m-spam-webinar",
       "thread_id": "t-spam-webinar",
       "sender": "growth@peakscale.example",
@@ -209,6 +426,19 @@
       ]
     },
     {
+      "provider_message_id": "m-facilities-parking",
+      "thread_id": "t-facilities-parking",
+      "sender": "facilities@northwind.example",
+      "sender_name": "Northwind Facilities",
+      "subject": "Car park resurfacing next week — use the south entrance",
+      "body": "The main car park is being resurfaced Tuesday to Thursday. Use the south entrance; the barrier code is unchanged.\n\nFacilities",
+      "received_at": "2026-08-16T05:04:00+00:00",
+      "rationale": [
+        "Building logistics with no decision content whatsoever.",
+        "Filed automatically — this is exactly the traffic that should never reach an approval queue."
+      ]
+    },
+    {
       "provider_message_id": "m-spam-saas",
       "thread_id": "t-spam-saas",
       "sender": "hello@opsflowhq.example",
@@ -221,6 +451,266 @@
         "Cold vendor outreach using the same promotional signals — classified as spam.",
         "Personalized-looking, but structurally identical to bulk mail.",
         "Filed automatically; nothing reaches the approval queue."
+      ]
+    },
+    {
+      "provider_message_id": "m-it-laptop",
+      "thread_id": "t-it-laptop",
+      "sender": "itsupport@northwind.example",
+      "sender_name": "Northwind IT",
+      "subject": "Your laptop refresh is scheduled for 24 September",
+      "body": "You are due a hardware refresh on the 24th. It takes about forty minutes and we come to you.\n\nReply to this ticket if the date does not work.\n\nIT Support",
+      "received_at": "2026-08-16T04:48:00+00:00",
+      "rationale": [
+        "Routine internal service scheduling with a simple opt-out.",
+        "Deferred: a reply is only needed if the date is wrong, which the copilot cannot know."
+      ]
+    },
+    {
+      "provider_message_id": "m-expenses-reminder",
+      "thread_id": "t-expenses-reminder",
+      "sender": "expenses@northwind.example",
+      "sender_name": "Northwind Expenses",
+      "subject": "Two expense claims awaiting your approval",
+      "body": "Two claims from your team are waiting: £340 and £86, both within policy.\n\nApprove in the expenses tool when convenient.\n\nExpenses",
+      "received_at": "2026-08-16T04:42:00+00:00",
+      "rationale": [
+        "An approval request, but for a different system with its own workflow.",
+        "Deferred rather than escalated — the copilot does not approve spending on the executive's behalf."
+      ]
+    },
+    {
+      "provider_message_id": "m-customer-praise",
+      "thread_id": "t-customer-praise",
+      "sender": "h.tanaka@lumenworks.example",
+      "sender_name": "Hiroshi Tanaka · Lumenworks",
+      "subject": "Thank you — your team handled the migration extremely well",
+      "body": "Wanted to pass on that the migration went better than we expected. Your platform team in particular were excellent under pressure.\n\nNo action needed, just credit where it is due.\n\nHiroshi",
+      "received_at": "2026-08-16T04:36:00+00:00",
+      "rationale": [
+        "Positive client contact with no request attached.",
+        "Deferred, not dropped: worth the COO's attention eventually, but it is not competing with an active incident."
+      ]
+    },
+    {
+      "provider_message_id": "m-analyst-report",
+      "thread_id": "t-analyst-report",
+      "sender": "research@harrowanalysts.example",
+      "sender_name": "Harrow Analysts · Research",
+      "subject": "Sector operations benchmark, Q3 edition",
+      "body": "Our Q3 sector benchmark is published. Northwind appears in the upper quartile on incident response and mid-pack on cost per transaction.\n\nFull report is on the portal.\n\nHarrow Research",
+      "received_at": "2026-08-16T04:28:00+00:00",
+      "rationale": [
+        "External research with no request and no deadline.",
+        "Vendor-shaped sender, so it ranks low and is filed for later reading."
+      ]
+    },
+    {
+      "provider_message_id": "m-recruiting-referral",
+      "thread_id": "t-recruiting-referral",
+      "sender": "sara.lindqvist@northwind.example",
+      "sender_name": "Sara Lindqvist · People",
+      "subject": "Referral from your network — senior SRE candidate",
+      "body": "One of your former colleagues referred a senior SRE. Strong profile, currently at a competitor.\n\nI have booked a first conversation. Nothing needed from you unless you want to be involved earlier.\n\nSara",
+      "received_at": "2026-08-16T04:20:00+00:00",
+      "rationale": [
+        "Hiring pipeline update where the next step is already booked by the sender.",
+        "Deferred: involvement is offered, not required."
+      ]
+    },
+    {
+      "provider_message_id": "m-supplier-onboarding",
+      "thread_id": "t-supplier-onboarding",
+      "sender": "procurement@northwind.example",
+      "sender_name": "Northwind Procurement",
+      "subject": "New haulage supplier cleared due diligence",
+      "body": "Fenwick Transport has cleared financial and insurance checks. We are adding them as a secondary haulage supplier from October.\n\nFor your awareness.\n\nProcurement",
+      "received_at": "2026-08-16T04:12:00+00:00",
+      "rationale": [
+        "Procurement outcome shared for awareness after the checks were completed.",
+        "Auto-filed — the decision has already been made through the proper process."
+      ]
+    },
+    {
+      "provider_message_id": "m-training-mandatory",
+      "thread_id": "t-training-mandatory",
+      "sender": "learning@northwind.example",
+      "sender_name": "Northwind Learning",
+      "subject": "Annual information handling module due by 30 September",
+      "body": "The annual information handling module is open. It takes twenty minutes and is due by the 30th.\n\nLearning",
+      "received_at": "2026-08-16T04:06:00+00:00",
+      "rationale": [
+        "Mandatory training reminder with a fortnight of runway.",
+        "Filed with a label; the deadline is real but distant."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-conference",
+      "thread_id": "t-spam-conference",
+      "sender": "invites@globalopsforum.example",
+      "sender_name": "Global Ops Forum",
+      "subject": "Register now — 40% discount on the executive leadership summit",
+      "body": "Only three days left to register now and claim your 40% discount on the executive leadership summit. Network with 500+ operations leaders!\n\nLimited deal — do not miss out.",
+      "received_at": "2026-08-16T04:02:00+00:00",
+      "rationale": [
+        "Promotional vocabulary across the subject and body.",
+        "Classified as spam and filed with no human involvement."
+      ]
+    },
+    {
+      "provider_message_id": "m-press-query",
+      "thread_id": "t-press-query",
+      "sender": "newsdesk@tradejournal.example",
+      "sender_name": "Trade Journal · Newsdesk",
+      "subject": "Comment request for a piece on logistics automation",
+      "body": "Writing a piece on automation in mid-market logistics and would value a comment from Northwind.\n\nDeadline is next Wednesday. Happy to work through your comms team.\n\nNewsdesk",
+      "received_at": "2026-08-16T03:58:00+00:00",
+      "rationale": [
+        "External media request with a week's notice and a stated route through comms.",
+        "Deferred: the copilot routes nothing to press on its own initiative."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-consultancy",
+      "thread_id": "t-spam-consultancy",
+      "sender": "growth@apexadvisory.example",
+      "sender_name": "Apex Advisory",
+      "subject": "Special offer: free operations audit for Northwind",
+      "body": "We are offering a complimentary operations audit to selected mid-market firms. Subscribe to our insights list and we will include Northwind in this quarter's cohort.\n\nOffer closes Friday.",
+      "received_at": "2026-08-16T03:54:00+00:00",
+      "rationale": [
+        "Cold outreach with an artificial deadline.",
+        "Auto-filed as spam — the noise never reaches the approval queue."
+      ]
+    },
+    {
+      "provider_message_id": "m-charity-request",
+      "thread_id": "t-charity-request",
+      "sender": "partnerships@riverstonetrust.example",
+      "sender_name": "Riverstone Trust · Partnerships",
+      "subject": "Invitation to join our logistics skills programme",
+      "body": "We run a skills programme placing apprentices with logistics operators and would like to discuss Northwind joining for the 2027 intake.\n\nEntirely at your convenience.\n\nRiverstone Partnerships",
+      "received_at": "2026-08-16T03:50:00+00:00",
+      "rationale": [
+        "Unsolicited partnership approach with a horizon more than a year out.",
+        "Lowest-value item in the inbox and filed accordingly."
+      ]
+    },
+    {
+      "provider_message_id": "m-travel-visa",
+      "thread_id": "t-travel-visa",
+      "sender": "travel@northwind.example",
+      "sender_name": "Northwind Travel",
+      "subject": "Visa confirmed for the Singapore trip in November",
+      "body": "Your Singapore visa came through this morning. Documents are in the travel portal.\n\nNothing further needed.\n\nTravel",
+      "received_at": "2026-08-16T03:44:00+00:00",
+      "rationale": [
+        "Confirmation of something already arranged.",
+        "Auto-filed: no decision, no deadline, no reply expected."
+      ]
+    },
+    {
+      "provider_message_id": "m-survey-internal",
+      "thread_id": "t-survey-internal",
+      "sender": "people-insights@northwind.example",
+      "sender_name": "Northwind People Insights",
+      "subject": "Engagement survey results are ready for leadership",
+      "body": "Results are in and the response rate hit 78%. Headline scores are up on March, with a dip on workload in the platform team.\n\nSession booked for next Tuesday.\n\nPeople Insights",
+      "received_at": "2026-08-16T03:36:00+00:00",
+      "rationale": [
+        "Survey results with a review session already in the calendar.",
+        "Deferred — the workload signal matters, but the forum to act on it is booked."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-software",
+      "thread_id": "t-spam-software",
+      "sender": "hello@flowmetrics.example",
+      "sender_name": "FlowMetrics",
+      "subject": "Limited deal — subscribe before month end and save 30%",
+      "body": "FlowMetrics gives operations leaders real-time visibility. Subscribe before month end for a 30% discount on your first year.\n\nBook a demo in one click.",
+      "received_at": "2026-08-16T03:32:00+00:00",
+      "rationale": [
+        "Vendor promotion with discount and subscription language.",
+        "Classified as spam automatically."
+      ]
+    },
+    {
+      "provider_message_id": "m-customer-qbr",
+      "thread_id": "t-customer-qbr",
+      "sender": "s.ahmadi@lumenworks.example",
+      "sender_name": "Sara Ahmadi · Lumenworks",
+      "subject": "Proposing 14 October for our next quarterly review",
+      "body": "Would 14 October suit for the next QBR? Our team can travel to you or we can do it remotely.\n\nNo urgency, just pinning the diary.\n\nSara",
+      "received_at": "2026-08-16T03:28:00+00:00",
+      "rationale": [
+        "Scheduling request from a client contact, explicitly not urgent.",
+        "Deferred rather than answered — a date commitment belongs to the executive's calendar, not the copilot."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-recruiter",
+      "thread_id": "t-spam-recruiter",
+      "sender": "opportunities@pinnacle-search.example",
+      "sender_name": "Pinnacle Search",
+      "subject": "Exclusive offer — confidential COO opportunities in your sector",
+      "body": "We are working on several confidential COO mandates and would like to add you to our list. Register now for early sight of roles before they are advertised.",
+      "received_at": "2026-08-16T03:24:00+00:00",
+      "rationale": [
+        "Unsolicited recruiter outreach using promotional triggers.",
+        "Filed as spam without a human seeing it."
+      ]
+    },
+    {
+      "provider_message_id": "m-ops-capacity",
+      "thread_id": "t-ops-capacity",
+      "sender": "marcus.reid@northwind.example",
+      "sender_name": "Marcus Reid · Infrastructure",
+      "subject": "Capacity headroom report — comfortable through Q1",
+      "body": "Monthly capacity report: we are at 61% of provisioned headroom and comfortable through Q1 on current growth.\n\nNo action.\n\nMarcus",
+      "received_at": "2026-08-16T03:20:00+00:00",
+      "rationale": [
+        "Routine reporting from a system that is healthy.",
+        "Auto-filed; the copilot surfaces exceptions, not steady state."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-crypto",
+      "thread_id": "t-spam-crypto",
+      "sender": "treasury@nordvaultcapital.example",
+      "sender_name": "NordVault Capital",
+      "subject": "Limited deal for corporate treasury — high-yield digital asset accounts",
+      "body": "Corporate treasuries are earning 14% on idle balances. Register now to secure this rate before allocation closes.\n\nNordVault Capital",
+      "received_at": "2026-08-16T03:16:00+00:00",
+      "rationale": [
+        "Unsolicited financial product with implausible returns and urgency language.",
+        "Spam-classified; note it never reaches a human despite the financial vocabulary."
+      ]
+    },
+    {
+      "provider_message_id": "m-audit-schedule",
+      "thread_id": "t-audit-schedule",
+      "sender": "internalaudit@northwind.example",
+      "sender_name": "Northwind Internal Audit",
+      "subject": "Internal audit plan for the coming year",
+      "body": "The plan covers procurement, access management and incident response. Fieldwork starts in November.\n\nCirculating for awareness; the audit committee approves it.\n\nInternal Audit",
+      "received_at": "2026-08-16T03:12:00+00:00",
+      "rationale": [
+        "Governance planning with approval sitting elsewhere by design.",
+        "Deferred: awareness only, and the timeline is months out."
+      ]
+    },
+    {
+      "provider_message_id": "m-spam-swag",
+      "thread_id": "t-spam-swag",
+      "sender": "sales@brandworkspromo.example",
+      "sender_name": "Brandworks Promotional",
+      "subject": "Subscribe for 25% discount on branded corporate merchandise",
+      "body": "Branded merchandise for your next company event. Subscribe to our catalogue for a 25% discount on your first order.",
+      "received_at": "2026-08-16T03:08:00+00:00",
+      "rationale": [
+        "Low-value commercial mail.",
+        "Auto-filed as spam."
       ]
     }
   ]

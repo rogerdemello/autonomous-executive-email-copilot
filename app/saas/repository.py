@@ -13,6 +13,8 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import func
+
 from app.core.db import get_session
 
 from .models_db import (
@@ -526,6 +528,9 @@ class ProposedActionRepository:
         outcome: str | None = None,
         execution_ref: str | None = None,
         executed_at: str | None = None,
+        draft_source: str | None = None,
+        draft_confidence: float | None = None,
+        rationale: list[str] | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             action = ProposedAction(
@@ -540,6 +545,9 @@ class ProposedActionRepository:
                 outcome=outcome,
                 execution_ref=execution_ref,
                 executed_at=executed_at,
+                draft_source=draft_source,
+                draft_confidence=draft_confidence,
+                rationale="\n".join(rationale) if rationale else None,
             )
             session.add(action)
             session.flush()
@@ -570,6 +578,39 @@ class ProposedActionRepository:
                 "limit": safe_limit,
                 "offset": safe_offset,
             }
+
+    def summarize_for_org(self, org_id: str) -> dict[str, int]:
+        """Counts of what the copilot did, aggregated in the database.
+
+        Every other count in this layer is ``len()`` over one page of results,
+        which silently under-reports the moment an org has more actions than the
+        page size. This groups in SQL instead, so the inbox summary stays true
+        for a real mailbox rather than only for the demo's fourteen messages.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.status, func.count(ProposedAction.id))
+                .filter(ProposedAction.org_id == org_id)
+                .group_by(ProposedAction.status)
+                .all()
+            )
+            by_status = {str(status): int(count) for status, count in rows}
+            llm_drafts = (
+                session.query(func.count(ProposedAction.id))
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.draft_source == "llm",
+                )
+                .scalar()
+                or 0
+            )
+        return {
+            "total": sum(by_status.values()),
+            "awaiting": by_status.get("proposed", 0),
+            "auto_applied": by_status.get("executed", 0),
+            "decided": by_status.get("approved", 0) + by_status.get("rejected", 0),
+            "llm_drafts": int(llm_drafts),
+        }
 
     def get(self, org_id: str, action_id: str) -> dict[str, Any] | None:
         with get_session() as session:

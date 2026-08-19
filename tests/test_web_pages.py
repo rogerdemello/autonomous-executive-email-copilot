@@ -210,8 +210,14 @@ class TestDemoMailbox:
         client, email = with_demo_mailbox
         org_id = UserRepository().get_by_email_global(email)["org_id"]
 
+        from app.copilot.providers.demo import demo_message_count
+
         messages = ProcessedMessageRepository().list_for_org(org_id)
-        assert messages["total"] == 14
+        # Against the fixture's own size, not a literal: the demo mailbox is
+        # content and grows. A whole mailbox must arrive — the provider interface
+        # defaults to limit=25, which silently truncated this once already, and
+        # a half-synced inbox looks complete because nothing reports the gap.
+        assert messages["total"] == demo_message_count()
 
         pending = ProposedActionRepository().list_for_org(org_id, status="proposed")
         assert pending["total"] > 0, "the demo must leave work in the approval queue"

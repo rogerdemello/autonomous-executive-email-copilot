@@ -20,6 +20,7 @@ from app.core.models import (
     TokenUsage,
 )
 
+from .parsing import extract_json_object
 from .providers import LLMProvider, LLMResponse, ProviderCapability, calculate_cost
 from .providers.openai_provider import OpenAIProvider
 from .safety.guardrails import (
@@ -162,30 +163,12 @@ def _build_user_prompt(observation: Observation) -> str:
 
 
 def _parse_llm_response(text: str) -> dict[str, Any] | None:
-    """Parse LLM response, handling various formats."""
-    # Try direct JSON first
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
+    """Parse LLM response, handling various formats.
 
-    # Try to extract JSON from markdown code blocks
-    try:
-        # Look for JSON in ```json or ``` blocks
-        import re
-
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-        if match:
-            return json.loads(match.group(1))
-
-        # Try to find any {...} block
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
-            return json.loads(match.group(0))
-    except (json.JSONDecodeError, AttributeError):
-        pass
-
-    return None
+    Thin alias: the implementation now lives in :mod:`app.llm.parsing` so the
+    email drafter can reuse it without importing this module.
+    """
+    return extract_json_object(text)
 
 
 def _validate_action(action_dict: dict[str, Any]) -> Action | None:

@@ -39,6 +39,30 @@
     </div>
   </div>
 {% else %}
+  {# The point of the product in one line: most of this never reached a human. #}
+  <div class="card triage-summary">
+    <div class="statline">
+      <div class="stat">
+        <div class="n">{{ message_total or messages | length }}</div>
+        <div class="l">triaged</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ summary.auto_applied }}</div>
+        <div class="l">applied automatically</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ summary.awaiting }}</div>
+        <div class="l">need you</div>
+      </div>
+      {% if summary.llm_drafts %}
+        <div class="stat">
+          <div class="n">{{ summary.llm_drafts }}</div>
+          <div class="l">drafted by the model</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="inbox">
     {# ---- Pane 1: the message list, ranked the way the copilot ranked it ---- #}
     <div class="card">
@@ -144,6 +168,11 @@
             <span class="chip chip--{{ action.status }}">{{ status_labels.get(action.status, action.status) }}</span>
             {% if action.escalate_to %}
               <span class="chip chip--brass">→ {{ action.escalate_to | replace('_', ' ') }}</span>
+            {% endif %}
+            {% if action.draft_source == 'llm' %}
+              <span class="chip chip--accent" title="Wording written by the model. The decision itself is the deterministic policy's.">
+                model-drafted{% if action.draft_confidence %} · {{ '%.0f' % (action.draft_confidence * 100) }}%{% endif %}
+              </span>
             {% endif %}
           </div>
 

@@ -558,6 +558,8 @@ def inbox(request: Request, message: str | None = None) -> HTMLResponse:
     listing = _messages.list_for_org(user["org_id"], limit=100)
     messages = listing.get("messages", [])
     context["messages"] = messages
+    context["message_total"] = listing.get("total", len(messages))
+    context["summary"] = _actions.summarize_for_org(user["org_id"])
 
     selected = None
     if messages:
@@ -566,12 +568,16 @@ def inbox(request: Request, message: str | None = None) -> HTMLResponse:
 
     if selected:
         actions = _actions.list_for_org(user["org_id"], limit=500).get("actions", [])
-        context["selected_actions"] = [
+        selected_actions = [
             a
             for a in actions
             if a["message_id"] == selected["id"] and a["action_type"] != "classify"
         ]
-        context["selected_rationale"] = _rationale_for(user["org_id"], selected)
+        context["selected_actions"] = selected_actions
+        # A stored rationale is the model's own reasoning about *this* decision;
+        # prefer it over reasoning reconstructed from the signals after the fact.
+        stored = next((a["rationale"] for a in selected_actions if a.get("rationale")), None)
+        context["selected_rationale"] = stored or _rationale_for(user["org_id"], selected)
     else:
         context["selected_actions"] = []
         context["selected_rationale"] = []
@@ -677,7 +683,15 @@ def approvals(request: Request) -> HTMLResponse:
     for action in pending:
         message = _messages.get(user["org_id"], action["message_id"])
         if message:
-            items.append({"action": action, "message": message})
+            items.append(
+                {
+                    "action": action,
+                    "message": message,
+                    # Approving is a decision; showing the reasoning next to the
+                    # button is what makes it an informed one.
+                    "rationale": action.get("rationale") or _rationale_for(user["org_id"], message),
+                }
+            )
     context["actions"] = items
     return _render(request, "approvals.html", context)
 

@@ -296,6 +296,14 @@ class ProposedAction(Base):
     execution_ref = Column(String(255), nullable=True)
     outcome = Column(String(32), nullable=True)  # approved | rejected | auto
     created_at = Column(String(50), nullable=False, default=_now_iso)
+    # Where the *prose* came from — llm | authored | generic. The decision itself
+    # is always the deterministic policy's, so this describes the words only.
+    draft_source = Column(String(16), nullable=True)
+    draft_confidence = Column(Float, nullable=True)
+    # The reviewer-facing "why", newline-separated. Persisted rather than
+    # recomputed so the approvals queue can show it too, and so it still reads
+    # correctly months later even if the heuristics have since changed.
+    rationale = Column(Text, nullable=True)
 
     def to_dict(self) -> dict:
         return {
@@ -314,6 +322,9 @@ class ProposedAction(Base):
             "execution_ref": self.execution_ref,
             "outcome": self.outcome,
             "created_at": self.created_at,
+            "draft_source": self.draft_source,
+            "draft_confidence": self.draft_confidence,
+            "rationale": [line for line in (self.rationale or "").split("\n") if line],
         }
 
 

@@ -19,14 +19,22 @@ logger = logging.getLogger(__name__)
 
 
 def llm_provider_available() -> bool:
-    """True when a provider key is configured (``resolved_api_key`` is set).
+    """True when *any* provider credential is configured.
+
+    Delegates to :attr:`Settings.provider_available`, which is the same set of
+    credentials :func:`app.llm.providers.auto_detect_provider` will actually
+    accept. This used to test ``resolved_api_key`` alone — only ``HF_TOKEN`` /
+    ``OPENAI_API_KEY`` / ``AZURE_OPENAI_API_KEY`` — so an Anthropic-, Google- or
+    Ollama-only deployment reported "no provider" and silently ran the
+    deterministic fallback forever, even though auto-detection would have
+    constructed that provider happily.
 
     The hybrid policy uses this to decide whether to run the LLM planner or to
     skip straight to its strong deterministic fallback. Importantly, the
     deterministic path does NOT require a key — so when this returns ``False``
     callers must still produce a non-trivial trajectory (see ``HybridPolicy``).
     """
-    return get_settings().resolved_api_key is not None
+    return get_settings().provider_available
 
 
 class Strategy(Enum):

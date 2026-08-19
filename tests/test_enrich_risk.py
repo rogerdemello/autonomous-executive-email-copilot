@@ -43,13 +43,59 @@ def test_ordinary_words_are_not_risk_signals(text: str) -> None:
         ("a vulnerability was reported", "security"),
         ("invoices are overdue", "finance"),
         ("change of wire transfer details", "finance"),
-        ("billing service outage", "finance"),  # finance is checked before ops
         ("the sla was missed", "ops"),
         ("deployment caused downtime", "ops"),
     ],
 )
 def test_real_risk_signals_are_still_detected(text: str, expected: str) -> None:
     assert infer_risk_tag(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # One term each way. ops wins the tie, because the message is *about* the
+        # incident and only mentions the money.
+        ("billing service outage", "ops"),
+        ("outage during the invoice run", "ops"),
+        # Weight of evidence beats the tie-break: three finance terms, one ops.
+        ("the invoice, payment and refund all missed the deploy window", "finance"),
+        # Unambiguous money is still finance — nothing operational is claimed here.
+        ("supplier changed bank details on a $340k invoice", "finance"),
+        # legal and security stay on top regardless of how much else matches.
+        ("gdpr request raised during the billing outage", "legal"),
+        ("phishing campaign hit the invoice inbox during the outage", "security"),
+    ],
+)
+def test_mixed_signals_go_to_the_tag_with_the_most_evidence(text: str, expected: str) -> None:
+    """Risk is scored, not first-hit.
+
+    Under first-hit-wins ``ops`` was unreachable in practice: any finance term
+    anywhere in a message claimed it before ops was ever consulted, so genuine
+    incidents were filed as finance.
+    """
+    assert infer_risk_tag(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "the contractor finished on friday",
+        "three contractors are still onboarded",
+    ],
+)
+def test_a_contractor_is_a_person_not_a_contract(text: str) -> None:
+    """``contract*`` as a stem also swallows **contractor**.
+
+    Found by widening the demo mailbox: "a former contractor's credentials are
+    still active" is a security incident, and the stem match routed it to the
+    legal team instead.
+    """
+    assert infer_risk_tag(text) == "none"
+
+
+def test_contractor_credentials_are_a_security_matter() -> None:
+    assert infer_risk_tag("former contractor credentials still active") == "security"
 
 
 def test_matching_is_case_insensitive() -> None:

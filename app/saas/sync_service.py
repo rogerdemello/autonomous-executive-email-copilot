@@ -12,17 +12,24 @@ The provider is passed in, so this is fully testable with the in-memory
 
 from __future__ import annotations
 
+import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from app.copilot import enrich, pipeline
-from app.copilot.providers.base import MailProvider
+from app.copilot.providers.base import FetchedMessage, MailProvider
+from app.core.config import get_settings
 
 from .repository import (
     AuditRepository,
     MailboxRepository,
+    OrganizationRepository,
     ProcessedMessageRepository,
     ProposedActionRepository,
+    UserRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _now_iso() -> str:
@@ -36,14 +43,28 @@ class ProcessingError(Exception):
         self.status_code = status_code
 
 
-def _draft_text(provider: MailProvider, proposal) -> str | None:
-    """The reply body to hold for approval.
+@dataclass(frozen=True)
+class ResolvedDraft:
+    """The prose held for approval, and where it came from."""
 
-    The policy decides *whether* to reply; it is not a writer, and emits one
-    generic sentence for every message. A provider may offer better wording for
-    a specific message (the demo mailbox ships authored drafts, and a future
-    LLM-backed drafter would hook in the same way). The decision is unchanged
-    either way — only the prose the reviewer reads.
+    body: str | None
+    source: str  # llm | authored | generic
+    confidence: float | None = None
+    rationale: list[str] = field(default_factory=list)
+
+
+def _draft_text(provider: MailProvider, proposal) -> str | None:
+    """The reply body to hold for approval, provider-authored where available.
+
+    Kept as the narrow, dependency-free path: the policy decides *whether* to
+    reply and emits one generic sentence, and a provider may offer better wording
+    for a specific message (the demo mailbox ships authored drafts). See
+    :func:`resolve_draft` for the full resolution including model-written prose.
+
+    Still gated on ``reply``. An authored draft answers the *sender*; an escalation
+    needs a handover note to a colleague, and showing the one in place of the
+    other would misdescribe what approving the action does. Escalation prose comes
+    from the model, which is asked for a handover note explicitly.
     """
     author = getattr(provider, "draft_for", None)
     if proposal.action_type == "reply" and callable(author):
@@ -53,25 +74,134 @@ def _draft_text(provider: MailProvider, proposal) -> str | None:
     return proposal.content
 
 
+def resolve_draft(
+    provider: MailProvider,
+    proposal,
+    *,
+    message: FetchedMessage | None = None,
+    signals=None,
+    context=None,
+    live_llm: bool = False,
+) -> ResolvedDraft:
+    """Resolve the prose for one held action, best source first.
+
+    Order is cache → model → provider-authored → the policy's generic sentence.
+    The cache comes first so a seeded demo never touches the network; the model
+    is only consulted when ``live_llm`` is set, because a sync is request-bound
+    and a stalled provider would be felt by the user.
+
+    Every step degrades rather than raises. Losing the model costs prose, not the
+    decision — which was made deterministically before any of this ran.
+    """
+    from app.llm.draft_cache import draft_key, get_draft_cache
+
+    action_type = proposal.action_type
+    fallback = _draft_text(provider, proposal)
+
+    if message is None or action_type not in ("reply", "escalate"):
+        return ResolvedDraft(body=fallback, source="authored" if fallback else "generic")
+
+    key = draft_key(
+        provider_message_id=message.provider_message_id,
+        subject=message.subject or "",
+        body=message.body or "",
+        action_type=action_type,
+    )
+
+    cache = get_draft_cache()
+    cached = cache.get(key)
+    if cached:
+        return ResolvedDraft(
+            body=str(cached["body"]),
+            source="llm",
+            confidence=cached.get("confidence"),
+            rationale=list(cached.get("rationale") or []),
+        )
+
+    if live_llm:
+        from app.llm.drafter import get_drafter
+
+        result = get_drafter().draft(
+            message=message,
+            action_type=action_type,
+            signals=signals,
+            escalate_to=proposal.escalate_to,
+            context=context,
+        )
+        if result is not None:
+            cache.put(
+                key,
+                body=result.body,
+                rationale=result.rationale,
+                confidence=result.confidence,
+                model=result.model,
+                subject=message.subject or "",
+            )
+            return ResolvedDraft(
+                body=result.body,
+                source="llm",
+                confidence=result.confidence,
+                rationale=result.rationale,
+            )
+
+    return ResolvedDraft(body=fallback, source="authored" if fallback else "generic")
+
+
 class InboxSyncService:
     def __init__(self) -> None:
         self.mailboxes = MailboxRepository()
         self.messages = ProcessedMessageRepository()
         self.actions = ProposedActionRepository()
         self.audit = AuditRepository()
+        self.orgs = OrganizationRepository()
+        self.users = UserRepository()
+
+    def _draft_context(self, org_id: str, user_id: str):
+        """Who the drafter writes as. Best-effort — defaults are always usable."""
+        from app.llm.drafter import DraftContext
+
+        try:
+            org = self.orgs.get(org_id) or {}
+            user = self.users.get(org_id, user_id) or {}
+        except Exception:  # noqa: BLE001 - naming is cosmetic, never fail a sync
+            return DraftContext()
+        kwargs = {}
+        if user.get("full_name"):
+            kwargs["executive_name"] = user["full_name"]
+        if org.get("name"):
+            kwargs["organisation"] = org["name"]
+        return DraftContext(**kwargs)
 
     # -- sync ---------------------------------------------------------------
     def sync(
-        self, *, org_id: str, user_id: str, connection_id: str, provider: MailProvider
+        self,
+        *,
+        org_id: str,
+        user_id: str,
+        connection_id: str,
+        provider: MailProvider,
+        live_llm: bool | None = None,
     ) -> dict:
         connection = self.mailboxes.get(org_id, connection_id)
         if not connection:
             raise ProcessingError("Mailbox connection not found", 404)
         account_email = connection.get("account_email", "unknown")
 
-        fetched = provider.fetch_messages()
+        settings = get_settings()
+        if live_llm is None:
+            live_llm = settings.llm_drafting_enabled
+
+        # Explicit: the provider interface's own default is 25, which quietly
+        # truncates any mailbox larger than that.
+        fetched = provider.fetch_messages(limit=settings.inbox_sync_limit)
         observation = enrich.to_observation(fetched, account_email=account_email)
         proposals = pipeline.to_proposals(pipeline.run_policy(observation))
+
+        # Proposals carry only an email_id; drafting needs the message itself and
+        # the signals inferred from it.
+        message_by_id = {m.provider_message_id: m for m in fetched}
+        signals_by_id = {e.id: e for e in observation.emails}
+        draft_context = self._draft_context(org_id, user_id) if live_llm else None
 
         # Persist each fetched message; keep a provider_id -> row_id map to link
         # proposals to their message.
@@ -110,15 +240,26 @@ class InboxSyncService:
                 continue
             if prop.requires_approval:
                 # External action (reply/escalate) — hold for a human.
+                drafted = resolve_draft(
+                    provider,
+                    prop,
+                    message=message_by_id.get(prop.email_id),
+                    signals=signals_by_id.get(prop.email_id),
+                    context=draft_context,
+                    live_llm=live_llm,
+                )
                 self.actions.create(
                     org_id=org_id,
                     message_id=message_row["id"],
                     action_type=prop.action_type,
-                    content=_draft_text(provider, prop),
+                    content=drafted.body,
                     escalate_to=prop.escalate_to,
                     label=prop.label,
                     status="proposed",
                     requires_approval=True,
+                    draft_source=drafted.source,
+                    draft_confidence=drafted.confidence,
+                    rationale=drafted.rationale,
                 )
                 proposed_count += 1
             else:
@@ -141,6 +282,16 @@ class InboxSyncService:
                     executed_at=_now_iso() if result.ok else None,
                 )
                 auto_count += 1
+
+        if live_llm:
+            # Persist anything the model just wrote, so the next run — and the
+            # demo — replays it from disk instead of paying for it again.
+            try:
+                from app.llm.draft_cache import get_draft_cache
+
+                get_draft_cache().save()
+            except OSError as exc:
+                logger.warning("Could not write the draft cache: %s", exc)
 
         self.mailboxes.set_synced_at(org_id, connection_id, _now_iso())
         self.audit.record(

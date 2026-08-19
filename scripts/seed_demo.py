@@ -50,7 +50,27 @@ def main() -> int:
         action="store_true",
         help="delete the demo organization first, then recreate it from scratch",
     )
+    parser.add_argument(
+        "--with-llm",
+        action="store_true",
+        help=(
+            "call the configured LLM to write the reply and escalation prose, and "
+            "commit it to data/demo/drafts.json. Run this once, with a key and a "
+            "network; every later run replays those drafts from disk."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.with_llm:
+        from app.core.config import get_settings
+
+        if not get_settings().provider_available:
+            print(
+                "--with-llm needs a provider credential (OPENAI_API_KEY, "
+                "ANTHROPIC_API_KEY, GOOGLE_API_KEY or OLLAMA_BASE_URL).",
+                file=sys.stderr,
+            )
+            return 1
 
     migrate_db()
 
@@ -101,11 +121,15 @@ def main() -> int:
     )
     print(f"Connected the demo mailbox ({demo_message_count()} messages)")
 
+    if args.with_llm:
+        print("Drafting with the model — this makes network calls and costs money…")
+
     result = InboxSyncService().sync(
         org_id=owner["org_id"],
         user_id=owner["id"],
         connection_id=connection["id"],
         provider=build_provider(connection),
+        live_llm=args.with_llm,
     )
     pending = actions.list_for_org(owner["org_id"], status="proposed", limit=200)
 
@@ -114,12 +138,36 @@ def main() -> int:
         f"{result.get('auto_executed', 0)} applied automatically, "
         f"{pending.get('total', 0)} held for approval"
     )
+
+    _report_draft_sources(pending.get("actions") or [])
     print()
     print("  Demo workspace ready.")
     print("    uvicorn app.main:app --reload --port 8000")
     print("    http://localhost:8000/login")
     print(f"    {DEMO_OWNER_EMAIL} / {DEMO_OWNER_PASSWORD}")
     return 0
+
+
+def _report_draft_sources(actions: list) -> None:
+    """Say where the held prose came from — the thing worth knowing before a demo."""
+    counts: dict[str, int] = {}
+    for action in actions:
+        counts[action.get("draft_source") or "generic"] = (
+            counts.get(action.get("draft_source") or "generic", 0) + 1
+        )
+    if not counts:
+        return
+    labels = {
+        "llm": "model-written",
+        "authored": "authored fixture prose",
+        "generic": "the policy's generic sentence",
+    }
+    summary = ", ".join(
+        f"{count} {labels.get(source, source)}" for source, count in sorted(counts.items())
+    )
+    print(f"  Drafts: {summary}")
+    if not counts.get("llm"):
+        print("  (no cached model drafts — run once with --with-llm to generate them)")
 
 
 def _purge_messages(org_id: str) -> None:

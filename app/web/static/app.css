@@ -1001,6 +1001,23 @@ footer {
 /* ========================================================================== */
 /* Inbox: three panes                                                         */
 /* ========================================================================== */
+/* The triage summary above the inbox reuses the marketing `.statline` tiles.
+   Only the spacing differs: inside a card there is no section gap to clear, and
+   the numbers sit tighter than they do on a landing page. */
+.triage-summary {
+  padding: 18px 22px;
+  margin-bottom: 18px;
+}
+
+.triage-summary .statline {
+  margin-top: 0;
+  gap: 40px;
+}
+
+.triage-summary .stat .n {
+  font-size: 1.7rem;
+}
+
 .inbox {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(300px, 380px);

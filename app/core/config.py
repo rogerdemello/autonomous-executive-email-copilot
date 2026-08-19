@@ -74,6 +74,18 @@ class Settings(BaseSettings):
     # Behavior
     require_approval: bool = False
 
+    # How many messages one sync pulls. The provider interface defaults to 25,
+    # which silently truncated a 50-message mailbox to its first half — the
+    # inbox looked complete because nothing reports what was left behind.
+    inbox_sync_limit: int = 100
+
+    # Call the model to write reply/escalation prose during an inbox sync.
+    # Off by default, deliberately: a sync is request-bound, and a slow or
+    # unreachable provider would stall the user rather than the background job.
+    # Cached drafts are always used regardless of this flag, so a seeded demo
+    # shows model-written prose with this off and no network available.
+    llm_drafting_enabled: bool = False
+
     # Scenario selection
     # When False (default) the loader resolves exactly ``{task_id}.yaml`` so
     # golden scores stay byte-identical. When True the loader globs

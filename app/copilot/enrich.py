@@ -25,7 +25,16 @@ _FREEMAIL = {"gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com
 # Automated/no-reply local parts → a vendor/system sender.
 _VENDOR_HINTS = ("noreply", "no-reply", "notifications", "billing", "support", "donotreply")
 
-# Risk vocabulary, checked in priority order (first hit wins).
+# Risk vocabulary. The tag with the most distinct term matches wins; ties break
+# in the listed order, which is why that order is severity-descending.
+#
+# ``ops`` sits above ``finance`` deliberately. A message is usually *about* the
+# incident and only *mentions* the money: "billing service outage" matches one
+# term on each side, and calling that finance buries an operational incident
+# under the wrong owner. Under the previous first-hit-wins rule ``ops`` was
+# effectively unreachable — any finance word anywhere in the body claimed the
+# message first. ``legal`` and ``security`` stay on top, so the escalation gate
+# in :mod:`app.copilot.policy` sees exactly what it saw before.
 #
 # A trailing ``*`` means "this is a stem, match the whole word family"
 # (``indemnif*`` covers indemnify/indemnified/indemnification). Everything else
@@ -37,32 +46,48 @@ _VENDOR_HINTS = ("noreply", "no-reply", "notifications", "billing", "support", "
 # a Monday deadline was being escalated to the legal team.
 _RISK_TERMS: list[tuple[RiskTag, tuple[str, ...]]] = [
     (
+        # "contract" is listed as its own word family rather than a ``contract*``
+        # stem, because that stem also swallows **contractor** and
+        # **contractors** — people, not agreements. It sent "a former
+        # contractor's credentials are still active" to the legal team instead of
+        # to security, which is the same class of mistake as the old "nda inside
+        # Monday", one level further in.
         "legal",
-        ("contract*", "legal*", "lawsuit*", "liability", "nda", "indemnif*", "compliance", "gdpr"),
+        (
+            "contract",
+            "contracts",
+            "contractual",
+            "legal*",
+            "lawsuit*",
+            "liability",
+            "nda",
+            "indemnif*",
+            "compliance",
+            "gdpr",
+        ),
     ),
     (
         "security",
         ("breach*", "security", "phishing", "malware", "credential*", "vulnerab*", "ransomware"),
     ),
+    ("ops", ("outage*", "downtime", "incident*", "deploy*", "sla")),
     (
         "finance",
         ("invoice*", "payment*", "wire transfer", "refund*", "billing", "forecast*", "budget*"),
     ),
-    ("ops", ("outage*", "downtime", "incident*", "deploy*", "sla")),
 ]
 
 
-def _compile(terms: tuple[str, ...]) -> re.Pattern[str]:
-    """One alternation per risk tag: stems match their word family, others whole words."""
-    parts = [
-        rf"{re.escape(term[:-1])}\w*" if term.endswith("*") else rf"{re.escape(term)}\b"
-        for term in terms
-    ]
-    return re.compile(r"\b(?:" + "|".join(parts) + r")", re.IGNORECASE)
+def _compile(term: str) -> re.Pattern[str]:
+    """One pattern per term: stems match their word family, others whole words."""
+    body = rf"{re.escape(term[:-1])}\w*" if term.endswith("*") else rf"{re.escape(term)}\b"
+    return re.compile(r"\b(?:" + body + r")", re.IGNORECASE)
 
 
-_RISK_PATTERNS: list[tuple[RiskTag, re.Pattern[str]]] = [
-    (tag, _compile(terms)) for tag, terms in _RISK_TERMS
+# One pattern per *term* rather than one alternation per tag, so a tag's score is
+# the number of distinct terms it matched — not how often any single word recurs.
+_RISK_PATTERNS: list[tuple[RiskTag, tuple[re.Pattern[str], ...]]] = [
+    (tag, tuple(_compile(term) for term in terms)) for tag, terms in _RISK_TERMS
 ]
 
 _DEADLINE_BY_PRIORITY = {"high": 60, "medium": 240, "low": 480}
@@ -88,10 +113,21 @@ def infer_sender_role(sender: str, account_email: str) -> SenderRole:
 
 
 def infer_risk_tag(text: str) -> RiskTag:
-    for tag, pattern in _RISK_PATTERNS:
-        if pattern.search(text):
-            return tag
-    return "none"
+    """The risk tag with the most distinct term matches; ties break by severity.
+
+    Scoring rather than first-hit matters for mixed messages. "Billing service
+    outage" carries one finance word and one ops word: whichever tag is merely
+    checked first would otherwise claim it outright, regardless of how much
+    evidence the other side had.
+    """
+    best: RiskTag = "none"
+    best_score = 0
+    for tag, patterns in _RISK_PATTERNS:
+        score = sum(1 for pattern in patterns if pattern.search(text))
+        # Strictly greater: on a tie the earlier (more severe) tag already won.
+        if score > best_score:
+            best, best_score = tag, score
+    return best
 
 
 def infer_priority(text: str, risk_tag: RiskTag, sender_role: SenderRole) -> str:

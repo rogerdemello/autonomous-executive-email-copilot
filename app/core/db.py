@@ -212,7 +212,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 
 class SchemaVersion(Base):
@@ -290,6 +290,15 @@ def _run_migration(version: int) -> None:
         # sync time, so a mailbox looks like it arrived in one instant.
         _add_column_if_missing("saas_processed_messages", "received_at", "VARCHAR(50)")
         _add_column_if_missing("saas_processed_messages", "sender_name", "VARCHAR(255)")
+        return
+    if version == 3:
+        # Record where a draft's *prose* came from and why the action was chosen.
+        # Without draft_source the UI cannot distinguish model-written text from
+        # the policy's generic sentence; without a persisted rationale the
+        # approvals queue has to show a bare draft with no reasoning attached.
+        _add_column_if_missing("saas_proposed_actions", "draft_source", "VARCHAR(16)")
+        _add_column_if_missing("saas_proposed_actions", "draft_confidence", "FLOAT")
+        _add_column_if_missing("saas_proposed_actions", "rationale", "TEXT")
         return
 
 
