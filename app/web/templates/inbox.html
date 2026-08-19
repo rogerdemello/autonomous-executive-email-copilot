@@ -5,6 +5,13 @@
 {% block lede %}What the copilot is working on right now.{% endblock %}
 
 {% block headactions %}
+  {% if connections %}
+    {# Sync is manual for now, so say when it last ran rather than implying live. #}
+    {% set synced = connections | map(attribute="last_synced_at") | select | list %}
+    <span class="muted" style="font-size: 0.85rem">
+      {% if synced %}Last synced {{ synced | max | short_time }}{% else %}Not synced yet{% endif %}
+    </span>
+  {% endif %}
   {% if can_manage and connections %}
     <form method="post" action="/app/sync">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
