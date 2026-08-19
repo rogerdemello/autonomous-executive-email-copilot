@@ -74,11 +74,18 @@ class BenchmarkRunner:
         self.reflective = ReflectiveAgent()
 
     def run_all(self) -> list[BenchmarkResult]:
+        """Every *offline* agent — the no-credentials smoke path.
+
+        Honours the same contract as the CLI: deterministic agents need
+        nothing; the LLM agent needs a key and is opt-in via
+        ``run_agent("llm")``, never silently included to fail mid-sweep.
+        (It used to be — and ``reflective`` was constructed but skipped.)
+        """
         results: list[BenchmarkResult] = []
         agents: list[BaseBenchmarkAgent] = [
             self.baseline_agent,
-            self.llm_agent,
             self.multiagent,
+            self.reflective,
         ]
 
         for task_id in self.tasks:

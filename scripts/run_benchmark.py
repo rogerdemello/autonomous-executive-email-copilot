@@ -10,7 +10,7 @@ included when explicitly requested via ``--agents``.
 
 Example::
 
-    python scripts/run_benchmark.py --agents baseline multiagent --out reports/out
+    python scripts/run_benchmark.py --agents baseline multiagent --out artifacts/results
 """
 
 from __future__ import annotations
@@ -69,13 +69,16 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("baseline", "multiagent", "reflective", "llm"),
         default=list(OFFLINE_AGENTS),
         help=(
-            "Agents to run (default: baseline multiagent). The 'llm' agent needs "
-            "OPENAI_API_KEY and is only run when explicitly selected."
+            "Agents to run (default: %(default)s — every agent that needs no API "
+            "key). The 'llm' agent needs OPENAI_API_KEY and is only run when "
+            "explicitly selected."
         ),
     )
     parser.add_argument(
         "--out",
-        default="reports/benchmark",
+        # artifacts/ is gitignored; the old default (reports/benchmark) dropped
+        # generated files inside the `reports` *source package*.
+        default="artifacts/results",
         help="Output directory for results.json/.csv/.html (default: %(default)s).",
     )
     parser.add_argument(
@@ -91,7 +94,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--history-path",
-        default="benchmark/leaderboard_history.jsonl",
+        # artifacts/ is gitignored; the old default resurrected a root-level
+        # benchmark/ directory the restructure removed.
+        default="artifacts/leaderboard_history.jsonl",
         help="History file for --record-history (default: %(default)s).",
     )
     return parser
@@ -105,7 +110,7 @@ def run(
     out_dir: str,
     max_steps: int = 100,
     record_history: bool = False,
-    history_path: str = "benchmark/leaderboard_history.jsonl",
+    history_path: str = "artifacts/leaderboard_history.jsonl",
 ) -> list[BenchmarkResult]:
     """Run the selected agents and write artifacts to ``out_dir``."""
     # The benchmark is sim-only by construction: refuse to run if a real-inbox

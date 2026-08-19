@@ -228,11 +228,12 @@ sampling variance at inference time (see Section 5).
 
 ## 5. Agent set
 
-The runner evaluates three agents, constructed in `BenchmarkRunner.__init__`
-(`research/benchmark/runner.py`, lines 66-68) and listed in `run_all` (lines 72-76). All
-three share the same loop shape: reset the env, step until `done` or `max_steps`,
-then grade the collected trajectory with `evaluate_trajectory`
-(`research/benchmark/agents.py`).
+The runner constructs four agents in `BenchmarkRunner.__init__`
+(`research/benchmark/runner.py`). `run_all()` runs the three *offline* ones
+(`baseline`, `multiagent`, `reflective`); the key-requiring `llm` agent is
+opt-in via `run_agent("llm")`. All share the same loop shape: reset the env,
+step until `done` or `max_steps`, then grade the collected trajectory with
+`evaluate_trajectory` (`research/benchmark/agents.py`).
 
 | Agent (`name`) | Implementation | Decision source | Tokens / cost reported |
 |----------------|----------------|-----------------|------------------------|
@@ -291,10 +292,10 @@ at `max(1, max_steps)` steps.
 ## 6. Reproducing results
 
 The full matrix is driven by `BenchmarkRunner.run_all()`, which iterates
-tasks x personas x seeds x agents and returns one `BenchmarkResult` per cell
-(`research/benchmark/runner.py`, lines 70-97). `BenchmarkResult.to_dict()` exposes
-`task_id, persona, seed, agent_name, score, time_ms, tokens, cost_usd`
-(lines 41-51). The `Reporter` aggregates these into JSON or HTML, computing
+tasks x personas x seeds x (offline) agents and returns one `BenchmarkResult`
+per cell (`research/benchmark/runner.py`). `BenchmarkResult.to_dict()` exposes
+`task_id, persona, seed, agent_name, score, time_ms, tokens, cost_usd`.
+The `Reporter` aggregates these into JSON or HTML, computing
 per-agent averages of score/time/tokens/cost (`research/benchmark/reporter.py`).
 
 ### Default full run
@@ -303,8 +304,8 @@ per-agent averages of score/time/tokens/cost (`research/benchmark/reporter.py`).
 from research.benchmark.runner import BenchmarkRunner
 from research.benchmark.reporter import Reporter
 
-runner = BenchmarkRunner()          # 3 tasks x 3 personas x 3 seeds x 3 agents = 81 runs
-results = runner.run_all()
+runner = BenchmarkRunner()          # 3 tasks x 3 personas x 8 seeds x 3 offline agents = 216 runs
+results = runner.run_all()          # pass seeds=[42, 43, 44] for the published 3-seed grid
 
 reporter = Reporter(runner)
 open("benchmark_results.json", "w").write(reporter.generate_json(results))
@@ -315,7 +316,7 @@ open("benchmark_results.html", "w").write(reporter.generate_html(results))
 
 ```python
 # One agent across the default matrix:
-results = BenchmarkRunner().run_agent("baseline")   # "baseline" | "llm" | "multiagent"
+results = BenchmarkRunner().run_agent("baseline")   # "baseline" | "multiagent" | "reflective" | "llm"
 
 # Custom grid (e.g. smoke test):
 runner = BenchmarkRunner(
@@ -323,7 +324,7 @@ runner = BenchmarkRunner(
     personas=["balanced"],
     seeds=[42],
 )
-results = runner.run_all()          # 1 x 1 x 1 x 3 agents = 3 runs
+results = runner.run_all()          # 1 x 1 x 1 x 3 offline agents = 3 runs, no key needed
 ```
 
 ### Reproducing the LLM column for **free** ($0)

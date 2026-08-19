@@ -1,7 +1,7 @@
 """Persisted leaderboard history with run-over-run deltas.
 
 Each benchmark run can append one JSON line per call to a history file
-(``benchmark/leaderboard_history.jsonl`` by default). Appends never mutate prior
+(``artifacts/leaderboard_history.jsonl`` by default). Appends never mutate prior
 lines, and each entry records the delta of its per-agent summary versus the
 previous entry — so regressions/improvements are visible over time.
 """

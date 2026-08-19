@@ -115,19 +115,21 @@ def test_run_all_returns_results_from_all_agents(monkeypatch):
     )
     stub_baseline = _StubAgent()
     stub_baseline.name = "baseline"
-    stub_llm = _StubAgent()
-    stub_llm.name = "llm"
+    stub_reflective = _StubAgent()
+    stub_reflective.name = "reflective"
     stub_multi = _StubAgent()
     stub_multi.name = "multiagent"
     monkeypatch.setattr(runner, "baseline_agent", stub_baseline)
-    monkeypatch.setattr(runner, "llm_agent", stub_llm)
+    monkeypatch.setattr(runner, "reflective", stub_reflective)
     monkeypatch.setattr(runner, "multiagent", stub_multi)
 
     results = runner.run_all()
 
+    # run_all is the no-credentials smoke path: every offline agent, and
+    # never the key-requiring llm agent (that one is opt-in via run_agent).
     assert len(results) == 3
     agent_names = {r.agent_name for r in results}
-    assert agent_names == {"baseline", "llm", "multiagent"}
+    assert agent_names == {"baseline", "reflective", "multiagent"}
 
 
 def test_run_all_with_custom_config_respects_dimensions(monkeypatch):
@@ -138,7 +140,7 @@ def test_run_all_with_custom_config_respects_dimensions(monkeypatch):
         seeds=[42, 43],
     )
     monkeypatch.setattr(runner, "baseline_agent", stub)
-    monkeypatch.setattr(runner, "llm_agent", stub)
+    monkeypatch.setattr(runner, "reflective", stub)
     monkeypatch.setattr(runner, "multiagent", stub)
 
     results = runner.run_all()
