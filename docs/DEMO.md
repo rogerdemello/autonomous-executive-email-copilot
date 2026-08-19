@@ -161,7 +161,15 @@ Approve one.
 
 ### 8. Settings — `/app/settings`
 
-Plan and seat usage, members with roles, connected mailboxes.
+Plan and seat usage, member management (invite with a one-time temporary
+password, change role, remove — seat limits and the last-owner guard enforced),
+license-key activation, change password, connected mailboxes, and the owner's
+data section: a one-click JSON export of everything the tenant owns, and
+permanent deletion gated on retyping the workspace slug.
+
+> "The plan is enforced, not decorative: an expired trial blocks syncing and
+> approvals with a clear 402 — sign-in and settings stay open, because an admin
+> needs those exactly when the plan has lapsed."
 
 ---
 
