@@ -1,0 +1,8 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "dacba5bd7b692465dc8f431ef670a3c388f98138",
+  "branch": "saas-foundation",
+  "prompts": {}
+}
