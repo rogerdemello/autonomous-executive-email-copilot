@@ -1,0 +1,86 @@
+app/web/templates/settings.html
+  s_f0cdcdb3c6f87a::t_bdda8b7018440b 8-10,25-42,50-55,82-96,115,123-137,139-149,155-183,220-248
+tests/test_web_pages.py
+  s_f0cdcdb3c6f87a::t_35de5f0ae2bc4e 697-865
+app/saas/org_service.py
+  s_f0cdcdb3c6f87a::t_19a3f7d5f9b7ab 1-137
+app/web/routes.py
+  s_f0cdcdb3c6f87a::t_2bd84474d6c4d5 825-833,835-836,848-859,863-934,936-1037
+  s_f0cdcdb3c6f87a::t_39e64fe9e9c307 29
+  s_f0cdcdb3c6f87a::t_39d002dcbb7630 935
+  s_f0cdcdb3c6f87a::t_b1feb0076dd173 35-36
+app/saas/routes.py
+  s_f0cdcdb3c6f87a::t_7020453f73d3d4 344-351,353-354,365-370,380-383
+  s_f0cdcdb3c6f87a::t_9ce1a9e6aadb33 47
+  s_f0cdcdb3c6f87a::t_39d002dcbb7630 17,23-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "2b21b03bb85109c96e394a6cc5f55ce24603e03f",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:987d06af3942f130e5755683510ade69409406b6a2a8144c72404a235c76a800",
+      "total_additions": 663,
+      "total_deletions": 103,
+      "accepted_lines": 2688,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:987d06af3942f130e5755683510ade69409406b6a2a8144c72404a235c76a800",
+      "stats": {
+        "total_additions": 663,
+        "total_deletions": 103,
+        "accepted_lines": 2688,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/org_service.py": {
+            "total_additions": 137,
+            "total_deletions": 0,
+            "accepted_lines": 137,
+            "overriden_lines": 0
+          },
+          "app/saas/routes.py": {
+            "total_additions": 25,
+            "total_deletions": 92,
+            "accepted_lines": 471,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 204,
+            "total_deletions": 9,
+            "accepted_lines": 1088,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 127,
+            "total_deletions": 1,
+            "accepted_lines": 127,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 170,
+            "total_deletions": 1,
+            "accepted_lines": 865,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
