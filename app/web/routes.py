@@ -326,6 +326,14 @@ def login_submit(
     try:
         user = _auth.authenticate(email=email, password=password)
     except AuthError as exc:
+        # The web surface must audit failures like the API does — the Activity
+        # page claims every sign-in attempt lands there.
+        account = _users.get_by_email_global(email)
+        _audit.record(
+            action="auth.login_failed",
+            org_id=account["org_id"] if account else None,
+            detail={"email": email, "surface": "web"},
+        )
         return _render(
             request,
             "login.html",

@@ -123,9 +123,14 @@ def login(body: LoginRequest, request: Request) -> dict:
     try:
         user = _auth.authenticate(email=body.email, password=body.password)
     except AuthError as exc:
+        # Attach the org when the account exists, or the failure can never
+        # appear on that tenant's Activity page — which promises to show
+        # failed sign-ins.
+        account = _users.get_by_email_global(body.email)
         _audit.record(
             action="auth.login_failed",
-            detail={"email": body.email},
+            org_id=account["org_id"] if account else None,
+            detail={"email": body.email, "surface": "api"},
             ip=_client_ip(request),
         )
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
@@ -186,8 +191,10 @@ def forgot_password(body: ForgotPasswordRequest, request: Request) -> dict:
             f"(valid for {get_settings().password_reset_ttl_minutes} minutes):\n\n{link}\n\n"
             "If you didn't request this, you can safely ignore this email.",
         )
+        account = _users.get_by_email_global(body.email)
         _audit.record(
             action="auth.password_reset_requested",
+            org_id=account["org_id"] if account else None,
             detail={"email": body.email},
             ip=_client_ip(request),
         )

@@ -323,6 +323,38 @@ class TestSupportingPages:
         assert response.status_code == 200
         assert "mailbox.connect" in response.text
 
+    def test_failed_sign_in_appears_on_the_activity_page(self, signed_in):
+        """The Activity page claims every sign-in attempt lands there — that
+        must include *failed* web sign-ins, attributed to the account's org."""
+        client, email = signed_in
+        client.post("/logout", data={"csrf_token": csrf_from(client.get("/app/inbox").text)})
+
+        page = client.get("/login").text
+        response = client.post(
+            "/login",
+            data={
+                "csrf_token": csrf_from(page),
+                "email": email,
+                "password": "not-the-password",
+                "next": "/app/inbox",
+            },
+        )
+        assert response.status_code == 401
+
+        # Sign back in and check the trail.
+        page = client.get("/login").text
+        client.post(
+            "/login",
+            data={
+                "csrf_token": csrf_from(page),
+                "email": email,
+                "password": "a-strong-password",
+                "next": "/app/inbox",
+            },
+        )
+        activity = client.get("/app/activity").text
+        assert "auth.login_failed" in activity
+
     def test_settings_shows_plan_and_members(self, with_demo_mailbox):
         client, email = with_demo_mailbox
         response = client.get("/app/settings")
