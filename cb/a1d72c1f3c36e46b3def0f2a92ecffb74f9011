@@ -1,0 +1,65 @@
+docs/ARCHITECTURE.md
+  s_f0cdcdb3c6f87a::t_f661d4b935d20b 75-79
+.env.example
+  s_f0cdcdb3c6f87a::t_d44f5ca4f08b9e 96-99
+README.md
+  s_f0cdcdb3c6f87a::t_c8806db7805511 543-546
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "cba1d72c1f3c36e46b3def0f2a92ecffb74f9011",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:ba59deadcc630bbe6306a08c32f44f2e47e21ea5f75525013d76707d909fb4cd",
+      "total_additions": 13,
+      "total_deletions": 5,
+      "accepted_lines": 278,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:ba59deadcc630bbe6306a08c32f44f2e47e21ea5f75525013d76707d909fb4cd",
+      "stats": {
+        "total_additions": 13,
+        "total_deletions": 5,
+        "accepted_lines": 278,
+        "overriden_lines": 0,
+        "files": {
+          ".env.example": {
+            "total_additions": 4,
+            "total_deletions": 2,
+            "accepted_lines": 195,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 4,
+            "overriden_lines": 0
+          },
+          "docs/ARCHITECTURE.md": {
+            "total_additions": 5,
+            "total_deletions": 2,
+            "accepted_lines": 79,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
