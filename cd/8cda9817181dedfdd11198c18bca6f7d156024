@@ -1,0 +1,57 @@
+tests/test_dashboard.py
+  s_f0cdcdb3c6f87a::t_794751792ae400 93-113
+app/live_api.py
+  s_f0cdcdb3c6f87a::t_612111738903cf 98-103,105,107,110,112-115,119-122,124,128-129,139-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "cd8cda9817181dedfdd11198c18bca6f7d156024",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:c1d2e1820f151778519b44757135abbd8038306e9441f90dd67b97beffeba72e",
+      "total_additions": 44,
+      "total_deletions": 31,
+      "accepted_lines": 256,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:c1d2e1820f151778519b44757135abbd8038306e9441f90dd67b97beffeba72e",
+      "stats": {
+        "total_additions": 44,
+        "total_deletions": 31,
+        "accepted_lines": 256,
+        "overriden_lines": 0,
+        "files": {
+          "app/live_api.py": {
+            "total_additions": 23,
+            "total_deletions": 31,
+            "accepted_lines": 143,
+            "overriden_lines": 0
+          },
+          "tests/test_dashboard.py": {
+            "total_additions": 21,
+            "total_deletions": 0,
+            "accepted_lines": 113,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
