@@ -1,0 +1,58 @@
+tests/test_saas_password_reset.py
+  s_f0cdcdb3c6f87a::t_06667684d35d60 189-224
+app/saas/auth.py
+  s_f0cdcdb3c6f87a::t_52c60ac432cb00 164
+  s_f0cdcdb3c6f87a::t_a742ced15e3424 181-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "e69b4aa0fb5fdcfe9da97633a79cc48fee14d773",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:8ae3a44fe7ea6214f0e860def3103e2d6689903d724cec4aca82b43b1311f159",
+      "total_additions": 44,
+      "total_deletions": 3,
+      "accepted_lines": 460,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:8ae3a44fe7ea6214f0e860def3103e2d6689903d724cec4aca82b43b1311f159",
+      "stats": {
+        "total_additions": 44,
+        "total_deletions": 3,
+        "accepted_lines": 460,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/auth.py": {
+            "total_additions": 7,
+            "total_deletions": 3,
+            "accepted_lines": 237,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_password_reset.py": {
+            "total_additions": 37,
+            "total_deletions": 0,
+            "accepted_lines": 223,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
