@@ -1,0 +1,26 @@
+{% extends "_public.html" %}
+
+{% block title %}{{ status_code }} — Executive Email Copilot{% endblock %}
+
+{% block main %}
+<div class="auth">
+  <div class="auth__card">
+    <p class="eyebrow">{{ status_code }}</p>
+    <h1>
+      {%- if status_code == 404 %}Not found
+      {%- elif status_code == 403 %}Not allowed
+      {%- elif status_code == 409 %}Already handled
+      {%- else %}Something went wrong{% endif -%}
+    </h1>
+    <p class="auth__sub">{{ message }}</p>
+
+    {% if current_user %}
+      <a class="btn btn--primary btn--block" href="/app/inbox">Back to the inbox</a>
+      <p class="auth__alt"><a href="/app/approvals">Approvals</a> · <a href="/app/connect">Mailboxes</a></p>
+    {% else %}
+      <a class="btn btn--primary btn--block" href="/login">Sign in</a>
+      <p class="auth__alt"><a href="/">Home</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

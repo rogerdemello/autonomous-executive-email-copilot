@@ -548,6 +548,29 @@ class TestMissingReferences:
         )
         assert response.status_code == 404
 
+    def test_web_errors_render_a_page_not_raw_json(self, with_demo_mailbox):
+        """A double-clicked Approve (or any web-path error) must land the user
+        on a page with a way back — the JSON error contract is for the API."""
+        client, _ = with_demo_mailbox
+        page = client.get("/app/approvals").text
+        response = client.post(
+            "/app/actions/no-such-action/approve", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("text/html")
+        assert "Back to the inbox" in response.text
+
+        # And an unknown /app page too.
+        response = client.get("/app/no-such-page")
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("text/html")
+
+    def test_api_errors_keep_the_json_contract(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        response = client.get("/replay/definitely-not-an-episode")
+        assert response.headers["content-type"].startswith("application/json")
+        assert "detail" in response.json()
+
     def test_rejecting_an_action_that_does_not_exist_is_a_404(self, with_demo_mailbox):
         client, _ = with_demo_mailbox
         page = client.get("/app/approvals").text

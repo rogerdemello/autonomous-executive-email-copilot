@@ -823,3 +823,48 @@ def settings_page(request: Request) -> HTMLResponse:
 async def login_redirect_handler(request: Request, exc: Exception) -> Response:
     next_url = getattr(exc, "next_url", "/app/inbox")
     return RedirectResponse(url=f"/login?next={quote(next_url, safe='/?=&')}", status_code=303)
+
+
+# --------------------------------------------------------------------------- #
+# Browser pages get an error *page*, not raw JSON
+# --------------------------------------------------------------------------- #
+# Paths served by this router. Everything else (the JSON API, the benchmark
+# surface) keeps FastAPI's default JSON error contract.
+_WEB_PATH_PREFIXES = (
+    "/app",
+    "/login",
+    "/logout",
+    "/signup",
+    "/forgot-password",
+    "/reset-password",
+    "/pricing",
+    "/welcome",
+)
+
+
+def is_web_path(path: str) -> bool:
+    return path == "/" or any(
+        path == prefix or path.startswith(prefix + "/") for prefix in _WEB_PATH_PREFIXES
+    )
+
+
+async def web_http_error_handler(request: Request, exc: Exception) -> Response:
+    """Render HTTPExceptions on browser pages as a page the user can act on.
+
+    A double-clicked Approve, a disconnect race, or a stale form otherwise
+    dumps ``{"detail": ...}`` in the browser with no way back. API routes are
+    deliberately untouched — machine callers want the JSON.
+    """
+    from fastapi.exception_handlers import http_exception_handler
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    if not isinstance(exc, StarletteHTTPException) or not is_web_path(request.url.path):
+        return await http_exception_handler(request, exc)  # type: ignore[arg-type]
+
+    detail = exc.detail if isinstance(exc.detail, str) else "Something went wrong."
+    return _render(
+        request,
+        "error.html",
+        {"status_code": exc.status_code, "message": detail},
+        status_code=exc.status_code,
+    )

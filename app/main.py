@@ -214,6 +214,7 @@ app.include_router(marketing_router)
 from .web.routes import (  # noqa: E402
     _LoginRedirect,
     login_redirect_handler,
+    web_http_error_handler,
     web_router,
 )
 
@@ -327,6 +328,12 @@ app.include_router(web_router)
 # An anonymous visitor hitting a page behind the session gets the login form
 # with their destination preserved, rather than a 401 they cannot act on.
 app.add_exception_handler(_LoginRedirect, login_redirect_handler)
+
+# And a signed-in visitor who double-clicks Approve or races a disconnect gets
+# an error page with a way back, not raw JSON. API paths keep the JSON contract.
+from starlette.exceptions import HTTPException as _StarletteHTTPException  # noqa: E402
+
+app.add_exception_handler(_StarletteHTTPException, web_http_error_handler)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
