@@ -20,10 +20,24 @@ from app.copilot.providers.gmail import GmailProvider
 from app.copilot.providers.graph import MicrosoftGraphProvider
 
 from . import oauth
-from .crypto import get_vault
+from .crypto import DecryptionError, get_vault
 from .repository import MailboxRepository
 
 logger = logging.getLogger(__name__)
+
+
+class BrokenConnectionError(Exception):
+    """A real connection exists but cannot produce an authenticated provider.
+
+    Raised instead of silently substituting fixture data: a user whose "Gmail"
+    fills with invented messages has been lied to, and nothing on screen said
+    so. Callers surface this as "reconnect the mailbox".
+    """
+
+    def __init__(self, message: str, status_code: int = 409) -> None:
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
 
 
 def _expiry_iso(token_response: dict) -> str | None:
@@ -74,11 +88,21 @@ def _make_refresher(connection: dict):
     return _refresh
 
 
+def _mark_broken(connection: dict, reason: str) -> BrokenConnectionError:
+    """Flag the connection as errored and return the exception to raise."""
+    MailboxRepository().set_status(connection["org_id"], connection["id"], "error")
+    logger.warning("Connection %s marked broken: %s", connection.get("id"), reason)
+    return BrokenConnectionError(reason)
+
+
 def build_provider(connection: dict) -> MailProvider:
     """Construct a provider for ``connection`` (a MailboxConnection ``to_dict``).
 
-    Re-reads the encrypted tokens server-side. Falls back to FakeProvider when the
-    provider isn't a real one or no token is stored (e.g. dev/test connections).
+    Re-reads the encrypted tokens server-side. A *real* connection that cannot
+    authenticate raises :class:`BrokenConnectionError` — it must never fall back
+    to fixture data, because a sync would then report success while filling the
+    user's mailbox with invented messages. FakeProvider remains only for
+    provider keys the product cannot create (dev/test connections).
     """
     provider_key = connection.get("provider")
     if provider_key == DEMO_PROVIDER_KEY:
@@ -88,17 +112,24 @@ def build_provider(connection: dict) -> MailProvider:
 
     full = MailboxRepository().get_with_tokens(connection["org_id"], connection["id"])
     if not full or not full.get("access_token_enc"):
-        logger.warning(
-            "Connection %s has no stored token; using FakeProvider", connection.get("id")
+        raise _mark_broken(
+            connection,
+            "This mailbox has no usable credentials. Reconnect it to continue syncing.",
         )
-        return FakeProvider()
 
     vault = get_vault()
-    access_token = vault.decrypt(full["access_token_enc"])
+    try:
+        access_token = vault.decrypt(full["access_token_enc"])
+    except DecryptionError as exc:
+        # Typically an AUTH_SECRET_KEY rotation: every stored token is now
+        # unreadable. Say so, rather than 500-ing every sync from here on.
+        raise _mark_broken(
+            connection,
+            "Stored mailbox credentials can no longer be decrypted "
+            "(was the server's secret key rotated?). Reconnect the mailbox.",
+        ) from exc
     refresher = _make_refresher(full) if full.get("refresh_token_enc") else None
 
     if provider_key == "google":
         return GmailProvider(access_token, token_refresher=refresher)
-    if provider_key == "microsoft":
-        return MicrosoftGraphProvider(access_token, token_refresher=refresher)
-    return FakeProvider()
+    return MicrosoftGraphProvider(access_token, token_refresher=refresher)

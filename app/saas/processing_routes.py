@@ -16,6 +16,7 @@ from app.copilot.providers.base import MailProvider
 
 from . import provider_factory
 from .deps import get_current_user, require_role
+from .provider_factory import BrokenConnectionError
 from .models_db import ROLE_ADMIN
 from .repository import (
     MailboxRepository,
@@ -37,10 +38,11 @@ _actions = ProposedActionRepository()
 def build_provider(connection: dict) -> MailProvider:
     """Build an authenticated provider for a connection.
 
-    Delegates to ``provider_factory`` which decrypts the stored OAuth token and
-    constructs the real Gmail/Graph provider (or a FakeProvider when the provider
-    isn't configured / has no token). Kept as a module-level indirection so tests
-    can monkeypatch it to inject a shared fake.
+    Delegates to ``provider_factory``, which decrypts the stored OAuth token and
+    constructs the real Gmail/Graph provider — or raises
+    :class:`BrokenConnectionError` when a real connection cannot authenticate.
+    Kept as a module-level indirection so tests can monkeypatch it to inject a
+    shared fake.
     """
     return provider_factory.build_provider(connection)
 
@@ -69,7 +71,15 @@ def sync(body: SyncRequest, actor: dict = Depends(require_role(ROLE_ADMIN))) -> 
 
     results = []
     for conn in connections:
-        provider = build_provider(conn)
+        # A broken mailbox reports its error and must not block syncing the
+        # others; reconnecting it clears the state.
+        try:
+            provider = build_provider(conn)
+        except BrokenConnectionError as exc:
+            results.append(
+                {"connection_id": conn["id"], "status": "error", "error": exc.message}
+            )
+            continue
         try:
             results.append(
                 _service.sync(
@@ -145,4 +155,7 @@ def _provider_for_action(org_id: str, action_id: str) -> MailProvider:
     connection = _mailboxes.get(org_id, message["connection_id"])
     if not connection:
         raise HTTPException(status_code=404, detail="Mailbox connection no longer exists")
-    return build_provider(connection)
+    try:
+        return build_provider(connection)
+    except BrokenConnectionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

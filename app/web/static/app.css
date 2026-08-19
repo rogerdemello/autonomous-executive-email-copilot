@@ -361,6 +361,7 @@ h3 {
 
 .chip--escalate,
 .chip--crit,
+.chip--danger,
 .chip--high {
   color: var(--crit);
   background: color-mix(in srgb, var(--crit) 14%, transparent);

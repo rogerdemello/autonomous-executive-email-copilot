@@ -33,7 +33,7 @@ from app.saas.deps import SESSION_COOKIE
 from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
 from app.saas.models_db import ROLE_ADMIN
-from app.saas.provider_factory import build_provider
+from app.saas.provider_factory import BrokenConnectionError, build_provider
 from app.saas.rbac import role_at_least
 from app.saas.repository import (
     AuditRepository,
@@ -621,6 +621,8 @@ def _sync_connection(user: dict, connection: dict) -> None:
             connection_id=connection["id"],
             provider=build_provider(connection),
         )
+    except BrokenConnectionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -758,7 +760,10 @@ def _provider_for_action(org_id: str, action_id: str):
     connection = _mailboxes.get(org_id, message["connection_id"])
     if not connection:
         raise HTTPException(status_code=404, detail="Mailbox connection no longer exists")
-    return build_provider(connection)
+    try:
+        return build_provider(connection)
+    except BrokenConnectionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
 
 @web_router.get("/app/approvals", response_class=HTMLResponse)

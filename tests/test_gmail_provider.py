@@ -216,9 +216,40 @@ class TestProviderFactory:
         stored = MailboxRepository().get_with_tokens(conn["org_id"], conn["id"])
         assert vault.decrypt(stored["access_token_enc"]) == "access-new"
 
-    def test_unconfigured_falls_back_to_fake(self):
-        from app.copilot.providers.fake import FakeProvider
+    def test_tokenless_real_connection_raises_not_fakes(self):
+        """A google connection with no stored token must surface an error —
+        never silently serve fixture messages as the user's Gmail."""
+        import pytest
 
         conn = {"provider": "google", "org_id": "x", "id": "y"}
-        # No such connection in DB -> no token -> FakeProvider.
+        with pytest.raises(provider_factory.BrokenConnectionError):
+            provider_factory.build_provider(conn)
+
+    def test_undecryptable_token_raises_broken_connection(self, monkeypatch):
+        """After a secret rotation the stored tokens are unreadable; that must
+        read as 'reconnect this mailbox', not a 500 on every sync."""
+        import pytest
+
+        from app.saas.crypto import DecryptionError
+
+        conn = {"provider": "google", "org_id": "x", "id": "y"}
+        monkeypatch.setattr(
+            provider_factory.MailboxRepository,
+            "get_with_tokens",
+            lambda self, org_id, cid: {"access_token_enc": "ciphertext-from-old-key"},
+        )
+
+        class _BadVault:
+            def decrypt(self, token):
+                raise DecryptionError("key mismatch")
+
+        monkeypatch.setattr(provider_factory, "get_vault", lambda: _BadVault())
+        with pytest.raises(provider_factory.BrokenConnectionError) as exc:
+            provider_factory.build_provider(conn)
+        assert "Reconnect" in str(exc.value)
+
+    def test_unknown_dev_provider_still_falls_back_to_fake(self):
+        from app.copilot.providers.fake import FakeProvider
+
+        conn = {"provider": "imap-dev", "org_id": "x", "id": "y"}
         assert isinstance(provider_factory.build_provider(conn), FakeProvider)

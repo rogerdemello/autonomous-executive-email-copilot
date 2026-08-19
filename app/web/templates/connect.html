@@ -26,6 +26,9 @@
               <td><strong>{{ conn.account_email }}</strong></td>
               <td>
                 <span class="chip chip--accent">{{ provider_labels.get(conn.provider, conn.provider) }}</span>
+                {% if conn.status == "error" %}
+                  <span class="chip chip--danger" title="This mailbox can no longer authenticate. Reconnect it to resume syncing.">needs reconnect</span>
+                {% endif %}
               </td>
               <td class="when">{{ conn.created_at | short_time }}</td>
               <td>
