@@ -338,7 +338,9 @@ cost, point it at a free provider (see [.env.example](../.env.example) "Style C"
 - **Local Ollama** — fully offline/free: `ollama serve`, then
   `API_BASE_URL=http://localhost:11434/v1`, `MODEL_NAME=llama3.1`, `OPENAI_API_KEY=ollama`.
 
-Then run `python scripts/run_benchmark.py --agents baseline multiagent llm --out artifacts/results`.
+Then run `python scripts/run_benchmark.py --agents baseline multiagent llm --seeds 42 43 44 --out artifacts/results`
+(the explicit `--seeds` reproduces the published 27-cell grid; the CLI's default
+is a wider 8-seed sweep).
 The deterministic `baseline` and `multiagent` agents are always free (no API calls).
 
 ### Notes for live (Azure OpenAI) runs
@@ -347,7 +349,7 @@ The deterministic `baseline` and `multiagent` agents are always free (no API cal
   (see [.env.example](../.env.example) "Style A") is read natively. The baseline and
   multi-agent agents run offline.
 - The default agent model is `gpt-4o-mini` (`data/settings.yaml` `agent_config`,
-  and `LLMAgent` default in `research/benchmark/agents.py` line 86). To price `gpt-4o`, the
+  and the `LLMAgent` default in `research/benchmark/agents.py`). To price `gpt-4o`, the
   rate `{prompt: 2.50, completion: 10.00}` is already in `MODEL_PRICING`.
 - `time_ms` is wall-clock and therefore environment-dependent; it is reported but
   not part of the score.

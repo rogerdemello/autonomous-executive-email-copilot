@@ -497,9 +497,10 @@ Supports webhook POST dispatch for triggered alerts.
 - `CONFIDENCE_THRESHOLD`
 - `AZURE_API_VERSION`
 
-### Dashboard variable
+### Integration variable
 
-- `APP_API_BASE_URL` (dashboard-to-app API URL)
+- `APP_API_BASE_URL` — last-resort base URL when building absolute links
+  (used only if neither `APP_PUBLIC_URL` nor `OAUTH_REDIRECT_BASE_URL` is set)
 
 ## 15) Complete Source Module Map
 

@@ -86,10 +86,11 @@ with 95% confidence intervals.
 
 ## 7. Beyond the benchmark
 
-The same environment is wrapped in a production-style stack — FastAPI + React,
-human-in-the-loop approvals, opt-in auth / multi-tenancy / rate limiting, Prometheus
-metrics + Grafana panels, a reproducible Docker image, and CI that gates lint, types,
-security, coverage, the frontend build, and a container smoke test. The benchmark is the
+The same environment is wrapped in a production-style stack — FastAPI with a
+server-rendered product UI (no bundler), human-in-the-loop approvals, opt-in
+auth / multi-tenancy / rate limiting, Prometheus metrics + Grafana panels, a
+reproducible Docker image, and CI that gates lint, types, security, coverage,
+and a container smoke test. The benchmark is the
 core; the product is proof the core is built to last.
 
 ## 8. Limitations & roadmap

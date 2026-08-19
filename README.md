@@ -188,7 +188,8 @@ design — see [docs/BENCHMARK.md](docs/BENCHMARK.md).</sub>
 Reproduce (deterministic agents need no API key):
 
 ```bash
-python scripts/run_benchmark.py --agents baseline multiagent --out artifacts/results
+# --seeds pinned to the published table's grid (the CLI default is 8 seeds)
+python scripts/run_benchmark.py --agents baseline multiagent --seeds 42 43 44 --out artifacts/results
 ```
 
 Supported tasks: `easy_classification`, `medium_prioritization`, `hard_full_management`.
