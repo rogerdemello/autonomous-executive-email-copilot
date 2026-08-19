@@ -26,13 +26,14 @@ from fastapi.templating import Jinja2Templates
 from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_account_email, demo_message_count
 from app.core.config import get_settings
 from app.core.paths import TEMPLATES_DIR
-from app.saas import licensing, oauth
+from app.saas import licensing, oauth, rbac
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingError, BillingService
 from app.saas.deps import SESSION_COOKIE
 from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
-from app.saas.models_db import ROLE_ADMIN
+from app.saas.models_db import ROLE_ADMIN, ROLE_OWNER, ROLES
+from app.saas.org_service import OrgError, OrgService
 from app.saas.provider_factory import BrokenConnectionError, build_provider
 from app.saas.rbac import role_at_least
 from app.saas.repository import (
@@ -821,11 +822,18 @@ def activity(request: Request) -> HTMLResponse:
     return _render(request, "activity.html", context)
 
 
-@web_router.get("/app/settings", response_class=HTMLResponse)
-def settings_page(request: Request) -> HTMLResponse:
-    user = _require_user(request)
-    context = _app_context(request, user, "settings")
+# Post-redirect notices for the settings page, keyed rather than free-text so
+# the query string can never render attacker-chosen copy.
+_SETTINGS_NOTICES = {
+    "password_changed": "Password updated.",
+    "license_activated": "License activated — your plan is live.",
+    "role_updated": "Member role updated.",
+    "member_removed": "Member removed from the workspace.",
+}
 
+
+def _settings_context(request: Request, user: dict) -> dict[str, Any]:
+    context = _app_context(request, user, "settings")
     raw = _billing.current_entitlement(user["org_id"])
     members = _users.list_for_org(user["org_id"])
     context["entitlement"] = {
@@ -837,7 +845,194 @@ def settings_page(request: Request) -> HTMLResponse:
     }
     context["members"] = members
     context["member_count"] = len(members)
+    context["assignable_roles"] = [
+        role for role in ROLES if rbac.can_assign_role(user["role"], role)
+    ]
+    context["is_owner"] = user["role"] == ROLE_OWNER
+    return context
+
+
+@web_router.get("/app/settings", response_class=HTMLResponse)
+def settings_page(request: Request, notice: str | None = None) -> HTMLResponse:
+    user = _require_user(request)
+    context = _settings_context(request, user)
+    context["notice"] = _SETTINGS_NOTICES.get(notice or "")
     return _render(request, "settings.html", context)
+
+
+def _render_settings(
+    request: Request,
+    user: dict,
+    *,
+    error: str | None = None,
+    notice: str | None = None,
+    status_code: int = 200,
+) -> HTMLResponse:
+    context = _settings_context(request, user)
+    context["error"] = error
+    context["notice"] = notice
+    return _render(request, "settings.html", context, status_code=status_code)
+
+
+# --------------------------------------------------------------------------- #
+# Settings: members
+# --------------------------------------------------------------------------- #
+@web_router.post("/app/members/invite")
+def invite_member_web(
+    request: Request,
+    email: str = Form(""),
+    full_name: str = Form(""),
+    role: str = Form("member"),
+    csrf_token: str = Form(""),
+) -> Response:
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    _require_manage(user)
+
+    import secrets
+
+    temp_password = secrets.token_urlsafe(9)
+    try:
+        member = OrgService().invite_member(
+            actor=user,
+            email=email.strip().lower(),
+            full_name=full_name.strip(),
+            role=role,
+            temp_password=temp_password,
+        )
+    except OrgError as exc:
+        return _render_settings(request, user, error=exc.message, status_code=exc.status_code)
+    # Rendered rather than redirected: the temporary password is shown exactly
+    # once, to the admin who created it (it is also in the invite email).
+    return _render_settings(
+        request,
+        user,
+        notice=(
+            f"Invited {member['email']} as {member['role']}. "
+            f"Temporary password (shown once, also emailed): {temp_password}"
+        ),
+    )
+
+
+@web_router.post("/app/members/{member_id}/role")
+def change_member_role_web(
+    request: Request,
+    member_id: str,
+    role: str = Form(""),
+    csrf_token: str = Form(""),
+) -> Response:
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    _require_manage(user)
+    try:
+        OrgService().change_member_role(actor=user, member_id=member_id, role=role)
+    except OrgError as exc:
+        return _render_settings(request, user, error=exc.message, status_code=exc.status_code)
+    return RedirectResponse(url="/app/settings?notice=role_updated", status_code=303)
+
+
+@web_router.post("/app/members/{member_id}/remove")
+def remove_member_web(request: Request, member_id: str, csrf_token: str = Form("")) -> Response:
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    _require_manage(user)
+    try:
+        OrgService().remove_member(actor=user, member_id=member_id)
+    except OrgError as exc:
+        return _render_settings(request, user, error=exc.message, status_code=exc.status_code)
+    return RedirectResponse(url="/app/settings?notice=member_removed", status_code=303)
+
+
+# --------------------------------------------------------------------------- #
+# Settings: account, license, data
+# --------------------------------------------------------------------------- #
+@web_router.post("/app/settings/password")
+def change_password_web(
+    request: Request,
+    current_password: str = Form(""),
+    new_password: str = Form(""),
+    csrf_token: str = Form(""),
+) -> Response:
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    if len(new_password) < 8:
+        return _render_settings(
+            request, user, error="Choose a new password of at least 8 characters.", status_code=400
+        )
+    try:
+        _auth.change_password(user, current_password, new_password)
+    except AuthError as exc:
+        return _render_settings(request, user, error=exc.message, status_code=exc.status_code)
+    _audit.record(
+        action="auth.change_password",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        detail={"surface": "web"},
+    )
+    return RedirectResponse(url="/app/settings?notice=password_changed", status_code=303)
+
+
+@web_router.post("/app/settings/license")
+def activate_license_web(
+    request: Request, license_key: str = Form(""), csrf_token: str = Form("")
+) -> Response:
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    if user["role"] != ROLE_OWNER:
+        raise HTTPException(status_code=403, detail="Only the owner can activate a license")
+    try:
+        _billing.activate_license(
+            org_id=user["org_id"], license_key=license_key.strip(), actor_user_id=user["id"]
+        )
+    except BillingError as exc:
+        return _render_settings(request, user, error=exc.message, status_code=exc.status_code)
+    return RedirectResponse(url="/app/settings?notice=license_activated", status_code=303)
+
+
+@web_router.get("/app/settings/export")
+def export_org_web(request: Request) -> Response:
+    """The tenant's full data bundle as a JSON download. Owner only (GDPR)."""
+    user = _require_user(request)
+    if user["role"] != ROLE_OWNER:
+        raise HTTPException(status_code=403, detail="Only the owner can export the workspace")
+    from app.saas.data_lifecycle import DataLifecycleService
+
+    bundle = DataLifecycleService().export_org(user["org_id"])
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    _audit.record(action="org.export", org_id=user["org_id"], actor_user_id=user["id"])
+    org = _orgs.get(user["org_id"]) or {}
+    filename = f"{org.get('slug', 'workspace')}-export.json"
+    return Response(
+        content=json.dumps(bundle, indent=2, default=str),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@web_router.post("/app/settings/delete-org")
+def delete_org_web(
+    request: Request, confirm: str = Form(""), csrf_token: str = Form("")
+) -> Response:
+    """Permanent erasure, gated on retyping the org slug — deliberate friction."""
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    if user["role"] != ROLE_OWNER:
+        raise HTTPException(status_code=403, detail="Only the owner can delete the workspace")
+    org = _orgs.get(user["org_id"])
+    if not org or confirm.strip() != org["slug"]:
+        return _render_settings(
+            request,
+            user,
+            error="Type the workspace slug exactly to confirm deletion.",
+            status_code=400,
+        )
+    from app.saas.data_lifecycle import DataLifecycleService
+
+    DataLifecycleService().delete_org(user["org_id"])
+    response = RedirectResponse(url="/", status_code=303)
+    clear_session_cookie(response)
+    return response
 
 
 # --------------------------------------------------------------------------- #

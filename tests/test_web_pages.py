@@ -694,3 +694,172 @@ class TestPlanEnforcement:
         # The rest of the app is untouched.
         assert client.get("/app/inbox").status_code == 200
         assert client.get("/app/settings").status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# Settings management (members, password, license, data)
+# --------------------------------------------------------------------------- #
+# token_urlsafe alphabet only — a greedy \S+ would swallow the closing HTML tag.
+TEMP_PW_RE = re.compile(r"Temporary password \(shown once, also emailed\): ([A-Za-z0-9_-]+)")
+
+
+class TestSettingsManagement:
+    """The landing page promises member management, license activation, data
+    export, and hard delete. They must be reachable from the product UI, not
+    curl-only."""
+
+    def _invite(self, client, email, role="member"):
+        page = client.get("/app/settings").text
+        return client.post(
+            "/app/members/invite",
+            data={
+                "csrf_token": csrf_from(page),
+                "email": email,
+                "full_name": "New Teammate",
+                "role": role,
+            },
+        )
+
+    def test_invite_member_end_to_end(self, signed_in):
+        client, _owner = signed_in
+        new_email = f"invitee_{uuid.uuid4().hex[:8]}@northwind.example"
+
+        response = self._invite(client, new_email)
+        assert response.status_code == 200
+        match = TEMP_PW_RE.search(response.text)
+        assert match, "the one-time temporary password must be shown to the admin"
+        temp_password = match.group(1)
+        assert new_email in client.get("/app/settings").text
+
+        # The invitee can sign in with the temporary password.
+        other = TestClient(app, follow_redirects=False)
+        page = other.get("/login").text
+        login = other.post(
+            "/login",
+            data={"csrf_token": csrf_from(page), "email": new_email, "password": temp_password},
+        )
+        assert login.status_code == 303
+
+    def test_seat_limit_is_enforced_from_the_ui(self, signed_in):
+        client, _ = signed_in  # trial: 3 seats, owner occupies one
+        assert self._invite(client, f"a_{uuid.uuid4().hex[:8]}@x.example").status_code == 200
+        assert self._invite(client, f"b_{uuid.uuid4().hex[:8]}@x.example").status_code == 200
+        third = self._invite(client, f"c_{uuid.uuid4().hex[:8]}@x.example")
+        assert third.status_code == 402
+        assert "No seats available" in third.text
+
+    def test_change_role_and_remove_member(self, signed_in):
+        client, _ = signed_in
+        new_email = f"rr_{uuid.uuid4().hex[:8]}@x.example"
+        self._invite(client, new_email)
+
+        from app.saas.repository import UserRepository
+
+        member = UserRepository().get_by_email_global(new_email)
+
+        page = client.get("/app/settings").text
+        promote = client.post(
+            f"/app/members/{member['id']}/role",
+            data={"csrf_token": csrf_from(page), "role": "admin"},
+        )
+        assert promote.status_code == 303
+        assert UserRepository().get_by_email_global(new_email)["role"] == "admin"
+
+        page = client.get("/app/settings").text
+        remove = client.post(
+            f"/app/members/{member['id']}/remove", data={"csrf_token": csrf_from(page)}
+        )
+        assert remove.status_code == 303
+        assert UserRepository().get_by_email_global(new_email) is None
+
+    def test_member_cannot_manage_members(self, signed_in):
+        client, email = signed_in
+        page = client.get("/app/settings").text
+        from app.saas.repository import UserRepository
+
+        users = UserRepository()
+        me = users.get_by_email_global(email)
+        users.update_role(me["org_id"], me["id"], "member")
+
+        response = client.post(
+            "/app/members/invite",
+            data={"csrf_token": csrf_from(page), "email": "x@y.example", "role": "member"},
+        )
+        assert response.status_code == 403
+
+    def test_change_password_from_settings(self, signed_in):
+        client, email = signed_in
+        page = client.get("/app/settings").text
+        response = client.post(
+            "/app/settings/password",
+            data={
+                "csrf_token": csrf_from(page),
+                "current_password": "a-strong-password",
+                "new_password": "an-even-stronger-1",
+            },
+        )
+        assert response.status_code == 303
+
+        client.post("/logout", data={"csrf_token": csrf_from(client.get("/app/inbox").text)})
+        page = client.get("/login").text
+        old = client.post(
+            "/login",
+            data={"csrf_token": csrf_from(page), "email": email, "password": "a-strong-password"},
+        )
+        assert old.status_code == 401
+        page = client.get("/login").text
+        new = client.post(
+            "/login",
+            data={"csrf_token": csrf_from(page), "email": email, "password": "an-even-stronger-1"},
+        )
+        assert new.status_code == 303
+
+    def test_activate_license_from_settings(self, signed_in):
+        client, email = signed_in
+        from app.core.config import get_settings
+        from app.saas import licensing
+        from app.saas.repository import UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        key, _terms = licensing.mint_license(
+            org_id, "business", get_settings().resolved_auth_secret
+        )
+
+        page = client.get("/app/settings").text
+        response = client.post(
+            "/app/settings/license",
+            data={"csrf_token": csrf_from(page), "license_key": key},
+        )
+        assert response.status_code == 303
+        assert "Business" in client.get("/app/settings").text
+
+    def test_export_downloads_the_tenant_bundle(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        response = client.get("/app/settings/export")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/json")
+        assert "attachment" in response.headers["content-disposition"]
+        bundle = response.json()
+        assert bundle["processed_messages"], "the demo messages belong to the export"
+
+    def test_delete_org_requires_the_exact_slug(self, signed_in):
+        client, email = signed_in
+        page = client.get("/app/settings").text
+        response = client.post(
+            "/app/settings/delete-org",
+            data={"csrf_token": csrf_from(page), "confirm": "wrong-slug"},
+        )
+        assert response.status_code == 400
+        assert "exactly" in response.text
+
+        # With the right slug the workspace is gone and the account with it.
+        from app.saas.repository import OrganizationRepository, UserRepository
+
+        org = OrganizationRepository().get(UserRepository().get_by_email_global(email)["org_id"])
+        page = client.get("/app/settings").text
+        response = client.post(
+            "/app/settings/delete-org",
+            data={"csrf_token": csrf_from(page), "confirm": org["slug"]},
+        )
+        assert response.status_code == 303
+        assert UserRepository().get_by_email_global(email) is None

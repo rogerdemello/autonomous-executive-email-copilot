@@ -5,6 +5,9 @@
 {% block lede %}Your workspace, plan, and the people in it.{% endblock %}
 
 {% block main %}
+{% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+{% if notice %}<div class="banner banner--ok" role="status">{{ notice }}</div>{% endif %}
+
 <div class="grid-2">
   <div class="card">
     <div class="card__head"><span class="card__title">Workspace</span></div>
@@ -19,6 +22,24 @@
         <dt>Your role</dt>
         <dd><span class="chip chip--accent">{{ current_user.role }}</span></dd>
       </dl>
+
+      <details style="margin-top: 18px">
+        <summary class="muted">Change password</summary>
+        <form method="post" action="/app/settings/password" style="margin-top: 12px">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <div class="field">
+            <label for="current_password">Current password</label>
+            <input id="current_password" name="current_password" type="password"
+                   autocomplete="current-password" required />
+          </div>
+          <div class="field">
+            <label for="new_password">New password</label>
+            <input id="new_password" name="new_password" type="password"
+                   autocomplete="new-password" minlength="8" required />
+          </div>
+          <button class="btn btn--sm" type="submit">Update password</button>
+        </form>
+      </details>
     </div>
   </div>
 
@@ -26,6 +47,12 @@
     <div class="card__head"><span class="card__title">Plan</span></div>
     <div class="card__body">
       {% if entitlement %}
+        {% if not entitlement.active %}
+          <div class="banner banner--error" role="alert">
+            This plan is inactive — syncing and approvals are paused until a
+            license is activated.
+          </div>
+        {% endif %}
         <dl class="kv">
           <dt>Plan</dt>
           <dd>{{ entitlement.plan | title }}</dd>
@@ -52,6 +79,21 @@
       {% else %}
         <p class="muted" style="margin: 0">No active license on this organization.</p>
       {% endif %}
+
+      {% if is_owner %}
+        <details style="margin-top: 18px">
+          <summary class="muted">Activate a license key</summary>
+          <form method="post" action="/app/settings/license" style="margin-top: 12px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <div class="field">
+              <label for="license_key">License key (from sales)</label>
+              <input id="license_key" name="license_key" type="text" class="mono"
+                     autocomplete="off" required />
+            </div>
+            <button class="btn btn--sm" type="submit">Activate</button>
+          </form>
+        </details>
+      {% endif %}
       <a class="btn btn--sm" href="/pricing#contact" style="margin-top: 18px">Talk to sales</a>
     </div>
   </div>
@@ -70,6 +112,7 @@
           <th>Email</th>
           <th>Role</th>
           <th>Added</th>
+          {% if can_manage %}<th></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -77,13 +120,67 @@
           <tr>
             <td>{{ member.full_name or "—" }}</td>
             <td class="mono">{{ member.email }}</td>
-            <td><span class="chip chip--neutral">{{ member.role }}</span></td>
+            <td>
+              {% if can_manage and member.id != current_user.id and member.role in assignable_roles %}
+                <form method="post" action="/app/members/{{ member.id }}/role" class="actions-row">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                  <select name="role" aria-label="Role for {{ member.email }}">
+                    {% for role in assignable_roles %}
+                      <option value="{{ role }}" {% if member.role == role %}selected{% endif %}>{{ role }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn btn--sm" type="submit">Change</button>
+                </form>
+              {% else %}
+                <span class="chip chip--neutral">{{ member.role }}</span>
+              {% endif %}
+            </td>
             <td class="when">{{ member.created_at | short_time }}</td>
+            {% if can_manage %}
+              <td>
+                {% if member.id != current_user.id and member.role in assignable_roles %}
+                  <form method="post" action="/app/members/{{ member.id }}/remove"
+                        data-confirm="Remove {{ member.email }} from the workspace?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                    <button class="btn btn--sm btn--danger" type="submit">Remove</button>
+                  </form>
+                {% endif %}
+              </td>
+            {% endif %}
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  {% if can_manage %}
+    <div class="card__body" style="border-top: 1px solid var(--line)">
+      <form method="post" action="/app/members/invite">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <div class="grid-2">
+          <div class="field">
+            <label for="invite_email">Work email</label>
+            <input id="invite_email" name="email" type="email" required />
+          </div>
+          <div class="field">
+            <label for="invite_name">Full name</label>
+            <input id="invite_name" name="full_name" type="text" />
+          </div>
+        </div>
+        <div class="actions-row">
+          <select name="role" aria-label="Role for the new member">
+            {% for role in assignable_roles %}
+              <option value="{{ role }}" {% if role == "member" %}selected{% endif %}>{{ role }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn--primary btn--sm" type="submit">Invite member</button>
+        </div>
+        <p class="muted" style="margin: 8px 0 0; font-size: 0.85rem">
+          A temporary password is generated, shown to you once, and emailed to them.
+        </p>
+      </form>
+    </div>
+  {% endif %}
 </div>
 
 <div class="card" style="margin-top: 16px">
@@ -120,4 +217,33 @@
     </div>
   {% endif %}
 </div>
+
+{% if is_owner %}
+  <div class="card" style="margin-top: 16px">
+    <div class="card__head"><span class="card__title">Data &amp; danger zone</span></div>
+    <div class="card__body">
+      <p class="muted" style="margin-top: 0">
+        Export everything this workspace owns as JSON (tokens excluded), or
+        erase the workspace permanently. Owner only.
+      </p>
+      <div class="actions-row">
+        <a class="btn btn--sm" href="/app/settings/export">Download data export</a>
+      </div>
+      <details style="margin-top: 16px">
+        <summary style="color: var(--crit)">Delete this workspace permanently</summary>
+        <form method="post" action="/app/settings/delete-org" style="margin-top: 12px"
+              data-confirm="This permanently erases {{ organization.name }} and every message, action, member, and audit entry it owns. There is no undo.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <div class="field">
+            <label for="confirm_slug">
+              Type <code>{{ organization.slug }}</code> to confirm
+            </label>
+            <input id="confirm_slug" name="confirm" type="text" autocomplete="off" required />
+          </div>
+          <button class="btn btn--sm btn--danger" type="submit">Delete workspace</button>
+        </form>
+      </details>
+    </div>
+  </div>
+{% endif %}
 {% endblock %}

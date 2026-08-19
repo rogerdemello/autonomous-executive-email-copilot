@@ -14,13 +14,14 @@ from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
 
-from . import licensing, rbac
+from . import licensing
 from .auth import AuthError, AuthService
 from .billing import BillingError, BillingService
 from .data_lifecycle import DataLifecycleService
 from .deps import get_current_user, require_role
 from .email import send_email
-from .models_db import ROLE_ADMIN, ROLE_OWNER, ROLES
+from .models_db import ROLE_ADMIN, ROLE_OWNER
+from .org_service import OrgError, OrgService
 from .repository import AuditRepository, OrganizationRepository, UserRepository
 from .schemas import (
     ActivateLicenseRequest,
@@ -43,6 +44,7 @@ _orgs = OrganizationRepository()
 _users = UserRepository()
 _audit = AuditRepository()
 _lifecycle = DataLifecycleService()
+_org_service = OrgService()
 
 # Path prefixes that must bypass the operator API_AUTH_TOKEN gateway because they
 # are how customers authenticate in the first place. Consumed by app.main.
@@ -339,50 +341,17 @@ def invite_member(
     request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
-    role = body.role
-    if role not in ROLES:
-        raise HTTPException(status_code=422, detail=f"role must be one of {ROLES}")
-    if not rbac.can_assign_role(actor["role"], role):
-        raise HTTPException(status_code=403, detail="Cannot assign a role above your own")
-
-    org_id = actor["org_id"]
-    if not _billing.has_seat_available(org_id):
-        raise HTTPException(
-            status_code=402,
-            detail="No seats available on your current plan. Contact sales to add seats.",
+    try:
+        member = _org_service.invite_member(
+            actor=actor,
+            email=body.email,
+            full_name=body.full_name,
+            role=body.role,
+            temp_password=body.temp_password,
+            ip=_client_ip(request),
         )
-    if _users.email_exists(body.email):
-        raise HTTPException(status_code=409, detail="A user with this email already exists")
-
-    from . import passwords
-
-    member = _users.create(
-        org_id=org_id,
-        email=body.email,
-        password_hash=passwords.hash_password(body.temp_password),
-        full_name=body.full_name,
-        role=role,
-    )
-    org = _orgs.get(org_id)
-    org_name = org["name"] if org else "your team"
-    login_url = f"{get_settings().resolved_app_public_url}/login"
-    send_email(
-        member["email"],
-        f"You've been invited to {org_name} on Executive Email Copilot",
-        f"{actor.get('email', 'A teammate')} invited you to {org_name}.\n\n"
-        f"Sign in at {login_url} with:\n"
-        f"  Email: {member['email']}\n"
-        f"  Temporary password: {body.temp_password}\n\n"
-        "Please change your password after your first sign-in.",
-    )
-    _audit.record(
-        action="member.invite",
-        org_id=org_id,
-        actor_user_id=actor["id"],
-        target=member["id"],
-        detail={"email": member["email"], "role": role},
-        ip=_client_ip(request),
-    )
+    except OrgError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     return {"member": member}
 
 
@@ -393,32 +362,12 @@ def update_member_role(
     request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
-    if body.role not in ROLES:
-        raise HTTPException(status_code=422, detail=f"role must be one of {ROLES}")
-    if not rbac.can_assign_role(actor["role"], body.role):
-        raise HTTPException(status_code=403, detail="Cannot assign a role above your own")
-
-    org_id = actor["org_id"]
-    target = _users.get(org_id, member_id)
-    if not target:
-        raise HTTPException(status_code=404, detail="Member not found")
-    # Guard against demoting the last owner (would orphan the org's billing).
-    if target["role"] == ROLE_OWNER and body.role != ROLE_OWNER:
-        owners = [m for m in _users.list_for_org(org_id) if m["role"] == ROLE_OWNER]
-        if len(owners) <= 1:
-            raise HTTPException(
-                status_code=409, detail="An organization must keep at least one owner"
-            )
-
-    updated = _users.update_role(org_id, member_id, body.role)
-    _audit.record(
-        action="member.role_change",
-        org_id=org_id,
-        actor_user_id=actor["id"],
-        target=member_id,
-        detail={"new_role": body.role},
-        ip=_client_ip(request),
-    )
+    try:
+        updated = _org_service.change_member_role(
+            actor=actor, member_id=member_id, role=body.role, ip=_client_ip(request)
+        )
+    except OrgError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     return {"member": updated}
 
 
@@ -428,26 +377,10 @@ def remove_member(
     request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
-    org_id = actor["org_id"]
-    if member_id == actor["id"]:
-        raise HTTPException(status_code=409, detail="You cannot remove yourself")
-    target = _users.get(org_id, member_id)
-    if not target:
-        raise HTTPException(status_code=404, detail="Member not found")
-    if target["role"] == ROLE_OWNER:
-        owners = [m for m in _users.list_for_org(org_id) if m["role"] == ROLE_OWNER]
-        if len(owners) <= 1:
-            raise HTTPException(
-                status_code=409, detail="An organization must keep at least one owner"
-            )
-    _users.delete(org_id, member_id)
-    _audit.record(
-        action="member.remove",
-        org_id=org_id,
-        actor_user_id=actor["id"],
-        target=member_id,
-        ip=_client_ip(request),
-    )
+    try:
+        _org_service.remove_member(actor=actor, member_id=member_id, ip=_client_ip(request))
+    except OrgError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     return {"status": "ok", "removed": member_id}
 
 
