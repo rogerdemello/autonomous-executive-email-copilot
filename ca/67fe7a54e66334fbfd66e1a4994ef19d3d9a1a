@@ -1,0 +1,146 @@
+research/sim/learning/trajectory_store.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 41
+README.md
+  s_f0cdcdb3c6f87a::t_3f3bd4e0fcc4db 467-470
+app/main.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 143
+tests/test_config.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 1
+app/copilot/pipeline.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 18
+tests/test_observability.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 19
+tests/test_safety_metric.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 1
+app/llm/safety/metric.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 7
+tests/test_db_engine.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 1
+tests/test_product_isolation.py
+  s_f0cdcdb3c6f87a::t_24c317f09e6436 35-36,38,42
+  s_f0cdcdb3c6f87a::t_016d0a28f28018 1,3-6,8-10,18
+tests/test_repositories.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 1
+docs/ROADMAP.md
+  s_f0cdcdb3c6f87a::t_3f3bd4e0fcc4db 174,177,186
+tests/harness/invariants.py
+  s_f0cdcdb3c6f87a::t_377eeb9643a92c 4-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "ca67fe7a54e66334fbfd66e1a4994ef19d3d9a1a",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:40877337fffeef67d696a77c7da4d50a551534bce4eb3cc31a48dfb24c72289f",
+      "total_additions": 33,
+      "total_deletions": 24,
+      "accepted_lines": 1780,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_f0cdcdb3c6f87a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f7016f5-00e4-43fd-a339-57cd881e2ed2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:40877337fffeef67d696a77c7da4d50a551534bce4eb3cc31a48dfb24c72289f",
+      "stats": {
+        "total_additions": 33,
+        "total_deletions": 24,
+        "accepted_lines": 1780,
+        "overriden_lines": 0,
+        "files": {
+          "README.md": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 4,
+            "overriden_lines": 0
+          },
+          "app/copilot/pipeline.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 73,
+            "overriden_lines": 0
+          },
+          "app/llm/safety/metric.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 56,
+            "overriden_lines": 0
+          },
+          "app/main.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "docs/ROADMAP.md": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 305,
+            "overriden_lines": 0
+          },
+          "research/sim/learning/trajectory_store.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 392,
+            "overriden_lines": 0
+          },
+          "tests/harness/invariants.py": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 122,
+            "overriden_lines": 0
+          },
+          "tests/test_config.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 170,
+            "overriden_lines": 0
+          },
+          "tests/test_db_engine.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 92,
+            "overriden_lines": 0
+          },
+          "tests/test_observability.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 51,
+            "overriden_lines": 0
+          },
+          "tests/test_product_isolation.py": {
+            "total_additions": 15,
+            "total_deletions": 9,
+            "accepted_lines": 67,
+            "overriden_lines": 0
+          },
+          "tests/test_repositories.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 343,
+            "overriden_lines": 0
+          },
+          "tests/test_safety_metric.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 104,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
