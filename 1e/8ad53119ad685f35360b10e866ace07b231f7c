@@ -1,0 +1,49 @@
+docs/PLAN.md
+  s_ca5919f3786d51::t_0c0f96bc10d869 204-217,220-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "1e8ad53119ad685f35360b10e866ace07b231f7c",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:bfbbd15e2ca415f0bf04daaf74660a480149ebe9be592d66ffd0384b26f73d10",
+      "total_additions": 17,
+      "total_deletions": 15,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:bfbbd15e2ca415f0bf04daaf74660a480149ebe9be592d66ffd0384b26f73d10",
+      "stats": {
+        "total_additions": 17,
+        "total_deletions": 15,
+        "accepted_lines": 17,
+        "overriden_lines": 0,
+        "files": {
+          "docs/PLAN.md": {
+            "total_additions": 17,
+            "total_deletions": 15,
+            "accepted_lines": 17,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
