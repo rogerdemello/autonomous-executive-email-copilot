@@ -294,7 +294,11 @@ class ProposedAction(Base):
     decided_at = Column(String(50), nullable=True)
     executed_at = Column(String(50), nullable=True)
     execution_ref = Column(String(255), nullable=True)
-    outcome = Column(String(32), nullable=True)  # approved | rejected | auto
+    outcome = Column(String(32), nullable=True)  # approved | edited | rejected | auto
+    # When a reviewer amends the draft before approving, the proposed text is
+    # kept here — the (original, edited) pair is the strongest learning signal
+    # the product collects: a human corrected the copilot's wording.
+    original_content = Column(Text, nullable=True)
     created_at = Column(String(50), nullable=False, default=_now_iso)
     # Where the *prose* came from — llm | authored | generic. The decision itself
     # is always the deterministic policy's, so this describes the words only.
@@ -321,6 +325,7 @@ class ProposedAction(Base):
             "executed_at": self.executed_at,
             "execution_ref": self.execution_ref,
             "outcome": self.outcome,
+            "original_content": self.original_content,
             "created_at": self.created_at,
             "draft_source": self.draft_source,
             "draft_confidence": self.draft_confidence,

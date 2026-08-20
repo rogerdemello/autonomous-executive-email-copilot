@@ -212,7 +212,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 3
+_SCHEMA_VERSION = 4
 
 
 class SchemaVersion(Base):
@@ -299,6 +299,11 @@ def _run_migration(version: int) -> None:
         _add_column_if_missing("saas_proposed_actions", "draft_source", "VARCHAR(16)")
         _add_column_if_missing("saas_proposed_actions", "draft_confidence", "FLOAT")
         _add_column_if_missing("saas_proposed_actions", "rationale", "TEXT")
+        return
+    if version == 4:
+        # A reviewer may now amend a draft before approving; the proposed text
+        # is kept so (original, edited) pairs can teach the drafter.
+        _add_column_if_missing("saas_proposed_actions", "original_content", "TEXT")
         return
 
 

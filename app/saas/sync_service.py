@@ -82,6 +82,7 @@ def resolve_draft(
     signals=None,
     context=None,
     live_llm: bool = False,
+    examples: list[dict] | None = None,
 ) -> ResolvedDraft:
     """Resolve the prose for one held action, best source first.
 
@@ -90,10 +91,15 @@ def resolve_draft(
     is only consulted when ``live_llm`` is set, because a sync is request-bound
     and a stalled provider would be felt by the user.
 
+    ``examples`` are this org's recently accepted drafts (see
+    :mod:`app.saas.learning`); they ride along in the prompt and in the cache
+    key, so a workspace whose voice has changed re-drafts rather than replaying
+    prose written before the feedback existed.
+
     Every step degrades rather than raises. Losing the model costs prose, not the
     decision — which was made deterministically before any of this ran.
     """
-    from app.llm.draft_cache import draft_key, get_draft_cache
+    from app.llm.draft_cache import draft_key, examples_digest, get_draft_cache
 
     action_type = proposal.action_type
     fallback = _draft_text(provider, proposal)
@@ -106,6 +112,7 @@ def resolve_draft(
         subject=message.subject or "",
         body=message.body or "",
         action_type=action_type,
+        extra=examples_digest(examples),
     )
 
     cache = get_draft_cache()
@@ -127,6 +134,7 @@ def resolve_draft(
             signals=signals,
             escalate_to=proposal.escalate_to,
             context=context,
+            examples=examples,
         )
         if result is not None:
             cache.put(
@@ -218,6 +226,23 @@ class InboxSyncService:
         signals_by_id = {e.id: e for e in observation.emails}
         draft_context = self._draft_context(org_id, user_id) if live_llm else None
 
+        # What this org's reviewers have taught the copilot (see app.saas.learning):
+        # pairs they keep rejecting get downgraded below, and their accepted drafts
+        # ride along in the drafting prompt. Examples are only fetched when live
+        # drafting is on — with it off, cached prose replays under its original key.
+        from .learning import FeedbackService
+
+        feedback = FeedbackService()
+        suppressed = feedback.suppressed_pairs(org_id)
+        examples_by_type: dict[str, list[dict]] = {}
+
+        def _examples(action_type: str) -> list[dict] | None:
+            if not live_llm:
+                return None
+            if action_type not in examples_by_type:
+                examples_by_type[action_type] = feedback.few_shot_examples(org_id, action_type)
+            return examples_by_type[action_type] or None
+
         # Persist each fetched message; keep a provider_id -> row_id map to link
         # proposals to their message.
         row_by_provider_id: dict[str, dict] = {}
@@ -243,6 +268,7 @@ class InboxSyncService:
         proposed_count = 0
         auto_count = 0
         skipped_count = 0
+        downgraded_count = 0
         # Low-risk actions become labels; grouping them by label lets a provider
         # with a batch write (Gmail's batchModify) apply each label in one call
         # instead of one call per message.
@@ -254,18 +280,50 @@ class InboxSyncService:
             # Idempotency: if this message already has a live (non-rejected,
             # non-failed) action of this type, skip it. This makes re-syncing an
             # inbox safe — no duplicate proposals and no repeated provider writes.
-            if prop.action_type in self.actions.active_types_for_message(org_id, message_row["id"]):
+            active_types = self.actions.active_types_for_message(org_id, message_row["id"])
+            if prop.action_type in active_types:
                 skipped_count += 1
                 continue
             if prop.requires_approval:
+                signals = signals_by_id.get(prop.email_id)
+                pair = (prop.action_type, (signals.sender_role if signals else None) or "unknown")
+                vetoed = suppressed.get(pair)
+                if vetoed is not None:
+                    # The org's reviewers have repeatedly rejected this shape of
+                    # proposal — file it instead of asking again, and say why.
+                    if "defer" in active_types:
+                        skipped_count += 1
+                        continue
+                    result = provider.add_label(prop.email_id, "deferred")
+                    self.actions.create(
+                        org_id=org_id,
+                        message_id=message_row["id"],
+                        action_type="defer",
+                        content=None,
+                        escalate_to=None,
+                        label="deferred",
+                        status="executed" if result.ok else "failed",
+                        requires_approval=False,
+                        outcome="auto" if result.ok else None,
+                        execution_ref=result.provider_ref,
+                        executed_at=_now_iso() if result.ok else None,
+                        rationale=[
+                            f"Downgraded from {prop.action_type}: you rejected "
+                            f"{vetoed.rejected} of the last {vetoed.total} "
+                            f"{prop.action_type} proposals for {pair[1]} senders"
+                        ],
+                    )
+                    downgraded_count += 1
+                    continue
                 # External action (reply/escalate) — hold for a human.
                 drafted = resolve_draft(
                     provider,
                     prop,
                     message=message_by_id.get(prop.email_id),
-                    signals=signals_by_id.get(prop.email_id),
+                    signals=signals,
                     context=draft_context,
                     live_llm=live_llm,
+                    examples=_examples(prop.action_type),
                 )
                 self.actions.create(
                     org_id=org_id,
@@ -332,6 +390,7 @@ class InboxSyncService:
                 "proposed": proposed_count,
                 "auto_executed": auto_count,
                 "skipped": skipped_count,
+                "downgraded": downgraded_count,
             },
         )
         return {
@@ -340,10 +399,19 @@ class InboxSyncService:
             "proposed": proposed_count,
             "auto_executed": auto_count,
             "skipped": skipped_count,
+            "downgraded": downgraded_count,
         }
 
     # -- approve / reject ---------------------------------------------------
-    def approve(self, *, org_id: str, user_id: str, action_id: str, provider: MailProvider) -> dict:
+    def approve(
+        self,
+        *,
+        org_id: str,
+        user_id: str,
+        action_id: str,
+        provider: MailProvider,
+        edited_content: str | None = None,
+    ) -> dict:
         # Approving dispatches an outbound write - part of the value loop the
         # plan pays for. Rejection stays free: it only records a decision.
         self._require_active_plan(org_id)
@@ -358,18 +426,33 @@ class InboxSyncService:
             raise ProcessingError("Message for this action no longer exists", 404)
         provider_message_id = message["provider_message_id"]
 
+        # A reviewer amending the draft before approving is the strongest
+        # feedback the product collects: keep both texts, send the human's.
+        outcome = "approved"
+        original = action.get("content")
+        edited = (edited_content or "").strip()
+        if edited and edited != (original or "").strip():
+            action["content"] = edited
+            outcome = "edited"
+
         result = self._execute(provider, action, provider_message_id, message)
         now = _now_iso()
         if result.ok:
+            amended = (
+                {"content": action["content"], "original_content": original}
+                if outcome == "edited"
+                else {}
+            )
             updated = self.actions.set_status(
                 org_id,
                 action_id,
                 "executed",
-                outcome="approved",
+                outcome=outcome,
                 decided_by=user_id,
                 decided_at=now,
                 executed_at=now,
                 execution_ref=result.provider_ref,
+                **amended,
             )
         else:
             updated = self.actions.set_status(
@@ -380,7 +463,11 @@ class InboxSyncService:
             org_id=org_id,
             actor_user_id=user_id,
             target=action_id,
-            detail={"action_type": action["action_type"], "ok": result.ok},
+            detail={
+                "action_type": action["action_type"],
+                "ok": result.ok,
+                "edited": outcome == "edited",
+            },
         )
         return updated or {}
 

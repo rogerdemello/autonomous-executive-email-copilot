@@ -36,13 +36,36 @@ DRAFT_CACHE_FILE = DEMO_DIR / "drafts.json"
 _CACHE_VERSION = 1
 
 
-def draft_key(*, provider_message_id: str, subject: str, body: str, action_type: str) -> str:
-    """A stable id for "this exact message, drafted for this exact action"."""
+def draft_key(
+    *, provider_message_id: str, subject: str, body: str, action_type: str, extra: str = ""
+) -> str:
+    """A stable id for "this exact message, drafted for this exact action".
+
+    ``extra`` folds anything else that changed the prompt into the key — today
+    that is the digest of the org's few-shot examples. Empty ``extra`` produces
+    byte-identical keys to the pre-``extra`` scheme, so the committed demo
+    drafts (generated without examples) keep resolving.
+    """
     digest = hashlib.sha256()
     for part in (provider_message_id, subject, body, action_type):
         digest.update(part.encode("utf-8"))
         digest.update(b"\x00")  # length-delimit, so fields cannot run together
+    if extra:
+        digest.update(extra.encode("utf-8"))
+        digest.update(b"\x00")
     return digest.hexdigest()[:32]
+
+
+def examples_digest(examples: list[dict] | None) -> str:
+    """A short fingerprint of the few-shot examples that shaped a draft."""
+    if not examples:
+        return ""
+    digest = hashlib.sha256()
+    for example in examples:
+        for field in ("subject", "body"):
+            digest.update(str(example.get(field, "")).encode("utf-8"))
+            digest.update(b"\x00")
+    return digest.hexdigest()[:16]
 
 
 class DraftCache:

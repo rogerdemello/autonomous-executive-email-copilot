@@ -5,6 +5,19 @@
 {% block lede %}Actions that reach the outside world wait here for a human.{% endblock %}
 
 {% block main %}
+{% if learning and learning.learned %}
+  <div class="card" style="margin-bottom: 16px">
+    <div class="card__head">
+      <span class="card__title">What the copilot has learned</span>
+      <span class="muted" style="font-size: 0.82rem">
+        from your last {{ learning.window }} decision{{ 's' if learning.window != 1 }}
+      </span>
+    </div>
+    <ul class="learned">
+      {% for sentence in learning.learned %}<li>{{ sentence }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}
 {% if not actions %}
   <div class="card">
     <div class="empty">
@@ -55,16 +68,23 @@
           </ul>
         {% endif %}
 
-        {% if item.action.content %}<div class="draft">{{ item.action.content }}</div>{% endif %}
-
         {% if can_manage %}
+          <form method="post" action="/app/actions/{{ item.action.id }}/approve"
+                id="approve-{{ item.action.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            {% if item.action.content %}
+              <textarea class="draft" name="content" rows="6"
+                        aria-label="Draft to send — you can edit it before approving">{{ item.action.content }}</textarea>
+              <p class="muted" style="margin: 0 0 12px; font-size: 0.8rem">
+                Edit freely — your edits are sent, and they teach the copilot this workspace's voice.
+              </p>
+            {% endif %}
+          </form>
           <div class="actions-row">
-            <form method="post" action="/app/actions/{{ item.action.id }}/approve">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-              <button class="btn btn--primary btn--sm" type="submit">
-                {% if item.action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
-              </button>
-            </form>
+            <button class="btn btn--primary btn--sm" type="submit"
+                    form="approve-{{ item.action.id }}">
+              {% if item.action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
+            </button>
             <form method="post" action="/app/actions/{{ item.action.id }}/reject">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
               <button class="btn btn--sm btn--danger" type="submit">Reject</button>
@@ -72,6 +92,7 @@
             <a class="btn btn--sm" href="/app/inbox?message={{ item.message.id }}">Open message</a>
           </div>
         {% else %}
+          {% if item.action.content %}<div class="draft">{{ item.action.content }}</div>{% endif %}
           <p class="muted" style="margin: 0; font-size: 0.85rem">
             Approving needs the admin role or higher.
           </p>

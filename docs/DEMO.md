@@ -147,11 +147,18 @@ is *not* a contract, and routes to security rather than legal.
 ### 6. Approvals — `/app/approvals`
 
 Eleven actions waiting, each showing the reasoning behind it before the buttons.
-Approve one.
+The draft is a textarea — change a sentence, then approve.
 
 > "That's the whole control model. Replies and escalations queue here.
 > Classifications and deferrals apply themselves, because the worst they can do
 > is add a label."
+
+> "And notice the draft is editable. What you send is what you wrote — and the
+> copilot keeps the pair. Your edits become voice examples for future drafts,
+> and a proposal shape you keep rejecting stops being proposed: after three
+> straight rejections it gets filed as deferred, with the reason written on the
+> action. Once there are decisions to learn from, this page grows a 'what the
+> copilot has learned' panel that names them."
 
 ### 7. Activity — `/app/activity`
 

@@ -722,6 +722,7 @@ def approve_action(
     action_id: str,
     csrf_token: str = Form(""),
     message: str = Form(""),
+    content: str = Form(""),
 ) -> Response:
     verify_csrf(request, csrf_token)
     user = _require_user(request)
@@ -730,7 +731,11 @@ def approve_action(
     provider = _provider_for_action(user["org_id"], action_id)
     try:
         _sync.approve(
-            org_id=user["org_id"], user_id=user["id"], action_id=action_id, provider=provider
+            org_id=user["org_id"],
+            user_id=user["id"],
+            action_id=action_id,
+            provider=provider,
+            edited_content=content or None,
         )
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
@@ -798,6 +803,11 @@ def approvals(request: Request) -> HTMLResponse:
                 }
             )
     context["actions"] = items
+    # What the queue's past decisions have taught the copilot — shown beside
+    # the queue those decisions came from, so the learning is auditable.
+    from app.saas.learning import FeedbackService
+
+    context["learning"] = FeedbackService().insights(user["org_id"])
     return _render(request, "approvals.html", context)
 
 

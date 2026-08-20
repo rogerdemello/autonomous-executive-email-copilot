@@ -89,9 +89,16 @@ def _clean_rationale(value: object) -> list[str]:
     return [str(item).strip() for item in value[:4] if str(item).strip()]
 
 
+# Few-shot examples are style guidance, not content: past a couple of drafts the
+# extra tokens stop changing the voice and start diluting the actual message.
+_MAX_EXAMPLES = 3
+_MAX_EXAMPLE_CHARS = 800
+
+
 def _build_user_prompt(
     message: FetchedMessage,
     signals: ObservationEmail | None,
+    examples: list[dict] | None = None,
 ) -> str:
     lines = [
         "MESSAGE",
@@ -107,6 +114,20 @@ def _build_user_prompt(
     if len(body) > _MAX_BODY_CHARS:
         body = body[:_MAX_BODY_CHARS] + "\n[truncated]"
     lines += ["", body, "", "END MESSAGE"]
+    if examples:
+        # Drafts this workspace's reviewers actually approved (or corrected and
+        # sent). They demonstrate voice and length — the reply must still be
+        # grounded in the MESSAGE above, never in the examples' facts.
+        lines += [
+            "",
+            "APPROVED PAST DRAFTS FROM THIS WORKSPACE (match their voice and "
+            "length; do not reuse their facts):",
+        ]
+        for i, example in enumerate(examples[:_MAX_EXAMPLES], start=1):
+            sample = str(example.get("body", "")).strip()[:_MAX_EXAMPLE_CHARS]
+            subject = str(example.get("subject", "")).strip()
+            lines += [f"--- Example {i}" + (f" (re: {subject})" if subject else ""), sample]
+        lines.append("--- END EXAMPLES")
     return "\n".join(lines)
 
 
@@ -139,6 +160,7 @@ class EmailDrafter:
         signals: ObservationEmail | None = None,
         escalate_to: str | None = None,
         context: DraftContext | None = None,
+        examples: list[dict] | None = None,
     ) -> DraftResult | None:
         brief_template = _ACTION_BRIEFS.get(action_type)
         if brief_template is None:
@@ -178,7 +200,7 @@ class EmailDrafter:
                     sender_role=(signals.sender_role if signals else "unknown"),
                 ),
             },
-            {"role": "user", "content": _build_user_prompt(message, signals)},
+            {"role": "user", "content": _build_user_prompt(message, signals, examples)},
         ]
 
         started = time.monotonic()

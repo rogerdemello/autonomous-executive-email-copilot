@@ -668,6 +668,32 @@ class ProposedActionRepository:
             )
             return row.to_dict() if row else None
 
+    def list_decided(self, org_id: str, limit: int = 200) -> list[dict[str, Any]]:
+        """Human-decided actions, newest first, joined with the message's
+        inferred signals. This is the learning corpus: every row is a labeled
+        example (the copilot proposed X on a message shaped Y; a person said
+        yes / fixed the wording / said no)."""
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction, ProcessedMessage)
+                .join(ProcessedMessage, ProposedAction.message_id == ProcessedMessage.id)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.outcome.in_(["approved", "edited", "rejected"]),
+                )
+                .order_by(ProposedAction.decided_at.desc())
+                .limit(limit)
+                .all()
+            )
+            out = []
+            for action, message in rows:
+                item = action.to_dict()
+                item["sender_role"] = message.sender_role
+                item["subject"] = message.subject
+                item["sender"] = message.sender
+                out.append(item)
+            return out
+
     def active_types_for_message(self, org_id: str, message_id: str) -> set[str]:
         """The ``action_type``s on a message that already have a *live* action.
 

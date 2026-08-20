@@ -92,6 +92,18 @@ stay reproducible and testable, and a model outage costs you wording rather than
 triage. `LLM_DRAFTING_ENABLED=true` turns on live drafting for a real mailbox;
 already-generated drafts always replay from disk regardless.
 
+**Learning from the approval queue.** Every approve / amend-then-approve /
+reject is a labeled example, and the copilot uses all three
+([`app/saas/learning.py`](app/saas/learning.py)): a proposal shape the team
+keeps rejecting (≥3 decisions, ≥80% rejected) stops being proposed and is
+filed as deferred — with the reason written on the action; drafts the team
+approved or corrected ride along in the drafting prompt as few-shot voice
+examples; and the approvals page shows a "what the copilot has learned"
+panel that names the exact decisions each behaviour came from. Reviewers can
+edit any draft before approving — the edit is what gets sent, and the
+(original, edited) pair is kept as the strongest style signal. All of it is
+tenant-scoped and none of it touches the deterministic policy.
+
 **Background sync.** `SYNC_WORKER_ENABLED=true` starts a background worker that
 sweeps every connected mailbox on a jittered per-connection cadence
 (`SYNC_WORKER_INTERVAL_SECONDS`, default 5 minutes) — the approval queue fills

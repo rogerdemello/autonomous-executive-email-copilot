@@ -55,6 +55,12 @@ class RejectRequest(BaseModel):
     comment: str | None = None
 
 
+class ApproveRequest(BaseModel):
+    # Optional amended draft. When it differs from the proposed content the
+    # human's text is sent and the pair is kept as learning signal.
+    content: str | None = None
+
+
 @inbox_router.post("/sync")
 def sync(body: SyncRequest, actor: dict = Depends(require_role(ROLE_ADMIN))) -> dict:
     org_id = actor["org_id"]
@@ -117,16 +123,32 @@ def list_actions(
 
 
 @inbox_router.post("/actions/{action_id}/approve")
-def approve_action(action_id: str, actor: dict = Depends(require_role(ROLE_ADMIN))) -> dict:
+def approve_action(
+    action_id: str,
+    body: ApproveRequest | None = None,
+    actor: dict = Depends(require_role(ROLE_ADMIN)),
+) -> dict:
     org_id = actor["org_id"]
     provider = _provider_for_action(org_id, action_id)
     try:
         updated = _service.approve(
-            org_id=org_id, user_id=actor["id"], action_id=action_id, provider=provider
+            org_id=org_id,
+            user_id=actor["id"],
+            action_id=action_id,
+            provider=provider,
+            edited_content=body.content if body else None,
         )
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     return {"action": updated}
+
+
+@inbox_router.get("/learning")
+def learning_insights(user: dict = Depends(get_current_user)) -> dict:
+    """What the org's approve/edit/reject decisions have taught the copilot."""
+    from .learning import FeedbackService
+
+    return FeedbackService().insights(user["org_id"])
 
 
 @inbox_router.post("/actions/{action_id}/reject")
