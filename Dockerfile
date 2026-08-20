@@ -10,12 +10,22 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Patch the OS layer: the base image lags Debian security updates (the container
+# scan flags e.g. util-linux), so pull them explicitly at build time.
+RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install Python deps first so source changes don't bust the dependency layer.
 # pip itself is upgraded first: the base image ships a pip with known CVEs
 # that the container scan (rightly) flags.
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    # The runtime image never installs packages, so drop the installer stack:
+    # base-image setuptools carries CVEs, and pip vendors a vulnerable msgpack
+    # (flagged by the container scan) that even latest pip hasn't rev'd yet.
+    pip uninstall -y pip setuptools
 
 COPY . .
 
