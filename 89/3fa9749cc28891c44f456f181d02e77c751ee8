@@ -1,0 +1,181 @@
+app/llm/drafter.py
+  s_ca5919f3786d51::t_93f5ee76880e47 92-97,101,117-130
+  s_ca5919f3786d51::t_ed3efe3d30f81b 163
+  s_ca5919f3786d51::t_7e16130621f3b8 203
+app/saas/models_db.py
+  s_ca5919f3786d51::t_861e786d990bfb 328
+  s_ca5919f3786d51::t_0b32b4de64d33b 297-301
+app/saas/sync_service.py
+  s_ca5919f3786d51::t_f8ca6f18f3e5e6 283-284,288-317,323,326
+  s_ca5919f3786d51::t_9c8b9e3ffe90cc 406-414,429-437,441-445,450,455,466-470
+  s_ca5919f3786d51::t_41c9fc5a28852d 393,402
+  s_ca5919f3786d51::t_2b02a9fdcbce53 137
+  s_ca5919f3786d51::t_e050b7c71e688a 229-245
+  s_ca5919f3786d51::t_c458be2cac3e19 85,94-98,102,115
+  s_ca5919f3786d51::t_a30f10bda4b76a 271
+app/llm/draft_cache.py
+  s_ca5919f3786d51::t_c79cc836aaa7d2 39-48,53-55,59-68
+app/web/static/app.css
+  s_ca5919f3786d51::t_dff6920d17476a 1222-1244
+app/saas/processing_routes.py
+  s_ca5919f3786d51::t_b38f736743e3ff 58-63,152-153
+  s_ca5919f3786d51::t_e37a6f5816d215 126-130,135-139,146-151
+app/saas/learning.py
+  s_ca5919f3786d51::t_ea3f4569775af4 1-191
+app/web/routes.py
+  s_ca5919f3786d51::t_42e36d25d72ccf 806-810
+  s_ca5919f3786d51::t_5806e6640d2bde 725,734-738
+app/core/db.py
+  s_ca5919f3786d51::t_d4d12de2b6365c 215
+  s_ca5919f3786d51::t_1244c4318a8672 303-307
+app/saas/repository.py
+  s_ca5919f3786d51::t_8fbd7d46eff254 671-696
+tests/test_feedback_learning.py
+  s_ca5919f3786d51::t_80df8cf405ae7f 257
+  s_ca5919f3786d51::t_df0b45003f879c 232,266
+  s_ca5919f3786d51::t_f5921a2bd82b1d 235
+  s_ca5919f3786d51::t_00bdc956a71855 1-231,233-234,236-256,258-265,267-343
+README.md
+  s_ca5919f3786d51::t_b5643e59996340 95-106
+docs/DEMO.md
+  s_ca5919f3786d51::t_9e5772a60ebf9a 150,156-162
+app/web/templates/approvals.html
+  s_ca5919f3786d51::t_58f081c1939a0f 72-82,84-87,95
+  s_ca5919f3786d51::t_46d80ef9efe147 8-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "893fa9749cc28891c44f456f181d02e77c751ee8",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0723059d52ca0405a6835083734964430666abfc98216711cb05d6aa9d311642",
+      "total_additions": 1207,
+      "total_deletions": 34,
+      "accepted_lines": 5924,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0723059d52ca0405a6835083734964430666abfc98216711cb05d6aa9d311642",
+      "stats": {
+        "total_additions": 1207,
+        "total_deletions": 34,
+        "accepted_lines": 5924,
+        "overriden_lines": 0,
+        "files": {
+          "README.md": {
+            "total_additions": 12,
+            "total_deletions": 0,
+            "accepted_lines": 12,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 6,
+            "total_deletions": 1,
+            "accepted_lines": 325,
+            "overriden_lines": 0
+          },
+          "app/llm/draft_cache.py": {
+            "total_additions": 25,
+            "total_deletions": 2,
+            "accepted_lines": 25,
+            "overriden_lines": 0
+          },
+          "app/llm/draft_eval.py": {
+            "total_additions": 209,
+            "total_deletions": 2,
+            "accepted_lines": 207,
+            "overriden_lines": 0
+          },
+          "app/llm/drafter.py": {
+            "total_additions": 23,
+            "total_deletions": 1,
+            "accepted_lines": 23,
+            "overriden_lines": 0
+          },
+          "app/saas/learning.py": {
+            "total_additions": 191,
+            "total_deletions": 0,
+            "accepted_lines": 191,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 6,
+            "total_deletions": 1,
+            "accepted_lines": 364,
+            "overriden_lines": 0
+          },
+          "app/saas/processing_routes.py": {
+            "total_additions": 24,
+            "total_deletions": 2,
+            "accepted_lines": 181,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 26,
+            "total_deletions": 0,
+            "accepted_lines": 764,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 93,
+            "total_deletions": 6,
+            "accepted_lines": 517,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 11,
+            "total_deletions": 1,
+            "accepted_lines": 1098,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 23,
+            "total_deletions": 0,
+            "accepted_lines": 1401,
+            "overriden_lines": 0
+          },
+          "app/web/templates/approvals.html": {
+            "total_additions": 29,
+            "total_deletions": 8,
+            "accepted_lines": 29,
+            "overriden_lines": 0
+          },
+          "docs/DEMO.md": {
+            "total_additions": 8,
+            "total_deletions": 1,
+            "accepted_lines": 275,
+            "overriden_lines": 0
+          },
+          "scripts/eval_drafts.py": {
+            "total_additions": 170,
+            "total_deletions": 1,
+            "accepted_lines": 169,
+            "overriden_lines": 0
+          },
+          "tests/test_feedback_learning.py": {
+            "total_additions": 351,
+            "total_deletions": 8,
+            "accepted_lines": 343,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
