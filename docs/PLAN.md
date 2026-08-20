@@ -215,13 +215,23 @@ keep it that way with the entrypoint test pattern).
    `scripts/eval_drafts.py`). Deterministic rubric gates every push; nightly
    workflow adds an LLM judge when a key exists. Baseline 10/11 — the one flag
    is the model's real invented "25 September" deadline, kept as proof.
-4. **True multi-provider + failover** (Phase 4 done → circuit-breaker secondary,
-   per-provider tool translation tested against recorded fixtures).
+4. ✅ **True multi-provider + failover**. Phase 4 built the translation and the
+   wired secondary; `tests/test_provider_wire_fixtures.py` now pins the exact
+   payload each provider sends against recorded fixtures
+   (`tests/fixtures/provider_wire/`, regenerate with `REGEN_WIRE_FIXTURES=1`)
+   and proves the product path: the drafter, behind the real circuit breaker,
+   serves prose from the secondary family when the primary raises mid-call.
 5. ✅ **Draft-then-verify agent loop** (`app/llm/verifier.py`): rubric always +
    model fact-check when live drafting is on, verdict stored on the action and
    shown as a "verified" / "check flagged" chip with the exact notes.
-6. Postgres + async DB opt-in, OTEL spans over sync/draft/approve, calibration
-   report wired to the existing `calibration_cli.py`.
+6. ✅* OTEL spans now cover the value loop (`inbox.sync`, `llm.draft`,
+   `inbox.approve` — no-ops without OpenTelemetry installed), and the
+   calibration report is wired: `scripts/export_calibration.py` turns the
+   approval queue's (draft confidence, human outcome) pairs into
+   `calibration_cli.py` input, closing the product→research loop. Postgres
+   opt-in already exists via `DATABASE_URL`; *an async DB layer is consciously
+   deferred — the async agent path had zero callers, and adding an async ORM
+   for it would be complexity without a customer.
 
 ---
 

@@ -27,6 +27,7 @@ ENTRYPOINTS = [
     "scripts/issue_license.py",
     "scripts/contamination_check.py",
     "scripts/eval_drafts.py",
+    "scripts/export_calibration.py",
     "research/inference.py",
     "research/baseline/run_baseline.py",
     "research/benchmark/calibration_cli.py",

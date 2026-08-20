@@ -419,3 +419,24 @@ Column definitions:
 - **mean_tokens**: mean `tokens` reported by the agent (0 for `baseline` /
   `multiagent`).
 - **mean_cost_usd**: mean `cost_usd` (Section 5 caveat applies to the `llm` agent).
+
+## Calibration: does stated confidence mean anything?
+
+`research/benchmark/calibration_cli.py` computes Brier score and expected
+calibration error (ECE) from `[{confidence, correct}, ...]` pairs. Two sources
+feed it:
+
+- **Research side**: any evaluation that records per-decision confidence can
+  be exported to that shape.
+- **Product side** (the live loop): the drafter states a confidence with every
+  model-written draft, and the approval queue supplies ground truth —
+  *correct* means the draft was sent exactly as written; an edited approval
+  counts against the stated confidence. Export and score:
+
+  ```bash
+  python scripts/export_calibration.py --org-slug <workspace> --out pairs.json
+  python research/benchmark/calibration_cli.py pairs.json --verbose
+  ```
+
+`research/benchmark/ab_eval.py` is the paired A/B comparison CLI over two
+result files (same seeds, two agents); `--help` documents its input shape.

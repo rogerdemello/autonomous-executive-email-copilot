@@ -31,6 +31,15 @@ from .repository import (
 
 logger = logging.getLogger(__name__)
 
+try:
+    from telemetry.otel import in_span
+except ImportError:  # pragma: no cover - telemetry is optional
+
+    def in_span(name, attributes=None, kind=None):
+        from contextlib import nullcontext
+
+        return nullcontext()
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -196,6 +205,26 @@ class InboxSyncService:
 
     # -- sync ---------------------------------------------------------------
     def sync(
+        self,
+        *,
+        org_id: str,
+        user_id: str,
+        connection_id: str,
+        provider: MailProvider,
+        live_llm: bool | None = None,
+    ) -> dict:
+        # One span per sync: the fetch, every draft and every provider write
+        # happen inside it, so a slow sync is attributable in a trace.
+        with in_span("inbox.sync", {"org_id": org_id, "connection_id": connection_id}):
+            return self._sync(
+                org_id=org_id,
+                user_id=user_id,
+                connection_id=connection_id,
+                provider=provider,
+                live_llm=live_llm,
+            )
+
+    def _sync(
         self,
         *,
         org_id: str,
@@ -421,6 +450,24 @@ class InboxSyncService:
 
     # -- approve / reject ---------------------------------------------------
     def approve(
+        self,
+        *,
+        org_id: str,
+        user_id: str,
+        action_id: str,
+        provider: MailProvider,
+        edited_content: str | None = None,
+    ) -> dict:
+        with in_span("inbox.approve", {"org_id": org_id, "action_id": action_id}):
+            return self._approve(
+                org_id=org_id,
+                user_id=user_id,
+                action_id=action_id,
+                provider=provider,
+                edited_content=edited_content,
+            )
+
+    def _approve(
         self,
         *,
         org_id: str,

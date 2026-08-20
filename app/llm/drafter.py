@@ -203,13 +203,28 @@ class EmailDrafter:
             {"role": "user", "content": _build_user_prompt(message, signals, examples)},
         ]
 
+        try:
+            from telemetry.otel import in_span
+        except ImportError:  # pragma: no cover - telemetry is optional
+            from contextlib import nullcontext
+
+            def in_span(name, attributes=None, kind=None):
+                return nullcontext()
+
         started = time.monotonic()
         try:
-            response = provider.generate(
-                messages,
-                temperature=_TEMPERATURE,
-                max_tokens=_MAX_TOKENS,
-            )
+            with in_span(
+                "llm.draft",
+                {
+                    "action_type": action_type,
+                    "provider_message_id": message.provider_message_id,
+                },
+            ):
+                response = provider.generate(
+                    messages,
+                    temperature=_TEMPERATURE,
+                    max_tokens=_MAX_TOKENS,
+                )
         except Exception as exc:  # noqa: BLE001 - degrade to authored prose
             logger.warning("LLM draft failed for %s: %s", message.provider_message_id, exc)
             return None

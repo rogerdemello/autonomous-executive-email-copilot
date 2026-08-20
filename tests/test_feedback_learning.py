@@ -61,7 +61,14 @@ def _pending(client, org) -> list[dict]:
     return resp.json()["actions"]
 
 
-def _decide(org_id: str, action_type: str, sender_role: str, outcome: str, seq: int) -> dict:
+def _decide(
+    org_id: str,
+    action_type: str,
+    sender_role: str,
+    outcome: str,
+    seq: int,
+    confidence: float | None = None,
+) -> dict:
     """Fabricate one decided action with a joined message, for aggregation tests."""
     msg = ProcessedMessageRepository().upsert(
         org_id=org_id,
@@ -90,6 +97,7 @@ def _decide(org_id: str, action_type: str, sender_role: str, outcome: str, seq: 
         status="proposed",
         requires_approval=True,
         draft_source="llm",
+        draft_confidence=confidence,
     )
     status = "rejected" if outcome == "rejected" else "executed"
     return actions.set_status(
@@ -255,6 +263,64 @@ class TestRoutingSuppression:
         client.post(f"/inbox/actions/{escalate['id']}/approve", headers=_hdr(org))
         resp = client.post("/inbox/sync", headers=_hdr(org), json={"connection_id": conn_id})
         assert resp.json()["results"][0].get("downgraded", 0) == 0
+
+
+class TestCalibrationExport:
+    def test_pairs_are_strict_about_correctness(self):
+        """Approved-as-written = correct; edited or rejected = the stated
+        confidence was wrong; drafts with no confidence are excluded."""
+        client = _client()
+        org = _signup(client)
+        org_id = org["organization"]["id"]
+        _decide(org_id, "reply", "vendor", "approved", 1, confidence=0.9)
+        _decide(org_id, "reply", "vendor", "edited", 2, confidence=0.8)
+        _decide(org_id, "reply", "vendor", "rejected", 3, confidence=0.7)
+        _decide(org_id, "reply", "vendor", "approved", 4)  # no confidence stated
+
+        pairs = FeedbackService().calibration_pairs(org_id)
+        assert len(pairs) == 3
+        by_conf = {p["confidence"]: p["correct"] for p in pairs}
+        assert by_conf == {0.9: True, 0.8: False, 0.7: False}
+
+    def test_export_script_feeds_the_calibration_cli(self, tmp_path):
+        """The whole loop: decisions → export → the research repo's Brier/ECE
+        math accepts the file. This is PLAN Phase 8 item 6's 'wired'."""
+        import subprocess
+        import sys as _sys
+
+        import scripts.export_calibration as exporter
+
+        client = _client()
+        org = _signup(client)
+        org_id = org["organization"]["id"]
+        for i, conf in enumerate((0.9, 0.85, 0.6)):
+            _decide(
+                org_id,
+                "reply",
+                "vendor",
+                "approved" if conf > 0.7 else "rejected",
+                i,
+                confidence=conf,
+            )
+
+        out = tmp_path / "pairs.json"
+        assert exporter.main(["--org-slug", org["organization"]["slug"], "--out", str(out)]) == 0
+        pairs = json.loads(out.read_text(encoding="utf-8"))
+        assert len(pairs) == 3
+
+        result = subprocess.run(
+            [_sys.executable, "research/benchmark/calibration_cli.py", str(out), "--verbose"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "Brier" in result.stdout or "brier" in result.stdout.lower()
+
+    def test_unknown_slug_exits_nonzero(self):
+        import scripts.export_calibration as exporter
+
+        assert exporter.main(["--org-slug", "no-such-workspace-xyz"]) == 1
 
 
 class TestDraftKeyCompatibility:

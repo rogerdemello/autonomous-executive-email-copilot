@@ -114,6 +114,26 @@ class FeedbackService:
             for d in candidates[:k]
         ]
 
+    def calibration_pairs(self, org_id: str) -> list[dict]:
+        """(confidence, correct) pairs for the calibration report.
+
+        The drafter states a confidence with every model-written draft; the
+        approval queue supplies the ground truth. "Correct" is deliberately
+        strict — the draft was sent *exactly as written*. An edited approval
+        means the prose needed a human fix, so for calibration purposes the
+        stated confidence was wrong. Feed the output to
+        ``research/benchmark/calibration_cli.py`` (Brier score, ECE).
+        """
+        pairs = []
+        for d in self._decisions(org_id):
+            confidence = d.get("draft_confidence")
+            if confidence is None:
+                continue
+            pairs.append(
+                {"confidence": float(confidence), "correct": d.get("outcome") == "approved"}
+            )
+        return pairs
+
     # -- the reviewer-facing panel --------------------------------------------
     def insights(self, org_id: str) -> dict:
         """Aggregates plus plain-English sentences, for UI and API."""
