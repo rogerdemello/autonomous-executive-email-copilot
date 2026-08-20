@@ -1,0 +1,35 @@
+{
+  "max_tokens": 256,
+  "messages": [
+    {
+      "content": "You draft executive email replies.",
+      "role": "system"
+    },
+    {
+      "content": "Draft a reply confirming the £480k claim goes to counsel.",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.2,
+  "tools": [
+    {
+      "function": {
+        "description": "Submit the drafted reply",
+        "name": "submit_draft",
+        "parameters": {
+          "properties": {
+            "body": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "body"
+          ],
+          "type": "object"
+        }
+      },
+      "type": "function"
+    }
+  ]
+}
