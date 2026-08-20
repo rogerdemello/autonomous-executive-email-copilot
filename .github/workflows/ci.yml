@@ -83,9 +83,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # Same pin as pyproject's dev extra: a newer mypy flags `type: ignore`s
-      # the pinned one still needs, failing the build with no code change.
-      - run: pip install "mypy==2.1.0"
+      # The dev extra pins mypy (2.1.0); installing the project alongside it
+      # matters just as much as the pin — with the real dependencies missing,
+      # sqlalchemy/fastapi types collapse to Any and mypy reports every
+      # dependency-related `type: ignore` as unused.
+      - run: pip install -e ".[dev]"
       - run: mypy app --config-file mypy.ini
 
   security:
