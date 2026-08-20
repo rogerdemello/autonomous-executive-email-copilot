@@ -201,23 +201,25 @@ keep it that way with the entrypoint test pattern).
 
 ## Phase 8 — World-class agent trajectory (post-hackathon, ordered)
 
-1. **Background sync worker** (async task or APScheduler; per-connection cadence,
-   jittered) + batched provider writes — a 100-message Gmail first sync is
-   currently ~400 sequential HTTP calls inside one request. This unlocks "the
-   copilot worked your inbox while you slept", the real product moment.
-2. **Learning from the approval queue.** Approve/edit/reject is labeled feedback
-   the schema already stores. Feed it back: per-org routing thresholds, few-shot
-   examples for the drafter, a "the copilot learned X from your last 20
-   decisions" panel. This is the feature interviewers remember.
-3. **Draft quality evals in CI.** The benchmark grades *routing*; nothing grades
-   *prose*. Nightly job: drafter over the 50 fixtures → LLM-judge rubric
-   (grounding, tone, no-invented-facts) → trend line. Ties the research half to
-   the product half — the whitepaper's missing chapter.
+1. ✅ **Background sync worker** (`app/saas/sync_worker.py`; per-connection
+   cadence from persistent `last_synced_at`, stable jitter, per-connection
+   failure isolation and backoff) + batched provider writes (Gmail
+   `batchModify` for label groups). Opt-in via `SYNC_WORKER_ENABLED`; the Helm
+   chart enables it.
+2. ✅ **Learning from the approval queue** (`app/saas/learning.py`).
+   Edit-before-approve in the UI/API (outcome `edited`, original kept);
+   rejected (action_type, sender_role) pairs downgrade to deferral with the
+   reason on the action; accepted drafts become few-shot voice examples;
+   "what the copilot has learned" panel on /app/approvals + `/inbox/learning`.
+3. ✅ **Draft quality evals in CI** (`app/llm/draft_eval.py`,
+   `scripts/eval_drafts.py`). Deterministic rubric gates every push; nightly
+   workflow adds an LLM judge when a key exists. Baseline 10/11 — the one flag
+   is the model's real invented "25 September" deadline, kept as proof.
 4. **True multi-provider + failover** (Phase 4 done → circuit-breaker secondary,
    per-provider tool translation tested against recorded fixtures).
-5. **Draft-then-verify agent loop**: a second cheap model pass that checks the
-   draft against the source message (claims, amounts, names) before it enters
-   the approval queue — visible as a "verified" chip with the diff.
+5. ✅ **Draft-then-verify agent loop** (`app/llm/verifier.py`): rubric always +
+   model fact-check when live drafting is on, verdict stored on the action and
+   shown as a "verified" / "check flagged" chip with the exact notes.
 6. Postgres + async DB opt-in, OTEL spans over sync/draft/approve, calibration
    report wired to the existing `calibration_cli.py`.
 
