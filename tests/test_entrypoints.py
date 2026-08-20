@@ -26,6 +26,7 @@ ENTRYPOINTS = [
     "scripts/regen_golden.py",
     "scripts/issue_license.py",
     "scripts/contamination_check.py",
+    "scripts/eval_drafts.py",
     "research/inference.py",
     "research/baseline/run_baseline.py",
     "research/benchmark/calibration_cli.py",

@@ -50,6 +50,15 @@ jobs:
         with:
           files: coverage.xml
         continue-on-error: true  # don't fail CI when no token is configured
+      - name: Draft-quality gate (deterministic rubric over the committed drafts)
+        if: matrix.python-version == '3.12'
+        run: python scripts/eval_drafts.py --json draft_quality_report.json
+      - name: Upload draft-quality report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-quality-report
+          path: draft_quality_report.json
 
   invariant-harness:
     runs-on: ubuntu-latest
