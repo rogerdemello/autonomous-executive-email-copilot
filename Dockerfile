@@ -11,8 +11,11 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install Python deps first so source changes don't bust the dependency layer.
+# pip itself is upgraded first: the base image ships a pip with known CVEs
+# that the container scan (rightly) flags.
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
