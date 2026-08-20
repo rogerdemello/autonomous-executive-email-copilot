@@ -1,0 +1,154 @@
+tests/test_draft_eval.py
+  s_ca5919f3786d51::t_b7d9eefb2b7dfc 34-38
+  s_ca5919f3786d51::t_18bcd7f071943c 1-33,39-110
+app/llm/draft_eval.py
+  s_ca5919f3786d51::t_bca630385e362f 48-52
+  s_ca5919f3786d51::t_b7d9eefb2b7dfc 40
+  s_ca5919f3786d51::t_009d8055f901c1 126-128,132-133,137,139-144
+  s_ca5919f3786d51::t_ab7434829afee6 1-39,41-47,53-125,129-131,134-136,138,145-205
+tests/test_entrypoints.py
+  s_ca5919f3786d51::t_9eacee745facc9 29
+.github/workflows/draft-eval.yml
+  s_ca5919f3786d51::t_6581ea32644f6b 1-35
+.github/workflows/ci.yml
+  s_ca5919f3786d51::t_fab2c276d99756 53-61
+scripts/eval_drafts.py
+  s_ca5919f3786d51::t_29b9b592301d0b 1-128,130-131,134-169
+  s_ca5919f3786d51::t_2167d08481411c 129,132-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "40b95a46408c179ab042cfa5fca63abd88693d84",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:cffbfc25851a1ba843ea0b515d44bc52ad6a4477a07323aca3a4ef4359017acd",
+      "total_additions": 481,
+      "total_deletions": 10,
+      "accepted_lines": 4628,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:cffbfc25851a1ba843ea0b515d44bc52ad6a4477a07323aca3a4ef4359017acd",
+      "stats": {
+        "total_additions": 481,
+        "total_deletions": 10,
+        "accepted_lines": 4628,
+        "overriden_lines": 0,
+        "files": {
+          ".github/workflows/ci.yml": {
+            "total_additions": 9,
+            "total_deletions": 0,
+            "accepted_lines": 144,
+            "overriden_lines": 0
+          },
+          ".github/workflows/draft-eval.yml": {
+            "total_additions": 35,
+            "total_deletions": 0,
+            "accepted_lines": 35,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 20,
+            "total_deletions": 0,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 7,
+            "total_deletions": 1,
+            "accepted_lines": 331,
+            "overriden_lines": 0
+          },
+          "app/llm/draft_eval.py": {
+            "total_additions": 1,
+            "total_deletions": 3,
+            "accepted_lines": 205,
+            "overriden_lines": 0
+          },
+          "app/llm/verifier.py": {
+            "total_additions": 117,
+            "total_deletions": 1,
+            "accepted_lines": 116,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 10,
+            "total_deletions": 0,
+            "accepted_lines": 374,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 4,
+            "total_deletions": 0,
+            "accepted_lines": 768,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 18,
+            "total_deletions": 1,
+            "accepted_lines": 534,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 4,
+            "total_deletions": 0,
+            "accepted_lines": 1405,
+            "overriden_lines": 0
+          },
+          "app/web/templates/approvals.html": {
+            "total_additions": 12,
+            "total_deletions": 0,
+            "accepted_lines": 12,
+            "overriden_lines": 0
+          },
+          "docs/DEMO.md": {
+            "total_additions": 6,
+            "total_deletions": 0,
+            "accepted_lines": 281,
+            "overriden_lines": 0
+          },
+          "scripts/eval_drafts.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 169,
+            "overriden_lines": 0
+          },
+          "tests/test_draft_eval.py": {
+            "total_additions": 111,
+            "total_deletions": 1,
+            "accepted_lines": 110,
+            "overriden_lines": 0
+          },
+          "tests/test_draft_verify.py": {
+            "total_additions": 126,
+            "total_deletions": 3,
+            "accepted_lines": 123,
+            "overriden_lines": 0
+          },
+          "tests/test_entrypoints.py": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
