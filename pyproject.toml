@@ -27,8 +27,8 @@ dependencies = [
   "fpdf2==2.8.7",
   "openai==2.44.0",
   "email-validator==2.3.0",  # required by pydantic EmailStr in the SaaS auth layer
-  "python-multipart==0.0.20",  # required by FastAPI Form(...) — every web login/approve form
-  "cryptography==46.0.7",  # audited Fernet AEAD for at-rest OAuth-token encryption
+  "python-multipart==0.0.32",  # required by FastAPI Form(...) — every web login/approve form
+  "cryptography==50.0.0",  # audited Fernet AEAD for at-rest OAuth-token encryption
 ]
 
 [project.optional-dependencies]
