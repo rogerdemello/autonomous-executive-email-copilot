@@ -1,0 +1,117 @@
+docs/BENCHMARK.md
+  s_ca5919f3786d51::t_1a06ee4e0c7762 422-442
+app/saas/learning.py
+  s_ca5919f3786d51::t_62a2e50e26b652 117-136
+tests/test_entrypoints.py
+  s_ca5919f3786d51::t_7e0fe211a2e3f5 30
+app/llm/drafter.py
+  s_ca5919f3786d51::t_b6b62312147305 206-213,216-227
+scripts/export_calibration.py
+  s_ca5919f3786d51::t_a05f09f158c554 1-54
+tests/test_feedback_learning.py
+  s_ca5919f3786d51::t_1a06ee4e0c7762 297-304
+  s_ca5919f3786d51::t_19ef5344d1c84e 268-296,305-325
+  s_ca5919f3786d51::t_e3198661d7d74e 64-71
+  s_ca5919f3786d51::t_cbcb50b8da1922 100
+docs/PLAN.md
+  s_ca5919f3786d51::t_77cf0457a43693 227-234
+  s_ca5919f3786d51::t_0ff7eb3697d982 218-223
+tests/test_otel_spans.py
+  s_ca5919f3786d51::t_ebce694c65efeb 1-113
+app/saas/sync_service.py
+  s_ca5919f3786d51::t_1f387e0f3a68d8 34-42,215,460
+  s_ca5919f3786d51::t_3c32d5158184c3 216-234
+  s_ca5919f3786d51::t_f440d00b6d18c0 461-477
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "05b3016c6f7ca2c6c1b4f282e8c29e2536d85081",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 808,
+      "overriden_lines": 35
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "stats": {
+        "total_additions": 0,
+        "total_deletions": 0,
+        "accepted_lines": 808,
+        "overriden_lines": 35,
+        "files": {
+          "app/llm/drafter.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "app/saas/learning.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 367,
+            "overriden_lines": 25
+          },
+          "docs/BENCHMARK.md": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 152,
+            "overriden_lines": 10
+          },
+          "docs/PLAN.md": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 14,
+            "overriden_lines": 0
+          },
+          "scripts/export_calibration.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 54,
+            "overriden_lines": 0
+          },
+          "tests/test_entrypoints.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "tests/test_feedback_learning.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 67,
+            "overriden_lines": 0
+          },
+          "tests/test_otel_spans.py": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 113,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
