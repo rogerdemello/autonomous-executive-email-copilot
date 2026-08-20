@@ -1,0 +1,65 @@
+Dockerfile
+  s_ca5919f3786d51::t_81dd0d8e5e7384 14-15,17-18
+pyproject.toml
+  s_ca5919f3786d51::t_30d802499ec2c2 1-117
+requirements.txt
+  s_ca5919f3786d51::t_30d802499ec2c2 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "4da1ad4035cfc39e3fe57e40145f37b380ace9f9",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:d1d3927d179564ae6fe31e332bb9feaed5ee6201b0311937492a3861fb41e070",
+      "total_additions": 6,
+      "total_deletions": 3,
+      "accepted_lines": 122,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:d1d3927d179564ae6fe31e332bb9feaed5ee6201b0311937492a3861fb41e070",
+      "stats": {
+        "total_additions": 6,
+        "total_deletions": 3,
+        "accepted_lines": 122,
+        "overriden_lines": 0,
+        "files": {
+          "Dockerfile": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 4,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 117,
+            "overriden_lines": 0
+          },
+          "requirements.txt": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
