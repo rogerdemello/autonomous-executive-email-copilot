@@ -1,0 +1,100 @@
+tests/test_graph_provider.py
+  s_ca5919f3786d51::t_56ff3b681d7806 104-113
+.github/workflows/security-scan.yml
+  s_ca5919f3786d51::t_01ccb90cd21b7f 50,62
+.github/workflows/ci.yml
+  s_ca5919f3786d51::t_6c27d6e697220f 128
+  s_ca5919f3786d51::t_ce9936add42db0 12-14
+tests/test_gmail_provider.py
+  s_ca5919f3786d51::t_543d1ee08bb8ac 151-160
+app/copilot/providers/graph.py
+  s_ca5919f3786d51::t_9e3c0acae0712e 84
+  s_ca5919f3786d51::t_a145cfabe64100 92
+  s_ca5919f3786d51::t_cc7fc9ae1a15dc 99-101
+  s_ca5919f3786d51::t_726da94db43137 55-57
+  s_ca5919f3786d51::t_8ff04482fd1672 77
+  s_ca5919f3786d51::t_3ba8c24a8da674 15
+app/copilot/providers/gmail.py
+  s_ca5919f3786d51::t_9bbc0b39960af2 124-126,129
+  s_ca5919f3786d51::t_bc34e264938f18 191
+  s_ca5919f3786d51::t_c3d32332b2899b 200
+  s_ca5919f3786d51::t_3164cdaaa190b0 165
+  s_ca5919f3786d51::t_cc7fc9ae1a15dc 31
+  s_ca5919f3786d51::t_3132109e862328 15,21-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "54357c4093b7b998517116ea541b959653f62903",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:71a1a9360507580a6d399f4bc31cbb3aad0d0de3a2f0e30f2ebaa9d779858388",
+      "total_additions": 57,
+      "total_deletions": 16,
+      "accepted_lines": 555,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:71a1a9360507580a6d399f4bc31cbb3aad0d0de3a2f0e30f2ebaa9d779858388",
+      "stats": {
+        "total_additions": 57,
+        "total_deletions": 16,
+        "accepted_lines": 555,
+        "overriden_lines": 0,
+        "files": {
+          ".github/workflows/ci.yml": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 135,
+            "overriden_lines": 0
+          },
+          ".github/workflows/security-scan.yml": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 2,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/gmail.py": {
+            "total_additions": 19,
+            "total_deletions": 5,
+            "accepted_lines": 19,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/graph.py": {
+            "total_additions": 11,
+            "total_deletions": 7,
+            "accepted_lines": 10,
+            "overriden_lines": 0
+          },
+          "tests/test_gmail_provider.py": {
+            "total_additions": 11,
+            "total_deletions": 1,
+            "accepted_lines": 269,
+            "overriden_lines": 0
+          },
+          "tests/test_graph_provider.py": {
+            "total_additions": 10,
+            "total_deletions": 0,
+            "accepted_lines": 120,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
