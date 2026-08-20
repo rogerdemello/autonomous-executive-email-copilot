@@ -1,0 +1,115 @@
+app/llm/drafter.py
+  s_ca5919f3786d51::t_80e4dc8c055f1a 123-126
+app/core/config.py
+  s_ca5919f3786d51::t_a57301b26dc7bd 275-281
+.github/workflows/ci.yml
+  s_ca5919f3786d51::t_f9bdae85fb3e1b 86-88
+  s_ca5919f3786d51::t_5b4dcfed9146ae 52
+  s_ca5919f3786d51::t_61132c73eb7fe4 23-26
+pyproject.toml
+  s_ca5919f3786d51::t_2e7f2e9a327b99 30
+requirements.txt
+  s_ca5919f3786d51::t_a795334e886f3f 8
+tests/test_config.py
+  s_ca5919f3786d51::t_46666542848384 69-72
+.gitleaks.toml
+  s_ca5919f3786d51::t_c262d35fc001f6 1-14
+.github/workflows/release.yml
+  s_ca5919f3786d51::t_be6e0a71e60549 54,57,74,85,111
+app/saas/sync_worker.py
+  s_ca5919f3786d51::t_16a5bafc98e1b9 151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "6659dd4fbd9f35626c3cdcb6267f34910fc3a666",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:4ac706c2c42f3b5c20982265f0d6a55b7db432523e58ccf55e9767e144cd0d71",
+      "total_additions": 45,
+      "total_deletions": 14,
+      "accepted_lines": 747,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:4ac706c2c42f3b5c20982265f0d6a55b7db432523e58ccf55e9767e144cd0d71",
+      "stats": {
+        "total_additions": 45,
+        "total_deletions": 14,
+        "accepted_lines": 747,
+        "overriden_lines": 0,
+        "files": {
+          ".github/workflows/ci.yml": {
+            "total_additions": 8,
+            "total_deletions": 3,
+            "accepted_lines": 149,
+            "overriden_lines": 0
+          },
+          ".github/workflows/release.yml": {
+            "total_additions": 5,
+            "total_deletions": 5,
+            "accepted_lines": 5,
+            "overriden_lines": 0
+          },
+          ".gitleaks.toml": {
+            "total_additions": 14,
+            "total_deletions": 0,
+            "accepted_lines": 14,
+            "overriden_lines": 0
+          },
+          "app/core/config.py": {
+            "total_additions": 7,
+            "total_deletions": 3,
+            "accepted_lines": 379,
+            "overriden_lines": 0
+          },
+          "app/llm/drafter.py": {
+            "total_additions": 4,
+            "total_deletions": 2,
+            "accepted_lines": 4,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_worker.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "requirements.txt": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "tests/test_config.py": {
+            "total_additions": 4,
+            "total_deletions": 0,
+            "accepted_lines": 174,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
