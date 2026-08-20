@@ -272,9 +272,13 @@ def get_settings() -> Settings:
 
 
 def is_azure_endpoint(api_base_url: str | None) -> bool:
-    """True if the base URL points at an Azure OpenAI resource."""
-    host = (urlsplit((api_base_url or "").strip()).netloc or "").lower()
-    return "openai.azure.com" in host
+    """True if the base URL points at an Azure OpenAI resource.
+
+    Suffix-anchored on the host, not a substring test: a substring would also
+    match ``openai.azure.com.evil.net`` and route the API key there.
+    """
+    host = (urlsplit((api_base_url or "").strip()).netloc or "").lower().rsplit(":", 1)[0]
+    return host == "openai.azure.com" or host.endswith(".openai.azure.com")
 
 
 def chat_client_kwargs(timeout_seconds: float = 30.0) -> tuple[dict, str]:

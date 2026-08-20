@@ -66,6 +66,10 @@ def test_is_azure_endpoint():
     assert is_azure_endpoint("https://api.openai.com/v1") is False
     assert is_azure_endpoint("") is False
     assert is_azure_endpoint(None) is False
+    # Suffix-anchored, not substring: a lookalike host must never receive the
+    # API key (Azure auths with a raw api-key header, so this would leak it).
+    assert is_azure_endpoint("https://openai.azure.com.evil.net/v1") is False
+    assert is_azure_endpoint("https://res.openai.azure.com:443/v1") is True
 
 
 def test_build_chat_client_requires_key(monkeypatch):

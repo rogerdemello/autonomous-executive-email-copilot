@@ -148,7 +148,7 @@ class BackgroundSyncWorker:
                 logger.exception("Background sync pass crashed; retrying next poll")
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self.poll_seconds)
-            except TimeoutError:
+            except asyncio.TimeoutError:  # noqa: UP041 - on 3.10 this is NOT builtins TimeoutError
                 pass
         logger.info("Background sync worker stopped")
 

@@ -120,8 +120,10 @@ def _build_user_prompt(
         # grounded in the MESSAGE above, never in the examples' facts.
         lines += [
             "",
-            "APPROVED PAST DRAFTS FROM THIS WORKSPACE (match their voice and "
-            "length; do not reuse their facts):",
+            (
+                "APPROVED PAST DRAFTS FROM THIS WORKSPACE "
+                "(match their voice and length; do not reuse their facts):"
+            ),
         ]
         for i, example in enumerate(examples[:_MAX_EXAMPLES], start=1):
             sample = str(example.get("body", "")).strip()[:_MAX_EXAMPLE_CHARS]
