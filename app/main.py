@@ -136,7 +136,15 @@ async def lifespan(_app: FastAPI):
             enable_console=False,
         )
         _OTEL_CONFIGURED = True
+    sync_worker = None
+    if get_settings().sync_worker_enabled:
+        from app.saas.sync_worker import BackgroundSyncWorker
+
+        sync_worker = BackgroundSyncWorker()
+        sync_worker.start()
     yield
+    if sync_worker is not None:
+        await sync_worker.stop()
     logger.info("Shutting down Autonomous Executive Email Copilot API")
 
 

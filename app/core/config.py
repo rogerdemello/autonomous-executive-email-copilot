@@ -86,6 +86,17 @@ class Settings(BaseSettings):
     # shows model-written prose with this off and no network available.
     llm_drafting_enabled: bool = False
 
+    # Background sync worker. Off by default so tests and one-shot scripts get
+    # no surprise threads; a deployment turns it on to get "the copilot worked
+    # your inbox while you slept" instead of sync-on-click. Each connection
+    # syncs when its last_synced_at is older than the interval plus a stable
+    # per-connection jitter (so a fleet doesn't hit provider APIs in lockstep);
+    # the poll is how often the worker checks for due connections.
+    sync_worker_enabled: bool = False
+    sync_worker_interval_seconds: int = 300
+    sync_worker_jitter_fraction: float = 0.2
+    sync_worker_poll_seconds: int = 30
+
     # Scenario selection
     # When False (default) the loader resolves exactly ``{task_id}.yaml`` so
     # golden scores stay byte-identical. When True the loader globs

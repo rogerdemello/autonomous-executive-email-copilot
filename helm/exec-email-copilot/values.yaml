@@ -78,6 +78,12 @@ extraEnv:
     value: ""
   - name: MODEL_NAME
     value: gpt-4o-mini
+  # A deployment (unlike a laptop demo) wants the copilot to work connected
+  # mailboxes on a cadence, not only on click.
+  - name: SYNC_WORKER_ENABLED
+    value: "true"
+  - name: SYNC_WORKER_INTERVAL_SECONDS
+    value: "300"
   # For a durable deployment point DATABASE_URL at Postgres; the default is a
   # zero-config SQLite file under /app/data (or the PVC when persistence is on).
   # - name: DATABASE_URL

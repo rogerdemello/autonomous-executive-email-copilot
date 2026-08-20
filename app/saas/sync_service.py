@@ -243,6 +243,10 @@ class InboxSyncService:
         proposed_count = 0
         auto_count = 0
         skipped_count = 0
+        # Low-risk actions become labels; grouping them by label lets a provider
+        # with a batch write (Gmail's batchModify) apply each label in one call
+        # instead of one call per message.
+        auto_by_label: dict[str, list[tuple]] = {}
         for prop in proposals:
             message_row = row_by_provider_id.get(prop.email_id)
             if message_row is None:
@@ -282,7 +286,16 @@ class InboxSyncService:
                 label = prop.label or (
                     "deferred" if prop.action_type == "defer" else prop.action_type
                 )
-                result = provider.add_label(prop.email_id, label)
+                auto_by_label.setdefault(label, []).append((prop, message_row))
+
+        batch_write = getattr(provider, "add_labels_batch", None)
+        for label, items in auto_by_label.items():
+            if callable(batch_write) and len(items) > 1:
+                # One provider call for the whole label group.
+                results = [batch_write([p.email_id for p, _ in items], label)] * len(items)
+            else:
+                results = [provider.add_label(p.email_id, label) for p, _ in items]
+            for (prop, message_row), result in zip(items, results, strict=True):
                 self.actions.create(
                     org_id=org_id,
                     message_id=message_row["id"],

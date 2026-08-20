@@ -338,6 +338,20 @@ class MailboxRepository:
             )
             return row.to_dict() if row else None
 
+    def list_all_connected(self) -> list[dict[str, Any]]:
+        """Every connected mailbox across all orgs — the background worker's
+        work list. Deliberately cross-tenant (the worker is a system actor);
+        broken connections are excluded because they need a human to
+        reconnect, not retries."""
+        with get_session() as session:
+            rows = (
+                session.query(MailboxConnection)
+                .filter(MailboxConnection.status == "connected")
+                .order_by(MailboxConnection.created_at.asc())
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
     def set_status(self, org_id: str, connection_id: str, status: str) -> bool:
         with get_session() as session:
             row = (

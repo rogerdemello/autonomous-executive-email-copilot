@@ -202,6 +202,27 @@ class GmailProvider(MailProvider):
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
+    @write_guard
+    def add_labels_batch(self, provider_message_ids: list[str], label: str) -> WriteResult:
+        """Apply one label to many messages in a single API call.
+
+        Gmail's ``batchModify`` takes up to 1000 ids per request, so one label
+        lookup plus one write replaces the 2N sequential calls the per-message
+        path costs — the difference between a 100-message first sync being ~200
+        HTTP round-trips and being 2. The sync service uses this when present.
+        """
+        if not provider_message_ids:
+            return WriteResult(ok=True)
+        label_id = self._ensure_label(label)
+        for start in range(0, len(provider_message_ids), 1000):
+            chunk = provider_message_ids[start : start + 1000]
+            self._call(
+                "POST",
+                f"{_BASE}/messages/batchModify",
+                {"ids": [str(i) for i in chunk], "addLabelIds": [label_id]},
+            )
+        return WriteResult(ok=True)
+
     def _ensure_label(self, name: str) -> str:
         """Return the id of the Gmail label ``name``, creating it if missing."""
         listing = self._call("GET", f"{_BASE}/labels")

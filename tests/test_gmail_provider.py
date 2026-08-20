@@ -148,6 +148,22 @@ class TestGmailProvider:
         assert result.ok
         assert any("/messages/g1/modify" in u for _, u, _ in transport.calls)
 
+    def test_batch_label_write_is_two_calls(self):
+        """N messages, one label: one label lookup + one batchModify — not 2N
+        sequential calls. This is what makes a large first sync cheap."""
+        transport = RecordingTransport(
+            {
+                ("GET", "/labels"): (200, {"labels": [{"id": "L-urgent", "name": "urgent"}]}),
+                ("POST", "/messages/batchModify"): (204, {}),
+            }
+        )
+        provider = GmailProvider("tok", transport=transport)
+        result = provider.add_labels_batch(["g1", "g2", "g3"], "urgent")
+        assert result.ok
+        assert len(transport.calls) == 2
+        method, url, _ = transport.calls[1]
+        assert method == "POST" and url.endswith("/messages/batchModify")
+
     def test_message_ids_are_url_quoted(self):
         """A crafted provider_message_id must not rewrite the request path or
         smuggle extra query parameters — ids are percent-encoded into URLs."""

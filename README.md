@@ -92,6 +92,15 @@ stay reproducible and testable, and a model outage costs you wording rather than
 triage. `LLM_DRAFTING_ENABLED=true` turns on live drafting for a real mailbox;
 already-generated drafts always replay from disk regardless.
 
+**Background sync.** `SYNC_WORKER_ENABLED=true` starts a background worker that
+sweeps every connected mailbox on a jittered per-connection cadence
+(`SYNC_WORKER_INTERVAL_SECONDS`, default 5 minutes) — the approval queue fills
+while nobody is clicking "Sync now". It is off by default so tests and one-shot
+scripts never grow surprise threads; the Helm chart turns it on. One broken
+mailbox is backed off and logged without stalling the others. Gmail label
+writes are batched (`batchModify`), so a 100-message first sync costs 2 write
+calls per label instead of 200.
+
 Inbound messages are scanned for prompt injection *before* they reach a provider,
 and a message that tries to rewrite the instructions is never sent to one — it
 falls back to fixture prose and still reaches a human. Generated drafts are
