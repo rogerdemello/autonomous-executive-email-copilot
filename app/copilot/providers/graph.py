@@ -12,7 +12,7 @@ import json
 from collections.abc import Callable
 
 from .base import FetchedMessage, MailProvider, WriteResult, write_guard
-from .gmail import ProviderError, Transport
+from .gmail import ProviderError, Transport, _seg
 
 _BASE = "https://graph.microsoft.com/v1.0/me"
 
@@ -52,7 +52,9 @@ class MicrosoftGraphProvider(MailProvider):
 
     def fetch_messages(self, folder: str = "INBOX", limit: int = 25) -> list[FetchedMessage]:
         mailfolder = "inbox" if folder.upper() == "INBOX" else folder
-        data = self._call("GET", f"{_BASE}/mailFolders/{mailfolder}/messages?$top={limit}")
+        data = self._call(
+            "GET", f"{_BASE}/mailFolders/{_seg(mailfolder)}/messages?$top={int(limit)}"
+        )
         return [self._to_fetched(m) for m in data.get("value", []) or []]
 
     def _to_fetched(self, m: dict) -> FetchedMessage:
@@ -72,14 +74,14 @@ class MicrosoftGraphProvider(MailProvider):
     @write_guard
     def send_reply(self, provider_message_id: str, body: str) -> WriteResult:
         data = self._call(
-            "POST", f"{_BASE}/messages/{provider_message_id}/reply", {"comment": body}
+            "POST", f"{_BASE}/messages/{_seg(provider_message_id)}/reply", {"comment": body}
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
     @write_guard
     def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
         data = self._call(
-            "POST", f"{_BASE}/messages/{provider_message_id}/createReply", {"comment": body}
+            "POST", f"{_BASE}/messages/{_seg(provider_message_id)}/createReply", {"comment": body}
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
@@ -87,13 +89,15 @@ class MicrosoftGraphProvider(MailProvider):
     def add_label(self, provider_message_id: str, label: str) -> WriteResult:
         # Graph has no labels; the nearest concept is a category.
         data = self._call(
-            "PATCH", f"{_BASE}/messages/{provider_message_id}", {"categories": [label]}
+            "PATCH", f"{_BASE}/messages/{_seg(provider_message_id)}", {"categories": [label]}
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
     @write_guard
     def archive(self, provider_message_id: str) -> WriteResult:
         data = self._call(
-            "POST", f"{_BASE}/messages/{provider_message_id}/move", {"destinationId": "archive"}
+            "POST",
+            f"{_BASE}/messages/{_seg(provider_message_id)}/move",
+            {"destinationId": "archive"},
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))

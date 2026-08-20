@@ -148,6 +148,16 @@ class TestGmailProvider:
         assert result.ok
         assert any("/messages/g1/modify" in u for _, u, _ in transport.calls)
 
+    def test_message_ids_are_url_quoted(self):
+        """A crafted provider_message_id must not rewrite the request path or
+        smuggle extra query parameters — ids are percent-encoded into URLs."""
+        transport = RecordingTransport({})
+        provider = GmailProvider("tok", transport=transport)
+        provider.archive("g1/modify?addLabelIds=../x")
+        assert len(transport.calls) == 1
+        _, url, _ = transport.calls[0]
+        assert "/messages/g1%2Fmodify%3FaddLabelIds%3D..%2Fx/modify" in url
+
     def test_write_failure_returns_not_ok(self):
         # Bug 1b: a write that hits an API error returns WriteResult(ok=False),
         # it does NOT raise — so one failure can't abort a whole sync batch.

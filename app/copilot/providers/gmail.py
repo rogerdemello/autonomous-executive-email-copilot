@@ -12,10 +12,22 @@ from __future__ import annotations
 import base64
 import json
 from collections.abc import Callable
+from urllib.parse import quote
 
 from .base import FetchedMessage, MailProvider, WriteResult, write_guard
 
 _BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
+
+
+def _seg(value: str) -> str:
+    """Quote a value for use as a URL path segment or query value.
+
+    Message and folder ids come back from the provider API and round-trip
+    through our database; quoting keeps a crafted id from rewriting the
+    request path or smuggling extra query parameters.
+    """
+    return quote(str(value), safe="")
+
 
 # transport(method, url, token, json_body) -> (status_code, response_json)
 Transport = Callable[[str, str, str, dict | None], tuple[int, dict]]
@@ -109,10 +121,12 @@ class GmailProvider(MailProvider):
 
     # -- read ---------------------------------------------------------------
     def fetch_messages(self, folder: str = "INBOX", limit: int = 25) -> list[FetchedMessage]:
-        listing = self._call("GET", f"{_BASE}/messages?maxResults={limit}&labelIds={folder}")
+        listing = self._call(
+            "GET", f"{_BASE}/messages?maxResults={int(limit)}&labelIds={_seg(folder)}"
+        )
         out: list[FetchedMessage] = []
         for ref in listing.get("messages", []) or []:
-            msg = self._call("GET", f"{_BASE}/messages/{ref['id']}?format=full")
+            msg = self._call("GET", f"{_BASE}/messages/{_seg(ref['id'])}?format=full")
             out.append(self._to_fetched(msg))
         return out
 
@@ -148,7 +162,7 @@ class GmailProvider(MailProvider):
         return _b64url(mime.encode("utf-8"))
 
     def _recipient_and_thread(self, provider_message_id: str) -> tuple[str, str, str]:
-        msg = self._call("GET", f"{_BASE}/messages/{provider_message_id}?format=metadata")
+        msg = self._call("GET", f"{_BASE}/messages/{_seg(provider_message_id)}?format=metadata")
         headers = msg.get("payload", {}).get("headers", [])
         sender, _ = self._split_from(_header(headers, "From"))
         subject = _header(headers, "Subject")
@@ -174,7 +188,7 @@ class GmailProvider(MailProvider):
         label_id = self._ensure_label(label)
         data = self._call(
             "POST",
-            f"{_BASE}/messages/{provider_message_id}/modify",
+            f"{_BASE}/messages/{_seg(provider_message_id)}/modify",
             {"addLabelIds": [label_id]},
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))
@@ -183,7 +197,7 @@ class GmailProvider(MailProvider):
     def archive(self, provider_message_id: str) -> WriteResult:
         data = self._call(
             "POST",
-            f"{_BASE}/messages/{provider_message_id}/modify",
+            f"{_BASE}/messages/{_seg(provider_message_id)}/modify",
             {"removeLabelIds": ["INBOX"]},
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))

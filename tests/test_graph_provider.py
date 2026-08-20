@@ -101,6 +101,16 @@ def test_archive_moves_message():
     assert body == {"destinationId": "archive"}
 
 
+def test_message_ids_are_url_quoted():
+    """A crafted provider_message_id must not rewrite the request path —
+    ids are percent-encoded into URLs."""
+    transport = RecordingTransport({})
+    provider = MicrosoftGraphProvider("tok", transport=transport)
+    provider.send_reply("m1/../../users/other", "hi")
+    _, url, _token, _body = transport.calls[0]
+    assert "/messages/m1%2F..%2F..%2Fusers%2Fother/reply" in url
+
+
 def test_write_failure_returns_not_ok():
     # Bug 1b: a write API error becomes WriteResult(ok=False), not an exception.
     transport = RecordingTransport({("POST", "/messages/m1/reply"): (503, {"error": "down"})})
