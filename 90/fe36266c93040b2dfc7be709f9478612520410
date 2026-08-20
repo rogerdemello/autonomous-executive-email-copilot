@@ -1,0 +1,66 @@
+requirements.txt
+  s_56c484fb35647f::t_2fd3674d789e26 8
+  s_56c484fb35647f::t_02331a459018db 20
+pyproject.toml
+  s_56c484fb35647f::t_b4158e24ed03af 30-31
+Dockerfile
+  s_56c484fb35647f::t_1b9de377e921ff 13-18,24-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "90fe36266c93040b2dfc7be709f9478612520410",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_56c484fb35647f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a81d0277-a2f4-4805-acd7-8dc52eca695d",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0dc9498848a8da833eb7dea03114ee1b82fd4fe3975d4c03e5a683d642fc0bb1",
+      "total_additions": 15,
+      "total_deletions": 5,
+      "accepted_lines": 182,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_56c484fb35647f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a81d0277-a2f4-4805-acd7-8dc52eca695d",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0dc9498848a8da833eb7dea03114ee1b82fd4fe3975d4c03e5a683d642fc0bb1",
+      "stats": {
+        "total_additions": 15,
+        "total_deletions": 5,
+        "accepted_lines": 182,
+        "overriden_lines": 0,
+        "files": {
+          "Dockerfile": {
+            "total_additions": 11,
+            "total_deletions": 1,
+            "accepted_lines": 45,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 117,
+            "overriden_lines": 0
+          },
+          "requirements.txt": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
