@@ -1,0 +1,119 @@
+tests/fixtures/provider_wire/openai_request.json
+  s_ca5919f3786d51::t_28b35e128ba917 1-35
+tests/fixtures/provider_wire/anthropic_request.json
+  s_ca5919f3786d51::t_28b35e128ba917 1-29
+tests/test_provider_wire_fixtures.py
+  s_ca5919f3786d51::t_aa1f8f3d3d5052 1-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "e6ff26704e0afcedf6cceb0dbcecfe0b96ca3180",
+  "branch": "saas-foundation",
+  "prompts": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e765de35eda775c377e11561bc899b978e601c4c55b64f71bf67e5a4510bc63e",
+      "total_additions": 630,
+      "total_deletions": 12,
+      "accepted_lines": 1581,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_ca5919f3786d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "468cf126-308c-4f56-a52a-9d61805b6ce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e765de35eda775c377e11561bc899b978e601c4c55b64f71bf67e5a4510bc63e",
+      "stats": {
+        "total_additions": 630,
+        "total_deletions": 12,
+        "accepted_lines": 1581,
+        "overriden_lines": 0,
+        "files": {
+          "app/llm/drafter.py": {
+            "total_additions": 20,
+            "total_deletions": 5,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "app/saas/learning.py": {
+            "total_additions": 20,
+            "total_deletions": 0,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 47,
+            "total_deletions": 0,
+            "accepted_lines": 581,
+            "overriden_lines": 0
+          },
+          "docs/BENCHMARK.md": {
+            "total_additions": 21,
+            "total_deletions": 0,
+            "accepted_lines": 440,
+            "overriden_lines": 0
+          },
+          "docs/PLAN.md": {
+            "total_additions": 14,
+            "total_deletions": 4,
+            "accepted_lines": 14,
+            "overriden_lines": 0
+          },
+          "scripts/export_calibration.py": {
+            "total_additions": 54,
+            "total_deletions": 0,
+            "accepted_lines": 54,
+            "overriden_lines": 0
+          },
+          "tests/fixtures/provider_wire/anthropic_request.json": {
+            "total_additions": 29,
+            "total_deletions": 0,
+            "accepted_lines": 29,
+            "overriden_lines": 0
+          },
+          "tests/fixtures/provider_wire/openai_request.json": {
+            "total_additions": 35,
+            "total_deletions": 0,
+            "accepted_lines": 35,
+            "overriden_lines": 0
+          },
+          "tests/test_entrypoints.py": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "tests/test_feedback_learning.py": {
+            "total_additions": 69,
+            "total_deletions": 3,
+            "accepted_lines": 67,
+            "overriden_lines": 0
+          },
+          "tests/test_otel_spans.py": {
+            "total_additions": 113,
+            "total_deletions": 0,
+            "accepted_lines": 113,
+            "overriden_lines": 0
+          },
+          "tests/test_provider_wire_fixtures.py": {
+            "total_additions": 207,
+            "total_deletions": 0,
+            "accepted_lines": 207,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
