@@ -9,8 +9,8 @@ These guard two stable contracts the rest of the stack relies on:
 
 import re
 
-from env.grader import evaluate_trajectory
-from env.models import Action
+from app.core.models import Action
+from research.sim.grader import evaluate_trajectory
 
 TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 

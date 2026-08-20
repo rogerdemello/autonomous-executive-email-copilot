@@ -1,0 +1,81 @@
+{% extends "_public.html" %}
+
+{% block title %}Start a free trial — Executive Email Copilot{% endblock %}
+
+{% block main %}
+<div class="auth">
+  <div class="auth__card">
+    <p class="eyebrow">14-day trial · no card</p>
+    <h1>Create your workspace</h1>
+    <p class="auth__sub">
+      You'll be the owner of a new organization, with a trial license activated immediately.
+    </p>
+
+    {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+
+    {% if not signup_enabled %}
+      <div class="banner">
+        Self-serve signup is switched off on this deployment.
+        <a href="/pricing#contact">Talk to sales</a> to have a workspace provisioned.
+      </div>
+    {% else %}
+      <form method="post" action="/signup" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+        <div class="field">
+          <label for="org_name">Organization</label>
+          <input
+            id="org_name"
+            name="org_name"
+            type="text"
+            required
+            value="{{ form.org_name or '' }}"
+            placeholder="Northwind Industries"
+          />
+        </div>
+
+        <div class="field">
+          <label for="full_name">Your name</label>
+          <input
+            id="full_name"
+            name="full_name"
+            type="text"
+            autocomplete="name"
+            required
+            value="{{ form.full_name or '' }}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="email">Work email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            required
+            value="{{ form.email or '' }}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          />
+          <span class="hint">At least 8 characters.</span>
+        </div>
+
+        <button class="btn btn--primary btn--block" type="submit">Create workspace</button>
+      </form>
+    {% endif %}
+
+    <p class="auth__alt">Already have an account? <a href="/login">Sign in</a></p>
+  </div>
+</div>
+{% endblock %}

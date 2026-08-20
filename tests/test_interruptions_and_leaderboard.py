@@ -1,6 +1,6 @@
-from baseline.leaderboard import build_leaderboard
-from env.environment import ExecutiveEmailEnv
-from env.models import Action
+from app.core.models import Action
+from research.baseline.leaderboard import build_leaderboard
+from research.sim.environment import ExecutiveEmailEnv
 
 
 def test_all_tasks_include_interruptions() -> None:

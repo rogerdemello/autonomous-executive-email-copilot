@@ -5,12 +5,16 @@
 # Bump deliberately and re-run the suite.
 fastapi==0.138.0
 starlette==1.3.1
+python-multipart==0.0.20  # FastAPI Form(...) — without it the web app dies at import
 uvicorn==0.49.0
 pydantic==2.13.4
 pydantic-settings==2.14.2
 pyyaml==6.0.3
+jinja2==3.1.6
 httpx==0.28.1
 scipy==1.15.3
 sqlalchemy==2.0.51
 fpdf2==2.8.7
 openai==2.44.0
+email-validator==2.3.0
+cryptography==46.0.7

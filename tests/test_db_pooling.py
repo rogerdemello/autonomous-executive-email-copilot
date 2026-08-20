@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from env.learning.trajectory_store import trajectory_engine
+from research.sim.learning.trajectory_store import trajectory_engine
 
 
 def test_wal_journal_mode_enabled() -> None:

@@ -10,7 +10,7 @@ included when explicitly requested via ``--agents``.
 
 Example::
 
-    python scripts/run_benchmark.py --agents baseline multiagent --out reports/out
+    python scripts/run_benchmark.py --agents baseline multiagent --out artifacts/results
 """
 
 from __future__ import annotations
@@ -27,8 +27,8 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from benchmark.results_report import write_results_report  # noqa: E402
-from benchmark.runner import (  # noqa: E402
+from research.benchmark.results_report import write_results_report  # noqa: E402
+from research.benchmark.runner import (  # noqa: E402
     DEFAULT_PERSONAS,
     DEFAULT_SEEDS,
     DEFAULT_TASKS,
@@ -69,13 +69,16 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("baseline", "multiagent", "reflective", "llm"),
         default=list(OFFLINE_AGENTS),
         help=(
-            "Agents to run (default: baseline multiagent). The 'llm' agent needs "
-            "OPENAI_API_KEY and is only run when explicitly selected."
+            "Agents to run (default: %(default)s — every agent that needs no API "
+            "key). The 'llm' agent needs OPENAI_API_KEY and is only run when "
+            "explicitly selected."
         ),
     )
     parser.add_argument(
         "--out",
-        default="reports/benchmark",
+        # artifacts/ is gitignored; the old default (reports/benchmark) dropped
+        # generated files inside the `reports` *source package*.
+        default="artifacts/results",
         help="Output directory for results.json/.csv/.html (default: %(default)s).",
     )
     parser.add_argument(
@@ -91,7 +94,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--history-path",
-        default="benchmark/leaderboard_history.jsonl",
+        # artifacts/ is gitignored; the old default resurrected a root-level
+        # benchmark/ directory the restructure removed.
+        default="artifacts/leaderboard_history.jsonl",
         help="History file for --record-history (default: %(default)s).",
     )
     return parser
@@ -105,17 +110,17 @@ def run(
     out_dir: str,
     max_steps: int = 100,
     record_history: bool = False,
-    history_path: str = "benchmark/leaderboard_history.jsonl",
+    history_path: str = "artifacts/leaderboard_history.jsonl",
 ) -> list[BenchmarkResult]:
     """Run the selected agents and write artifacts to ``out_dir``."""
     # The benchmark is sim-only by construction: refuse to run if a real-inbox
     # connector is enabled, so real mail can never contaminate benchmark results.
-    from env.connectors import email_connector_enabled
+    from app.copilot.connectors import email_connector_enabled
 
     if email_connector_enabled():
         raise RuntimeError(
             "EMAIL_CONNECTOR_ENABLED is set; the benchmark is sim-only and refuses to "
-            "run with a real-inbox connector enabled. Unset it to run the benchmark."
+            "run with a real-inbox connector enabled. Unset it to run the research.benchmark."
         )
 
     runner = BenchmarkRunner(
@@ -135,7 +140,7 @@ def run(
         print(f"  {name}: {path}")
 
     if record_history:
-        from benchmark.history import append_run
+        from research.benchmark.history import append_run
 
         entry = append_run(history_path, results, label=",".join(agents))
         print(f"  history: appended run to {history_path} (deltas: {entry['deltas']})")

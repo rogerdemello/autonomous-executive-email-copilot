@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from env.grader import evaluate_trajectory
+from research.sim.grader import evaluate_trajectory
 
 from .invariants import HARNESS_SEEDS, PERSONAS, TASKS, canonical_trace
 

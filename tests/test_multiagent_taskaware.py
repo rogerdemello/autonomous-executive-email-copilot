@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from benchmark.agents import MultiAgent
-from env.agents.coordinator import CoordinatorAgent
-from env.environment import ExecutiveEmailEnv
+from research.benchmark.agents import MultiAgent
+from research.sim.agents.coordinator import CoordinatorAgent
+from research.sim.environment import ExecutiveEmailEnv
 
 
 def _first_action(task_id: str, seed: int = 42, persona: str = "balanced"):

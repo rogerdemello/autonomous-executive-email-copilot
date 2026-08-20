@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from env.approval import (
+from app.core.approval import (
     ApprovalRequestStore,
     approve_request,
     get_pending_requests,

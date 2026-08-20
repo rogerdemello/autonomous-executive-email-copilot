@@ -1,15 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# --- Stage 1: build the React dashboard -> /dashboard/dist ---
-FROM node:20-slim AS dashboard-builder
-WORKDIR /dashboard
-# Install deps first for layer caching (package-lock.json optional).
-COPY dashboard/package.json dashboard/package-lock.json* ./
-RUN npm ci || npm install
-COPY dashboard/ ./
-RUN npm run build
-
-# --- Stage 2: Python runtime ---
+# Single-stage: the UI is server-rendered Jinja, so there is no Node toolchain,
+# no bundler, and no build artifact to stage in.
 FROM python:3.12-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
@@ -19,24 +11,25 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install Python deps first so source changes don't bust the dependency layer.
+# pip itself is upgraded first: the base image ships a pip with known CVEs
+# that the container scan (rightly) flags.
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Application source, then the pre-built dashboard from stage 1.
 COPY . .
-COPY --from=dashboard-builder /dashboard/dist ./dashboard/dist
 
-# Run as a non-root user; ensure the app dir (incl. runtime SQLite dirs) is writable.
+# Run as a non-root user; ensure the app dir (incl. the runtime SQLite dir) is writable.
 RUN useradd --create-home --uid 10001 appuser \
-    && mkdir -p /app/data /app/env/data \
+    && mkdir -p /app/data \
     && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 7860
+EXPOSE 8000
 
 # Bind to $PORT when the host injects one (Render, Cloud Run, Fly.io, …),
-# falling back to 7860 for local `docker run`. Shell form so $PORT expands.
+# falling back to 8000 for local `docker run`. Shell form so $PORT expands.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import os,httpx; httpx.get('http://localhost:%s/health' % os.environ.get('PORT','7860'), timeout=5).raise_for_status()"
+    CMD python -c "import os,httpx; httpx.get('http://localhost:%s/health' % os.environ.get('PORT','8000'), timeout=5).raise_for_status()"
 
-CMD uvicorn env.api:app --host 0.0.0.0 --port ${PORT:-7860}
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

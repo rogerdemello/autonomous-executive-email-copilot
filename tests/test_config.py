@@ -1,10 +1,10 @@
-"""Tests for centralized configuration (env/config.py)."""
+"""Tests for centralized configuration (app/core/config.py)."""
 
 from __future__ import annotations
 
 import pytest
 
-from env.config import (
+from app.core.config import (
     DEFAULT_API_BASE_URL,
     DEFAULT_MODEL,
     build_chat_client,
@@ -66,6 +66,10 @@ def test_is_azure_endpoint():
     assert is_azure_endpoint("https://api.openai.com/v1") is False
     assert is_azure_endpoint("") is False
     assert is_azure_endpoint(None) is False
+    # Suffix-anchored, not substring: a lookalike host must never receive the
+    # API key (Azure auths with a raw api-key header, so this would leak it).
+    assert is_azure_endpoint("https://openai.azure.com.evil.net/v1") is False
+    assert is_azure_endpoint("https://res.openai.azure.com:443/v1") is True
 
 
 def test_build_chat_client_requires_key(monkeypatch):
@@ -120,3 +124,51 @@ def test_build_chat_client_native_azure_block(monkeypatch):
     headers = {k.lower(): v for k, v in client.default_headers.items()}
     assert headers.get("api-key") == "az-native"
     assert dict(client.default_query).get("api-version") == "2024-12-01-preview"
+
+
+# --------------------------------------------------------------------------- #
+# Production safety gate
+# --------------------------------------------------------------------------- #
+def test_is_production_reflects_environment(monkeypatch):
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    assert get_settings().is_production is False
+    monkeypatch.setenv("ENVIRONMENT", "Production")  # case/space insensitive
+    assert get_settings().is_production is True
+
+
+def test_production_startup_rejects_dev_auth_secret(monkeypatch):
+    """ENVIRONMENT=production must hard-fail when AUTH_SECRET_KEY is unset.
+
+    The dev fallback is a publicly-known constant; booting production with it
+    would let anyone forge session tokens and license keys.
+    """
+    import anyio
+    from fastapi import FastAPI
+
+    from app.main import lifespan
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("AUTH_SECRET_KEY", raising=False)
+
+    async def _boot() -> None:
+        async with lifespan(FastAPI()):
+            pass
+
+    with pytest.raises(RuntimeError, match="AUTH_SECRET_KEY must be set"):
+        anyio.run(_boot)
+
+
+def test_production_startup_accepts_real_auth_secret(monkeypatch):
+    import anyio
+    from fastapi import FastAPI
+
+    from app.main import lifespan
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("AUTH_SECRET_KEY", "a-long-random-production-secret-value")
+
+    async def _boot() -> None:
+        async with lifespan(FastAPI()):
+            pass
+
+    anyio.run(_boot)  # must not raise

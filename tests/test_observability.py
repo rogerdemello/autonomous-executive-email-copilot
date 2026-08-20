@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from env.api import app
+from app.main import app
 
 client = TestClient(app)
 
 
 def test_version_endpoint():
-    from env import __version__
+    from app import __version__
 
     resp = client.get("/version")
     assert resp.status_code == 200
     body = resp.json()
     assert body["name"] == "autonomous-executive-email-copilot"
-    # Single-sourced from the package version (env/__init__.py / pyproject).
+    # Single-sourced from the package version (app/__init__.py / pyproject).
     assert body["version"] == __version__
 
 

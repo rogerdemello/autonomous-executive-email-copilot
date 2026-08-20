@@ -11,18 +11,24 @@ venv
 .coverage
 htmlcov
 
-# Node / dashboard (the image builds the dashboard in a separate stage)
-dashboard/node_modules
-dashboard/dist
 
 # Local runtime state and artifacts
 *.db
 *.sqlite
 *.sqlite3
 data/*.db
-env/data/*.db
+data/*.db
 artifacts
 leaderboard*.csv
+
+# Not needed at runtime — keep the image small. (reports/ and telemetry/ are
+# importable packages and MUST ship; tests and docs are not.)
+tests
+docs
+build
+*.egg-info
+.hypothesis
+helm
 
 # Local env and editor files
 .env

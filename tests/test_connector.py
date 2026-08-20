@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from env.connectors import to_observation_email
-from env.connectors.base import RawEmail, ReadOnlyEmailConnector
-from env.connectors.imap_readonly import ImapReadOnlyConnector, parse_raw_email
-from env.models import Observation, ObservationEmail
+from app.copilot.connectors import to_observation_email
+from app.copilot.connectors.base import RawEmail, ReadOnlyEmailConnector
+from app.copilot.connectors.imap_readonly import ImapReadOnlyConnector, parse_raw_email
+from app.core.models import Observation, ObservationEmail
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "mail" / "sample.eml"
 

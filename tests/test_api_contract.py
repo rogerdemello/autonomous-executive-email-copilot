@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
-from env.api import app
-from env.environment import ExecutiveEmailEnv
-from env.models import Action
+from app.core.models import Action
+from app.main import app
+from research.sim.environment import ExecutiveEmailEnv
 
 client = TestClient(app)
 

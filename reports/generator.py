@@ -2,7 +2,7 @@ import json
 
 from fpdf import FPDF
 
-from env.repositories import EpisodeRepository
+from app.core.repositories import EpisodeRepository
 
 
 class PDFGenerator:

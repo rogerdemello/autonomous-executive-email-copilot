@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.agents import BenchmarkMetrics
-from benchmark.cost_aware import cost_efficiency, score_per_1k_tokens, score_per_dollar
-from benchmark.credit_report import aggregate_step_credit
-from benchmark.runner import BenchmarkResult
-from env.eval.calibration import brier_score, expected_calibration_error
-from env.models import GraderResponse, StepScoreBreakdown
+from app.core.models import GraderResponse, StepScoreBreakdown
+from research.benchmark.agents import BenchmarkMetrics
+from research.benchmark.cost_aware import cost_efficiency, score_per_1k_tokens, score_per_dollar
+from research.benchmark.credit_report import aggregate_step_credit
+from research.benchmark.runner import BenchmarkResult
+from research.sim.eval.calibration import brier_score, expected_calibration_error
 
 # --- calibration ----------------------------------------------------------
 

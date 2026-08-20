@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "autonomous-executive-email-copilot"
 version = "1.0.0"
-description = "Deterministic RL-style executive-inbox environment with a typed API, bounded graders, baselines, and a production ops stack"
+description = "An executive email copilot: reads the inbox, triages by risk and deadline, drafts replies, and holds every outbound action for human approval"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -20,11 +20,15 @@ dependencies = [
   "pydantic==2.13.4",
   "pydantic-settings==2.14.2",
   "pyyaml==6.0.3",
+  "jinja2==3.1.6",  # server-rendered UI templates (app/web)
   "httpx==0.28.1",
   "scipy==1.15.3",  # 1.16+ needs py3.11, 1.18 needs py3.12; 1.15.3 supports the 3.10-3.12 matrix
   "sqlalchemy==2.0.51",
   "fpdf2==2.8.7",
   "openai==2.44.0",
+  "email-validator==2.3.0",  # required by pydantic EmailStr in the SaaS auth layer
+  "python-multipart==0.0.20",  # required by FastAPI Form(...) — every web login/approve form
+  "cryptography==46.0.7",  # audited Fernet AEAD for at-rest OAuth-token encryption
 ]
 
 [project.optional-dependencies]
@@ -40,13 +44,48 @@ dev = [
   "pip-audit==2.10.1",
 ]
 
-[project.scripts]
-server = "server.app:main"
+otel = [
+  "opentelemetry-api>=1.30.0",
+  "opentelemetry-sdk>=1.30.0",
+  "opentelemetry-exporter-otlp-proto-http>=1.30.0",
+]
 
-# Discover every package (including subpackages like env.agents, env.learning,
-# env.safety, env.eval, env.connectors) so a built wheel is complete.
+# Non-OpenAI LLM SDKs. The provider classes import these lazily, so the
+# extras are only needed when the matching key/LLM_PROVIDER is configured.
+providers = [
+  "anthropic>=0.40.0",
+  "google-generativeai>=0.8.0",
+]
+
+redis = [
+  "redis>=5.0.0",
+]
+
+async_db = [
+  "asyncpg>=0.30.0",
+  "aiosqlite>=0.20.0",
+]
+
+loadtest = [
+  "locust>=2.30.0",
+]
+
+all = [
+  "autonomous-executive-email-copilot[otel,providers,redis,async_db,loadtest]",
+]
+
+[project.scripts]
+server = "app.main:main"
+
+# Ship the product (app*) and the research benchmark (research*) plus the ops
+# helpers, including every subpackage, so a built wheel is complete.
 [tool.setuptools.packages.find]
-include = ["env*", "baseline*", "server*", "benchmark*", "telemetry*", "reports*"]
+include = ["app*", "research*", "telemetry*", "reports*"]
+
+# The web UI is templates + CSS, not Python. Without this a wheel would ship
+# app.web as an empty package and every page would 500 on a missing template.
+[tool.setuptools.package-data]
+"app.web" = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 markers = [
@@ -62,7 +101,7 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["dashboard", ".venv"]
+extend-exclude = [".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]

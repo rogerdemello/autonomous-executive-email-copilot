@@ -1,0 +1,29 @@
+{
+  "max_tokens": 256,
+  "messages": [
+    {
+      "content": "Draft a reply confirming the £480k claim goes to counsel.",
+      "role": "user"
+    }
+  ],
+  "model": "claude-3-5-sonnet-20241022",
+  "system": "You draft executive email replies.",
+  "temperature": 0.2,
+  "tools": [
+    {
+      "description": "Submit the drafted reply",
+      "input_schema": {
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "type": "object"
+      },
+      "name": "submit_draft"
+    }
+  ]
+}

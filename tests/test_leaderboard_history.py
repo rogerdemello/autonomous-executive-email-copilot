@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from benchmark.agents import BenchmarkMetrics
-from benchmark.history import append_run, compute_deltas, load_history, summarize_results
-from benchmark.runner import BenchmarkResult
+from research.benchmark.agents import BenchmarkMetrics
+from research.benchmark.history import append_run, compute_deltas, load_history, summarize_results
+from research.benchmark.runner import BenchmarkResult
 
 
 def _results(

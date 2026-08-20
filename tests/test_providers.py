@@ -9,7 +9,7 @@ providers, so swapping providers needs no code change.
 
 from __future__ import annotations
 
-from env.config import chat_client_kwargs
+from app.core.config import chat_client_kwargs
 
 
 def _clear_provider_env(monkeypatch) -> None:

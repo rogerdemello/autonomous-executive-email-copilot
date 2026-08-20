@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import json
 
-from benchmark.agents import BaselineAgent, BenchmarkMetrics, LLMAgent, MultiAgent
-from benchmark.reporter import Reporter
-from benchmark.runner import DEFAULT_PERSONAS, DEFAULT_SEEDS, DEFAULT_TASKS, BenchmarkRunner
+from research.benchmark.agents import BaselineAgent, BenchmarkMetrics, LLMAgent, MultiAgent
+from research.benchmark.reporter import Reporter
+from research.benchmark.runner import (
+    DEFAULT_PERSONAS,
+    DEFAULT_SEEDS,
+    DEFAULT_TASKS,
+    BenchmarkRunner,
+)
 
 
 def test_default_tasks():

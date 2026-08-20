@@ -1,0 +1,15 @@
+apiVersion: v2
+name: exec-email-copilot
+description: Autonomous Executive Email Copilot — LLM-powered email triage agent
+type: application
+version: "1.0.0"
+appVersion: "1.0.0"
+keywords:
+  - email
+  - ai-agent
+  - llm
+  - copilot
+maintainers:
+  - name: Autonomous Executive Email Copilot Team
+sources:
+  - https://github.com/rogerdemello/autonomous-executive-email-copilot

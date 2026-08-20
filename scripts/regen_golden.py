@@ -12,11 +12,19 @@ Usage:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from env.environment import ExecutiveEmailEnv
-from env.grader import evaluate_trajectory
-from env.policy import BaselinePolicy
+# Running a script puts its own directory on sys.path, not the repo root, so the
+# first-party packages are not importable. Add the repo root explicitly to keep
+# this entrypoint runnable directly (`python scripts/regen_golden.py`).
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from app.copilot.policy import BaselinePolicy  # noqa: E402
+from research.sim.environment import ExecutiveEmailEnv  # noqa: E402
+from research.sim.grader import evaluate_trajectory  # noqa: E402
 
 TASKS = ["easy_classification", "medium_prioritization", "hard_full_management"]
 PERSONAS = ["strict_ceo", "balanced", "chill_manager"]

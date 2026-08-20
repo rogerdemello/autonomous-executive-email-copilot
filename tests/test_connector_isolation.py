@@ -12,11 +12,11 @@ import ast
 import importlib.util
 from pathlib import Path
 
-_ENV = Path(__file__).resolve().parents[1] / "env"
+_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _src(rel: str) -> str:
-    return (_ENV / rel).read_text(encoding="utf-8")
+    return (_ROOT / rel).read_text(encoding="utf-8")
 
 
 def _imported_module_leaves(rel: str) -> set[str]:
@@ -34,13 +34,13 @@ def _imported_module_leaves(rel: str) -> set[str]:
 
 def test_grader_and_environment_do_not_import_connectors() -> None:
     # AST-based: a docstring mention is fine; an actual import is not.
-    for module in ("grader.py", "environment.py"):
+    for module in ("research/sim/grader.py", "research/sim/environment.py"):
         assert "connectors" not in _imported_module_leaves(module)
 
 
 def test_connectors_do_not_import_grader_or_environment() -> None:
     for f in ("__init__.py", "base.py", "mapping.py", "imap_readonly.py", "config.py"):
-        leaves = _imported_module_leaves(f"connectors/{f}")
+        leaves = _imported_module_leaves(f"app/copilot/connectors/{f}")
         assert "grader" not in leaves, f"connectors/{f} imports grader"
         assert "environment" not in leaves, f"connectors/{f} imports environment"
 

@@ -1,0 +1,14 @@
+# Gitleaks configuration (read by the Security Scan workflow's gitleaks job).
+#
+# The default ruleset stays fully active; the only allowance is the test tree.
+# Unit tests exercise token signing, password hashing and OAuth state with
+# deliberately fake inline values ("unit-test-secret", "s3cret", ...) — that is
+# what makes them tests. Real credentials never belong in this repository at
+# all; anything caught outside tests/ still fails the scan.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures: deliberately fake secrets that unit tests sign and hash"
+paths = ['''^tests/.*''']

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from benchmark.results_report import _render_html
+from research.benchmark.results_report import _render_html
 
 
 def _html() -> str:

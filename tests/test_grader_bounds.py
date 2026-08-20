@@ -1,5 +1,5 @@
-from env.grader import evaluate_trajectory
-from env.models import Action
+from app.core.models import Action
+from research.sim.grader import evaluate_trajectory
 
 
 def test_grader_score_bounds_for_all_tasks_and_personas() -> None:

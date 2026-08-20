@@ -15,13 +15,13 @@ cp .env.example .env   # optional; only needed for LLM/hybrid modes
 Run the API locally:
 
 ```bash
-uvicorn env.api:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
-Frontend (optional):
+Seed a demo workspace (optional, no credentials needed):
 
 ```bash
-cd dashboard && npm install && npm run dev
+make demo    # then open http://localhost:8000
 ```
 
 ## Before opening a pull request

@@ -1,4 +1,4 @@
-"""Tests for database engine configuration (env/db.py).
+"""Tests for database engine configuration (app/core/db.py).
 
 Covers the optional ``DATABASE_URL`` / Postgres support without requiring a live
 Postgres server: we test the pure ``build_engine_kwargs`` builder directly and
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import pytest
 
-from env import db
-from env.config import get_settings
-from env.repositories import EpisodeRepository
+from app.core import db
+from app.core.config import get_settings
+from app.core.repositories import EpisodeRepository
 
 POSTGRES_URL = "postgresql+psycopg://user:pass@localhost:5432/email_copilot"
 POSTGRES2_URL = "postgresql+psycopg2://user:pass@localhost:5432/email_copilot"

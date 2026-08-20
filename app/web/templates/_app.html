@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{# Chrome for the signed-in product: sidebar nav + page header. #}
+
+{% block body %}
+<div class="shell">
+  <aside class="side">
+    <a class="logo" href="/app/inbox"><span class="glyph">EC</span> Email Copilot</a>
+
+    <nav aria-label="Main">
+      <a href="/app/inbox" {% if active == 'inbox' %}aria-current="page"{% endif %}>Inbox</a>
+      <a href="/app/approvals" {% if active == 'approvals' %}aria-current="page"{% endif %}>
+        Approvals
+        {% if pending_count %}<span class="count">{{ pending_count }}</span>{% endif %}
+      </a>
+      <a href="/app/activity" {% if active == 'activity' %}aria-current="page"{% endif %}>Activity</a>
+      <a href="/app/connect" {% if active == 'connect' %}aria-current="page"{% endif %}>Mailboxes</a>
+      <a href="/app/settings" {% if active == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+    </nav>
+
+    <div class="side__foot">
+      <div class="who">{{ current_user.full_name or current_user.email }}</div>
+      <div>{{ organization.name }} · {{ current_user.role }}</div>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
+        <form method="post" action="/logout" style="margin: 0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="btn btn--sm" type="submit">Sign out</button>
+        </form>
+        <button
+          class="theme-toggle"
+          type="button"
+          data-theme-toggle
+          aria-label="Switch between light and dark theme"
+        >
+          ◐
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="main__head">
+      <div>
+        <h1>{% block heading %}{% endblock %}</h1>
+        <p class="lede muted">{% block lede %}{% endblock %}</p>
+      </div>
+      <div class="cta">{% block headactions %}{% endblock %}</div>
+    </header>
+
+    <div class="main__body">
+      {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+      {% if notice %}<div class="banner banner--ok">{{ notice }}</div>{% endif %}
+      {% block main %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from env.api import app, episode_history_store
-from env.learning.trajectory_store import trajectory_store
-from env.repositories import EpisodeRepository
+from app.core.repositories import EpisodeRepository
+from app.main import app, episode_history_store
+from research.sim.learning.trajectory_store import trajectory_store
 
 client = TestClient(app)
 

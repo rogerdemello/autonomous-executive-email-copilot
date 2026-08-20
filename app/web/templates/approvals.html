@@ -1,0 +1,116 @@
+{% extends "_app.html" %}
+
+{% block title %}Approvals — Executive Email Copilot{% endblock %}
+{% block heading %}Approvals{% endblock %}
+{% block lede %}Actions that reach the outside world wait here for a human.{% endblock %}
+
+{% block main %}
+{% if learning and learning.learned %}
+  <div class="card" style="margin-bottom: 16px">
+    <div class="card__head">
+      <span class="card__title">What the copilot has learned</span>
+      <span class="muted" style="font-size: 0.82rem">
+        from your last {{ learning.window }} decision{{ 's' if learning.window != 1 }}
+      </span>
+    </div>
+    <ul class="learned">
+      {% for sentence in learning.learned %}<li>{{ sentence }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}
+{% if not actions %}
+  <div class="card">
+    <div class="empty">
+      <h3>Nothing waiting on you</h3>
+      <p>
+        Replies and escalations pause here before they are sent. Classifications and deferrals apply
+        on their own — they only ever add a label.
+      </p>
+      <a class="btn" href="/app/inbox">Back to the inbox</a>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ actions | length }} awaiting approval</span>
+    </div>
+    {% for item in actions %}
+      <div class="action-block">
+        <div class="action-block__head">
+          <span class="action-block__what">
+            {{ action_labels.get(item.action.action_type, item.action.action_type) }}
+          </span>
+          <span class="chip chip--{{ item.message.priority_hint }}">{{ item.message.priority_hint }}</span>
+          {% if item.message.risk_tag and item.message.risk_tag != 'none' %}
+            <span class="chip chip--brass">{{ item.message.risk_tag }}</span>
+          {% endif %}
+          {% if item.action.escalate_to %}
+            <span class="chip chip--accent">→ {{ item.action.escalate_to | replace('_', ' ') }}</span>
+          {% endif %}
+          {% if item.action.draft_source == 'llm' %}
+            <span class="chip chip--accent" title="Wording written by the model. The decision itself is the deterministic policy's.">
+              model-drafted{% if item.action.draft_confidence %} · {{ '%.0f' % (item.action.draft_confidence * 100) }}%{% endif %}
+            </span>
+          {% endif %}
+          {% if item.action.verification_status == 'verified' %}
+            <span class="chip chip--good" title="A second pass checked this draft against the source message: its numbers, names and claims are supported.">verified</span>
+          {% elif item.action.verification_status == 'flagged' %}
+            <span class="chip chip--warn" title="{{ item.action.verification_notes | join(' · ') }}">check flagged</span>
+          {% endif %}
+        </div>
+
+        <p style="margin: 0 0 4px">
+          <strong>{{ item.message.subject }}</strong>
+        </p>
+        <p class="muted" style="margin: 0 0 12px; font-size: 0.86rem">
+          from {{ item.message.sender }} · {{ item.message.received_at | short_time }}
+        </p>
+
+        {# Why this is here at all. Approving without it is approving blind. #}
+        {% if item.rationale %}
+          <ul class="rationale">
+            {% for point in item.rationale %}<li>{{ point }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+
+        {# What verification flagged — the reviewer's "look here first". #}
+        {% if item.action.verification_status == 'flagged' and item.action.verification_notes %}
+          <ul class="rationale rationale--flagged">
+            {% for note in item.action.verification_notes %}<li>⚠ {{ note }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if can_manage %}
+          <form method="post" action="/app/actions/{{ item.action.id }}/approve"
+                id="approve-{{ item.action.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            {% if item.action.content %}
+              <textarea class="draft" name="content" rows="6"
+                        aria-label="Draft to send — you can edit it before approving">{{ item.action.content }}</textarea>
+              <p class="muted" style="margin: 0 0 12px; font-size: 0.8rem">
+                Edit freely — your edits are sent, and they teach the copilot this workspace's voice.
+              </p>
+            {% endif %}
+          </form>
+          <div class="actions-row">
+            <button class="btn btn--primary btn--sm" type="submit"
+                    form="approve-{{ item.action.id }}">
+              {% if item.action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
+            </button>
+            <form method="post" action="/app/actions/{{ item.action.id }}/reject">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+              <button class="btn btn--sm btn--danger" type="submit">Reject</button>
+            </form>
+            <a class="btn btn--sm" href="/app/inbox?message={{ item.message.id }}">Open message</a>
+          </div>
+        {% else %}
+          {% if item.action.content %}<div class="draft">{{ item.action.content }}</div>{% endif %}
+          <p class="muted" style="margin: 0; font-size: 0.85rem">
+            Approving needs the admin role or higher.
+          </p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "_app.html" %}
+
+{% block title %}Connect a mailbox — Executive Email Copilot{% endblock %}
+{% block heading %}Connect a mailbox{% endblock %}
+{% block lede %}The copilot reads what you connect, and never sends without approval.{% endblock %}
+
+{% block main %}
+{% if connections %}
+  <div class="card" style="margin-bottom: 24px">
+    <div class="card__head">
+      <span class="card__title">Connected</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Provider</th>
+            <th>Connected</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for conn in connections %}
+            <tr>
+              <td><strong>{{ conn.account_email }}</strong></td>
+              <td>
+                <span class="chip chip--accent">{{ provider_labels.get(conn.provider, conn.provider) }}</span>
+                {% if conn.status == "error" %}
+                  <span class="chip chip--danger" title="This mailbox can no longer authenticate. Reconnect it to resume syncing.">needs reconnect</span>
+                {% endif %}
+              </td>
+              <td class="when">{{ conn.created_at | short_time }}</td>
+              <td>
+                <div class="actions-row">
+                  {% if can_manage %}
+                    <form method="post" action="/app/mailboxes/{{ conn.id }}/sync">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <button class="btn btn--sm" type="submit">Sync now</button>
+                    </form>
+                    <form
+                      method="post"
+                      action="/app/mailboxes/{{ conn.id }}/disconnect"
+                      data-confirm="Disconnect {{ conn.account_email }}? Processed messages and pending actions for this mailbox are removed."
+                    >
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <button class="btn btn--sm btn--danger" type="submit">Disconnect</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+{% if not can_manage %}
+  <div class="banner">
+    Connecting a mailbox needs the <strong>admin</strong> role or higher. Ask an owner of
+    {{ organization.name }} to connect one.
+  </div>
+{% endif %}
+
+<div class="providers">
+  <div class="provider provider--ready">
+    <div class="provider__name">Demo mailbox</div>
+    <span class="chip chip--brass">No credentials needed</span>
+    <p>
+      A realistic executive inbox of {{ demo_message_count }} messages — contracts, an outage, a
+      suspected phishing attempt, invoices, board prep. Everything runs locally and gives the same
+      result every time, so it is safe to present.
+    </p>
+    <form method="post" action="/app/connect/demo">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <button class="btn btn--primary btn--block" type="submit" {% if not can_manage %}disabled{% endif %}>
+        Use the demo mailbox
+      </button>
+    </form>
+  </div>
+
+  {% for provider in providers %}
+    <div class="provider">
+      <div class="provider__name">{{ provider.name }}</div>
+      {% if provider.configured %}
+        <span class="chip chip--good">Ready</span>
+        <p>
+          Read-only access to your inbox plus the ability to send the replies you approve. You'll be
+          taken to {{ provider.name }} to grant consent.
+        </p>
+        <form method="post" action="/app/connect/{{ provider.key }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="btn btn--block" type="submit" {% if not can_manage %}disabled{% endif %}>
+            Connect {{ provider.name }}
+          </button>
+        </form>
+      {% else %}
+        <span class="chip chip--neutral">Not configured</span>
+        <p>
+          An operator must set this server's {{ provider.name }} OAuth client id and secret before
+          real mailboxes can be linked. The demo mailbox needs no setup.
+        </p>
+        <button class="btn btn--block" type="button" disabled aria-disabled="true">
+          Unavailable on this server
+        </button>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

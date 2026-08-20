@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from env.grader import evaluate_trajectory
+from research.sim.grader import evaluate_trajectory
 
 from .invariants import canonical_trace
 

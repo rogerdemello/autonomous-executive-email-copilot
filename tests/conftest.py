@@ -1,6 +1,6 @@
 """Shared pytest fixtures.
 
-Test isolation: ``env.config.Settings`` loads a developer's real ``.env`` file by
+Test isolation: ``app.core.config.Settings`` loads a developer's real ``.env`` file by
 default (``SettingsConfigDict(env_file=".env")``). Without this fixture a local
 ``.env`` (e.g. a real ``HF_TOKEN``) leaks into ``get_settings()`` and breaks
 config tests that assert on a clean environment. We disable ``.env`` loading for
@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import pytest
 
-from env import config
+from app.core import config
 
 # Disable .env loading at conftest IMPORT time as well. The FastAPI app
-# (``env.api``) reads settings such as ``CORS_ORIGINS`` when it is first imported
+# (``app.main``) reads settings such as ``CORS_ORIGINS`` when it is first imported
 # — which happens at test-module collection, before the autouse fixture below can
 # run. pytest imports this conftest before any test module, so setting the config
 # here guarantees the app is built from a clean environment, not a developer's

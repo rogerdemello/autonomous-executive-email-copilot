@@ -9,10 +9,10 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from baseline.run_baseline import run
-from env.api import app
-from env.grader import _compute_score, _normalize_reward
-from env.utils import strict_unit_interval
+from app.core.utils import strict_unit_interval
+from app.main import app
+from research.baseline.run_baseline import run
+from research.sim.grader import _compute_score, _normalize_reward
 
 client = TestClient(app)
 

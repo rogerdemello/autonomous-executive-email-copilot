@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.agents import BenchmarkMetrics
-from benchmark.runner import BenchmarkResult
-from benchmark.significance import (
+from research.benchmark.agents import BenchmarkMetrics
+from research.benchmark.runner import BenchmarkResult
+from research.benchmark.significance import (
     compare_agents,
     compare_all_pairs,
     paired_deltas,

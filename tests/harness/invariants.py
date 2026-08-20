@@ -1,18 +1,18 @@
 """Reusable invariant assertions + canonical rollout helpers.
 
 Every later advancement imports from here so the invariant contract is defined
-exactly once. Assertions mirror the production transforms in ``env/utils.py``
-(``strict_unit_interval``, ``epsilon=1e-6``) and ``env/grader.py``.
+exactly once. Assertions mirror the production transforms in ``app/core/utils.py``
+(``strict_unit_interval``, ``epsilon=1e-6``) and ``research/sim/grader.py``.
 """
 
 from __future__ import annotations
 
 import math
 
-from env.environment import ExecutiveEmailEnv
-from env.grader import evaluate_trajectory
-from env.models import Action, GraderResponse
-from env.policy import BaselinePolicy
+from app.copilot.policy import BaselinePolicy
+from app.core.models import Action, GraderResponse
+from research.sim.environment import ExecutiveEmailEnv
+from research.sim.grader import evaluate_trajectory
 
 TASKS: list[str] = [
     "easy_classification",

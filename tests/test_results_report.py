@@ -5,12 +5,12 @@ import json
 import os
 from statistics import mean, stdev
 
-from benchmark.agents import BenchmarkMetrics
-from benchmark.results_report import (
+from research.benchmark.agents import BenchmarkMetrics
+from research.benchmark.results_report import (
     aggregate_results,
     write_results_report,
 )
-from benchmark.runner import BenchmarkResult
+from research.benchmark.runner import BenchmarkResult
 
 
 def _result(

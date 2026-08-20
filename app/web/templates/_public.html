@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{# Chrome for the public, logged-out pages: landing, pricing, login, signup. #}
+
+{% block body %}
+<header class="wrap top">
+  <a class="logo" href="/"><span class="glyph">EC</span> Email Copilot</a>
+  <nav>
+    <a class="hide" href="/#how">How it works</a>
+    <a class="hide" href="/#proof">Proof</a>
+    <a class="hide" href="/pricing">Pricing</a>
+    <button
+      class="theme-toggle"
+      type="button"
+      data-theme-toggle
+      aria-label="Switch between light and dark theme"
+    >
+      ◐
+    </button>
+    {% if current_user %}
+      <a class="btn" href="/app/inbox">Open app</a>
+    {% else %}
+      <a class="hide" href="/login">Sign in</a>
+      <a class="btn btn--primary" href="/signup">Start free trial</a>
+    {% endif %}
+  </nav>
+</header>
+
+<main>{% block main %}{% endblock %}</main>
+
+<footer class="wrap">
+  <span>© Executive Email Copilot — autonomous inbox management for leaders.</span>
+  <span class="mono" style="letter-spacing: 0.04em">
+    Sales: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
+  </span>
+</footer>
+{% endblock %}

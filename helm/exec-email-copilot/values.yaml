@@ -1,0 +1,145 @@
+# Helm values for exec-email-copilot.
+# Default values — override per environment (e.g. -f values-prod.yaml).
+# ---------------------------------------------------------------------------
+# Image
+image:
+  repository: exec-email-copilot
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Replica count for horizontal scaling (stateless API servers).
+replicaCount: 2
+
+# Service configuration.
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# Ingress — disabled by default; enable with --set ingress.enabled=true.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: copilot.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource requests/limits — tune to workload.
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2
+    memory: 1Gi
+
+# Startup, liveness, and readiness probes. Liveness and readiness use the
+# split endpoints the app actually provides: /health/live is process-up,
+# /health/ready additionally probes the database and returns 503 when it is
+# unreachable — pointing all three at /health would keep routing traffic to a
+# pod whose DB is down.
+probes:
+  enabled: true
+  startup:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 30
+  liveness:
+    path: /health/live
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    failureThreshold: 5
+  readiness:
+    path: /health/ready
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+
+# Environment variables injected into the pod.
+# Sensitive values should come from an existing Secret (see existingSecret).
+# MODEL_NAME / LLM_PROVIDER are configuration, not secrets, and these are the
+# names app/core/config.py actually reads (the old secret carried LLM_MODEL,
+# which nothing consumes).
+extraEnv:
+  - name: LOG_LEVEL
+    value: info
+  - name: API_AUTH_TOKEN
+    value: ""
+  - name: RATE_LIMIT_PER_MINUTE
+    value: "60"
+  - name: CORS_ORIGINS
+    value: "*"
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: ""
+  - name: MODEL_NAME
+    value: gpt-4o-mini
+  # A deployment (unlike a laptop demo) wants the copilot to work connected
+  # mailboxes on a cadence, not only on click.
+  - name: SYNC_WORKER_ENABLED
+    value: "true"
+  - name: SYNC_WORKER_INTERVAL_SECONDS
+    value: "300"
+  # For a durable deployment point DATABASE_URL at Postgres; the default is a
+  # zero-config SQLite file under /app/data (or the PVC when persistence is on).
+  # - name: DATABASE_URL
+  #   value: postgresql://...
+
+# Name of an existing Secret whose keys are injected as env vars.
+# If empty, a default secret is created from .Values.secret.
+existingSecret: ""
+
+# Values used to create a default secret when existingSecret is empty.
+# Secrets only — model/provider selection lives in extraEnv above.
+secret:
+  OPENAI_API_KEY: ""
+  ANTHROPIC_API_KEY: ""
+  GOOGLE_API_KEY: ""
+
+# PersistentVolumeClaim for the data directory (SQLite store, draft cache,
+# scenario fixtures). When enabled, an init container seeds the volume from
+# the image's packaged data/ tree on first boot, and DATA_DIR points the app
+# at the volume.
+persistence:
+  enabled: false
+  size: 10Gi
+  storageClass: ""
+  mountPath: /data
+
+# ServiceAccount — useful for workload identity / IRSA.
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Pod-level security context. 10001 is the uid the Dockerfile creates
+# (appuser) and chowns /app to — running as any other uid cannot write the
+# data directory.
+podSecurityContext:
+  fsGroup: 10001
+
+# Container-level security context.
+# readOnlyRootFilesystem is off by default because the zero-config SQLite
+# store writes under /app/data inside the image. For a hardened deployment,
+# set DATABASE_URL to Postgres (or enable persistence) and flip this to true.
+containerSecurityContext:
+  runAsUser: 10001
+  runAsNonRoot: true
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# Additional topology spread or affinity constraints.
+affinity: {}
+
+# Tolerations for node scheduling.
+tolerations: []
+
+# Node selector.
+nodeSelector: {}

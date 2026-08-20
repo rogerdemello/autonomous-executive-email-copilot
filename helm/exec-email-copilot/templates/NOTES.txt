@@ -1,0 +1,16 @@
+Autonomous Executive Email Copilot {{ .Chart.AppVersion }} deployed.
+
+1. Get the application URL:
+  {{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
+  {{- else }}
+  kubectl port-forward service/{{ include "exec-email-copilot.fullname" . }} 8000:{{ .Values.service.port }}
+  {{- end }}
+
+2. Check pod status:
+  kubectl get pods -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. View logs:
+  kubectl logs -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+4. API docs at {{ if .Values.ingress.enabled }}https://{{ (index .Values.ingress.hosts 0).host }}/docs{{ else }}/docs{{ end }}

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from benchmark.agents import ReflectiveAgent as ReflectiveBenchmarkAgent
-from env.agents.reflector import ReflectiveAgent
-from env.models import Action, Observation, ObservationEmail
+from app.core.models import Action, Observation, ObservationEmail
+from research.benchmark.agents import ReflectiveAgent as ReflectiveBenchmarkAgent
+from research.sim.agents.reflector import ReflectiveAgent
 
 
 def _obs(email: ObservationEmail) -> Observation:
