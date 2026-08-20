@@ -52,6 +52,11 @@
               model-drafted{% if item.action.draft_confidence %} · {{ '%.0f' % (item.action.draft_confidence * 100) }}%{% endif %}
             </span>
           {% endif %}
+          {% if item.action.verification_status == 'verified' %}
+            <span class="chip chip--good" title="A second pass checked this draft against the source message: its numbers, names and claims are supported.">verified</span>
+          {% elif item.action.verification_status == 'flagged' %}
+            <span class="chip chip--warn" title="{{ item.action.verification_notes | join(' · ') }}">check flagged</span>
+          {% endif %}
         </div>
 
         <p style="margin: 0 0 4px">
@@ -65,6 +70,13 @@
         {% if item.rationale %}
           <ul class="rationale">
             {% for point in item.rationale %}<li>{{ point }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+
+        {# What verification flagged — the reviewer's "look here first". #}
+        {% if item.action.verification_status == 'flagged' and item.action.verification_notes %}
+          <ul class="rationale rationale--flagged">
+            {% for note in item.action.verification_notes %}<li>⚠ {{ note }}</li>{% endfor %}
           </ul>
         {% endif %}
 

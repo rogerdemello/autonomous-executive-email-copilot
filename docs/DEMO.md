@@ -153,6 +153,12 @@ The draft is a textarea — change a sentence, then approve.
 > Classifications and deferrals apply themselves, because the worst they can do
 > is add a label."
 
+> "Every held draft also carries a verification verdict — a second pass checked
+> the prose against the source message before it queued. Ten of these say
+> 'verified'. One says 'check flagged': the model wrote 'by 25 September' for a
+> message whose deadline is 30 September, and the verifier caught it. That's
+> the system catching its own model inventing a fact, in front of you."
+
 > "And notice the draft is editable. What you send is what you wrote — and the
 > copilot keeps the pair. Your edits become voice examples for future drafts,
 > and a proposal shape you keep rejecting stops being proposed: after three

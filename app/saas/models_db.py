@@ -308,6 +308,12 @@ class ProposedAction(Base):
     # recomputed so the approvals queue can show it too, and so it still reads
     # correctly months later even if the heuristics have since changed.
     rationale = Column(Text, nullable=True)
+    # Draft-then-verify (app/llm/verifier.py): "verified" | "flagged" | NULL
+    # (not checked — e.g. no draft body). Notes are newline-separated and say
+    # exactly what was flagged; a flagged draft still queues, the human is the
+    # gate.
+    verification_status = Column(String(16), nullable=True)
+    verification_notes = Column(Text, nullable=True)
 
     def to_dict(self) -> dict:
         return {
@@ -330,6 +336,10 @@ class ProposedAction(Base):
             "draft_source": self.draft_source,
             "draft_confidence": self.draft_confidence,
             "rationale": [line for line in (self.rationale or "").split("\n") if line],
+            "verification_status": self.verification_status,
+            "verification_notes": [
+                line for line in (self.verification_notes or "").split("\n") if line
+            ],
         }
 
 

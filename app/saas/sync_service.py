@@ -316,15 +316,30 @@ class InboxSyncService:
                     downgraded_count += 1
                     continue
                 # External action (reply/escalate) — hold for a human.
+                message = message_by_id.get(prop.email_id)
                 drafted = resolve_draft(
                     provider,
                     prop,
-                    message=message_by_id.get(prop.email_id),
+                    message=message,
                     signals=signals,
                     context=draft_context,
                     live_llm=live_llm,
                     examples=_examples(prop.action_type),
                 )
+                # Draft-then-verify: check the prose against its source before
+                # it queues. A flagged draft still queues — the human is the
+                # gate — but the reviewer sees what to look at first.
+                verification_status = None
+                verification_notes: list[str] = []
+                if drafted.body and message is not None:
+                    from app.llm.verifier import verify_draft
+
+                    verification_status, verification_notes = verify_draft(
+                        drafted.body,
+                        message=message,
+                        action_type=prop.action_type,
+                        live_llm=live_llm,
+                    )
                 self.actions.create(
                     org_id=org_id,
                     message_id=message_row["id"],
@@ -337,6 +352,8 @@ class InboxSyncService:
                     draft_source=drafted.source,
                     draft_confidence=drafted.confidence,
                     rationale=drafted.rationale,
+                    verification_status=verification_status,
+                    verification_notes=verification_notes,
                 )
                 proposed_count += 1
             else:

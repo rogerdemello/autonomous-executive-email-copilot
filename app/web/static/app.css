@@ -1231,6 +1231,10 @@ textarea.draft {
   margin-bottom: 4px;
 }
 
+.rationale--flagged li {
+  color: var(--warn, #b45309);
+}
+
 .learned {
   margin: 0;
   padding-left: 18px;

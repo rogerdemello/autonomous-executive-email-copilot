@@ -92,6 +92,26 @@ stay reproducible and testable, and a model outage costs you wording rather than
 triage. `LLM_DRAFTING_ENABLED=true` turns on live drafting for a real mailbox;
 already-generated drafts always replay from disk regardless.
 
+**Draft quality is gated, not vibes.** The routing benchmark grades decisions;
+[`scripts/eval_drafts.py`](scripts/eval_drafts.py) grades the *prose*. A
+deterministic rubric (every number in a draft must appear in the source
+message, greetings must name someone the source mentions, length bounds, no
+risky content) runs in CI on every push over the committed demo drafts, and a
+nightly job adds an LLM-judged grounding/tone/actionability score when a key
+is configured. Honest baseline: the corpus scores 10/11 — the rubric caught
+the model inventing a "25 September" deadline for a message whose deadline is
+30 September, and that flag is kept as proof the gate works.
+
+**Draft-then-verify.** Before a reply or handover enters the approval queue,
+a second pass ([`app/llm/verifier.py`](app/llm/verifier.py)) checks the prose
+against the message it answers — the deterministic rubric always (free, no
+network), plus a model fact-check pass when live drafting is on. The verdict
+rides on the action as a "verified" or "check flagged" chip with the exact
+notes, so the reviewer knows where to look first. A flagged draft still
+queues: the human is the gate, verification is the flashlight. In the demo
+queue this is visible immediately — ten drafts verify, and one is flagged for
+that invented "25 September" deadline.
+
 **Learning from the approval queue.** Every approve / amend-then-approve /
 reject is a labeled example, and the copilot uses all three
 ([`app/saas/learning.py`](app/saas/learning.py)): a proposal shape the team

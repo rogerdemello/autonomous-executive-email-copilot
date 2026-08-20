@@ -212,7 +212,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 4
+_SCHEMA_VERSION = 5
 
 
 class SchemaVersion(Base):
@@ -304,6 +304,12 @@ def _run_migration(version: int) -> None:
         # A reviewer may now amend a draft before approving; the proposed text
         # is kept so (original, edited) pairs can teach the drafter.
         _add_column_if_missing("saas_proposed_actions", "original_content", "TEXT")
+        return
+    if version == 5:
+        # Draft-then-verify: each held draft is checked against its source
+        # message before it queues; the verdict rides on the action.
+        _add_column_if_missing("saas_proposed_actions", "verification_status", "VARCHAR(16)")
+        _add_column_if_missing("saas_proposed_actions", "verification_notes", "TEXT")
         return
 
 

@@ -578,6 +578,8 @@ class ProposedActionRepository:
         draft_source: str | None = None,
         draft_confidence: float | None = None,
         rationale: list[str] | None = None,
+        verification_status: str | None = None,
+        verification_notes: list[str] | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             action = ProposedAction(
@@ -595,6 +597,8 @@ class ProposedActionRepository:
                 draft_source=draft_source,
                 draft_confidence=draft_confidence,
                 rationale="\n".join(rationale) if rationale else None,
+                verification_status=verification_status,
+                verification_notes="\n".join(verification_notes) if verification_notes else None,
             )
             session.add(action)
             session.flush()
