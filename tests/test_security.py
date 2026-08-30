@@ -59,6 +59,19 @@ def test_sensitive_reads_stay_open_without_a_token(monkeypatch):
     assert client.get("/episodes").status_code == 200
 
 
+def test_metrics_require_the_token_when_configured(monkeypatch):
+    """Prometheus output names paths, error classes, and episode volume —
+    operational detail that shouldn't be an anonymous read on a locked-down
+    deployment."""
+    monkeypatch.setenv("API_AUTH_TOKEN", "s3cret")
+    assert client.get("/metrics").status_code == 401
+    ok = client.get("/metrics", headers={"Authorization": "Bearer s3cret"})
+    assert ok.status_code == 200
+
+    monkeypatch.delenv("API_AUTH_TOKEN", raising=False)
+    assert client.get("/metrics").status_code == 200
+
+
 # --- CORS ---
 
 

@@ -164,10 +164,14 @@ app = FastAPI(
     license_info={"name": "MIT"},
     lifespan=lifespan,
 )
+# Credentials only ride when origins are pinned: "*" + allow_credentials is a
+# combination browsers reject and that would otherwise hand any origin the
+# session cookie on a misconfigured deployment.
+_cors_origins = get_settings().cors_origin_list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origin_list,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -198,6 +202,20 @@ class _V1PathRewriteMiddleware:
 
 
 app.add_middleware(_V1PathRewriteMiddleware)
+
+# Baseline security headers on every response (HTML, JSON, static). Added after
+# CORS/rewrite so it wraps them (outermost of the three); TrustedHost outermost
+# of all so a forged Host header is rejected before any routing happens.
+from .web.middleware import SecurityHeadersMiddleware  # noqa: E402
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+_allowed_hosts = get_settings().allowed_host_list
+if _allowed_hosts != ["*"]:
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
+
 app.include_router(dashboard_router)
 
 # Commercial SaaS layer: accounts, organizations (tenants), RBAC, sales-led
@@ -1099,7 +1117,15 @@ def main() -> None:
     import uvicorn
 
     port = int(os.environ.get("PORT", "8000"))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)  # nosec B104 - container service binds all interfaces by design
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",  # nosec B104 - container service binds all interfaces by design
+        port=port,
+        # Same proxy posture as the Dockerfile CMD: real client IPs behind a
+        # platform proxy; spoofable only if the process is exposed directly.
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover - manual invocation

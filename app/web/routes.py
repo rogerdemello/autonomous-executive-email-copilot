@@ -26,6 +26,7 @@ from fastapi.templating import Jinja2Templates
 from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_account_email, demo_message_count
 from app.core.config import get_settings
 from app.core.paths import TEMPLATES_DIR
+from app.core.security import login_attempt_allowed
 from app.saas import licensing, oauth, rbac
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingError, BillingService
@@ -323,6 +324,20 @@ def login_submit(
     csrf_token: str = Form(""),
 ) -> Response:
     verify_csrf(request, csrf_token)
+    client_ip = request.client.host if request.client else "unknown"
+    if not login_attempt_allowed(client_ip, email, get_settings().login_rate_limit_per_minute):
+        return _render(
+            request,
+            "login.html",
+            {
+                "error": "Too many sign-in attempts. Wait a minute and try again.",
+                "email": email,
+                "next_url": _safe_next(next),
+                "sso_enabled": get_settings().sso_enabled,
+                "demo_credentials": _demo_credentials(),
+            },
+            status_code=429,
+        )
     try:
         user = _auth.authenticate(email=email, password=password)
     except AuthError as exc:

@@ -28,7 +28,9 @@ def test_main_defaults_port_to_8000(monkeypatch: pytest.MonkeyPatch) -> None:
 
     main()
 
-    uvicorn_run.assert_called_once_with("app.main:app", host="0.0.0.0", port=8000)
+    uvicorn_run.assert_called_once_with(
+        "app.main:app", host="0.0.0.0", port=8000, proxy_headers=True, forwarded_allow_ips="*"
+    )
 
 
 def test_main_reads_port_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -40,4 +42,6 @@ def test_main_reads_port_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     main()
 
-    uvicorn_run.assert_called_once_with("app.main:app", host="0.0.0.0", port=8080)
+    uvicorn_run.assert_called_once_with(
+        "app.main:app", host="0.0.0.0", port=8080, proxy_headers=True, forwarded_allow_ips="*"
+    )

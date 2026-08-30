@@ -115,6 +115,14 @@ class Settings(BaseSettings):
     api_tenants: str | None = None
     cors_origins: str = "*"
     rate_limit_per_minute: int = 0  # 0 disables rate limiting
+    # Host-header allowlist (comma-separated). "*" (default) disables the check.
+    # Set to the public hostname(s) in production so Host-header injection can't
+    # influence absolute URLs (password-reset links, OAuth redirect URIs).
+    allowed_hosts: str = "*"
+    # Per-IP and per-email cap on sign-in attempts. 0 (default) disables the
+    # throttle so tests and local dev are unaffected; a public deployment sets
+    # something like 10 to blunt credential stuffing.
+    login_rate_limit_per_minute: int = 0
 
     # --- Commercial SaaS layer (accounts, tenants, licensing) ---
     # Deployment environment: "development" (default) | "production". In
@@ -195,6 +203,14 @@ class Settings(BaseSettings):
         if raw == "*":
             return ["*"]
         return [o.strip() for o in raw.split(",") if o.strip()]
+
+    @property
+    def allowed_host_list(self) -> list[str]:
+        """Allowed Host headers as a list; '*' (or empty) disables the check."""
+        raw = (self.allowed_hosts or "*").strip()
+        if raw == "*":
+            return ["*"]
+        return [h.strip() for h in raw.split(",") if h.strip()]
 
     @property
     def tenant_token_map(self) -> dict[str, str]:

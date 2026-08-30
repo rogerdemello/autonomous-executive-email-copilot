@@ -42,4 +42,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import os,httpx; httpx.get('http://localhost:%s/health' % os.environ.get('PORT','8000'), timeout=5).raise_for_status()"
 
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# --proxy-headers: behind a platform proxy (Render, Cloud Run) the client IP
+# must come from X-Forwarded-For, or rate limiting and audit IPs all see the
+# proxy. Trusting "*" is correct ONLY behind such a proxy — if you expose this
+# container directly to the internet, the header becomes spoofable.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips "*"

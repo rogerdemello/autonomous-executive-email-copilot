@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
+from app.core.security import login_attempt_allowed
 
 from . import licensing
 from .auth import AuthError, AuthService
@@ -122,6 +123,14 @@ def signup(body: SignupRequest, request: Request) -> dict:
 
 @auth_router.post("/login")
 def login(body: LoginRequest, request: Request) -> dict:
+    if not login_attempt_allowed(
+        _client_ip(request), body.email, get_settings().login_rate_limit_per_minute
+    ):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many sign-in attempts. Wait a minute and try again.",
+            headers={"Retry-After": "60"},
+        )
     try:
         user = _auth.authenticate(email=body.email, password=body.password)
     except AuthError as exc:

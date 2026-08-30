@@ -66,6 +66,9 @@ DEFAULT_TENANT = "default"
 # open-by-default posture is unchanged — with no token configured, everything
 # stays open for local/eval use.
 SENSITIVE_READ_PREFIXES = (
+    # Prometheus metrics leak operational detail (paths, error rates, episode
+    # counts); once an operator configures a token, reading them requires it.
+    "/metrics",
     "/approval",
     "/episodes",
     "/preferences",
@@ -158,3 +161,23 @@ class FixedWindowRateLimiter:
 
 # Shared limiter instance used by the API middleware.
 rate_limiter = FixedWindowRateLimiter()
+
+# Separate instance for sign-in attempts so login throttling and the general
+# request limit can't consume each other's windows (and each can be reset
+# independently in tests).
+login_rate_limiter = FixedWindowRateLimiter()
+
+
+def login_attempt_allowed(ip: str, email: str, limit_per_minute: int) -> bool:
+    """Fixed-window cap on sign-in attempts, per client IP AND per account.
+
+    The per-email key blunts a distributed guess against one account; the
+    per-IP key blunts one host spraying many accounts. Both windows are
+    consumed on every attempt (no short-circuit) so the counters agree.
+    A non-positive limit disables the throttle.
+    """
+    if limit_per_minute <= 0:
+        return True
+    ip_ok = login_rate_limiter.allow(f"login:ip:{ip}", limit_per_minute)
+    email_ok = login_rate_limiter.allow(f"login:email:{email.strip().lower()}", limit_per_minute)
+    return ip_ok and email_ok
