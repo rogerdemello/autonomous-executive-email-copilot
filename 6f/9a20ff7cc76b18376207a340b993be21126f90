@@ -1,0 +1,145 @@
+app/saas/routes.py
+  s_e4929838d9f5ed::t_fec544253648c6 16
+  s_e4929838d9f5ed::t_589c8e779e583c 126-133
+app/main.py
+  s_e4929838d9f5ed::t_d7ad6bb16e596e 167-170,173-174
+  s_e4929838d9f5ed::t_59d870b7836ee4 205-218
+  s_e4929838d9f5ed::t_475afa84824de1 1120-1128
+app/core/security.py
+  s_e4929838d9f5ed::t_fb3cafd1deb71c 69-71
+  s_e4929838d9f5ed::t_d6693105fd8fe2 164-168
+  s_e4929838d9f5ed::t_c97c00db2d7e49 169-183
+app/web/routes.py
+  s_e4929838d9f5ed::t_ce5c8af68fe7eb 327-340
+  s_e4929838d9f5ed::t_34d010f2bb3fbd 29
+app/core/config.py
+  s_e4929838d9f5ed::t_d8dd8c67745472 118-125,207
+  s_e4929838d9f5ed::t_9c74c51b9709c1 208-214
+app/web/static/theme-init.js
+  s_e4929838d9f5ed::t_40ef8c6834d408 1-12
+tests/test_web_security.py
+  s_e4929838d9f5ed::t_651e4f1d4d7ff3 183-279
+tests/test_security.py
+  s_e4929838d9f5ed::t_5b7dc55fff300f 62-74
+app/web/middleware.py
+  s_e4929838d9f5ed::t_ef02bde8f26f53 1-66
+Dockerfile
+  s_e4929838d9f5ed::t_686b7f9d259262 45-49
+tests/test_server_app.py
+  s_e4929838d9f5ed::t_9cb83313331a1e 31-33
+  s_e4929838d9f5ed::t_53f6425ce2d7b1 45-47
+app/web/templates/base.html
+  s_e4929838d9f5ed::t_46a2d0346db170 16-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "6f9a20ff7cc76b18376207a340b993be21126f90",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e3763c7357a76e25f44de1f285011fa0fd02aa973aa3981a232bcd912bd64454",
+      "total_additions": 297,
+      "total_deletions": 18,
+      "accepted_lines": 2779,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e3763c7357a76e25f44de1f285011fa0fd02aa973aa3981a232bcd912bd64454",
+      "stats": {
+        "total_additions": 297,
+        "total_deletions": 18,
+        "accepted_lines": 2779,
+        "overriden_lines": 0,
+        "files": {
+          "Dockerfile": {
+            "total_additions": 5,
+            "total_deletions": 1,
+            "accepted_lines": 49,
+            "overriden_lines": 0
+          },
+          "app/core/config.py": {
+            "total_additions": 16,
+            "total_deletions": 0,
+            "accepted_lines": 395,
+            "overriden_lines": 0
+          },
+          "app/core/security.py": {
+            "total_additions": 23,
+            "total_deletions": 0,
+            "accepted_lines": 183,
+            "overriden_lines": 0
+          },
+          "app/main.py": {
+            "total_additions": 29,
+            "total_deletions": 3,
+            "accepted_lines": 29,
+            "overriden_lines": 0
+          },
+          "app/saas/routes.py": {
+            "total_additions": 9,
+            "total_deletions": 0,
+            "accepted_lines": 480,
+            "overriden_lines": 0
+          },
+          "app/web/middleware.py": {
+            "total_additions": 66,
+            "total_deletions": 0,
+            "accepted_lines": 66,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 15,
+            "total_deletions": 0,
+            "accepted_lines": 1112,
+            "overriden_lines": 0
+          },
+          "app/web/static/theme-init.js": {
+            "total_additions": 12,
+            "total_deletions": 0,
+            "accepted_lines": 12,
+            "overriden_lines": 0
+          },
+          "app/web/templates/base.html": {
+            "total_additions": 3,
+            "total_deletions": 12,
+            "accepted_lines": 24,
+            "overriden_lines": 0
+          },
+          "tests/test_security.py": {
+            "total_additions": 13,
+            "total_deletions": 0,
+            "accepted_lines": 116,
+            "overriden_lines": 0
+          },
+          "tests/test_server_app.py": {
+            "total_additions": 6,
+            "total_deletions": 2,
+            "accepted_lines": 47,
+            "overriden_lines": 0
+          },
+          "tests/test_web_security.py": {
+            "total_additions": 100,
+            "total_deletions": 0,
+            "accepted_lines": 266,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
