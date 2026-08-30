@@ -1,0 +1,117 @@
+app/saas/routes.py
+  s_e4929838d9f5ed::t_111d17106df984 81-82
+  s_e4929838d9f5ed::t_538060a411a027 16
+  s_e4929838d9f5ed::t_7bdf64711a903c 483-489
+app/web/templates/landing.html
+  s_e4929838d9f5ed::t_886f4bd0d8acb5 191
+tests/test_saas_marketing.py
+  s_e4929838d9f5ed::t_7b070f0254851d 53-160
+app/saas/billing.py
+  s_e4929838d9f5ed::t_d37ae191db32f4 170-175,187-206
+app/core/security.py
+  s_e4929838d9f5ed::t_39bea9dfd8491f 171-181
+app/web/routes.py
+  s_e4929838d9f5ed::t_a4a6fe09adc436 277-336
+  s_e4929838d9f5ed::t_dce8f530aa5394 29
+  s_e4929838d9f5ed::t_ff6050bdc2d71c 1162
+app/web/templates/settings.html
+  s_e4929838d9f5ed::t_e365fdaa0e875e 97
+app/web/templates/signup.html
+  s_e4929838d9f5ed::t_2a219322cc0a15 19
+app/web/templates/contact_sales.html
+  s_e4929838d9f5ed::t_68ae0a35495303 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "02d300e64e587f300b71f4c1704e3d36f9b01029",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:321deac4e3d344b3fb44b0620f7e972d2ccf8190eee47f10d5fd877eddfe6e46",
+      "total_additions": 312,
+      "total_deletions": 21,
+      "accepted_lines": 2869,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:321deac4e3d344b3fb44b0620f7e972d2ccf8190eee47f10d5fd877eddfe6e46",
+      "stats": {
+        "total_additions": 312,
+        "total_deletions": 21,
+        "accepted_lines": 2869,
+        "overriden_lines": 0,
+        "files": {
+          "app/core/security.py": {
+            "total_additions": 11,
+            "total_deletions": 0,
+            "accepted_lines": 194,
+            "overriden_lines": 0
+          },
+          "app/saas/billing.py": {
+            "total_additions": 26,
+            "total_deletions": 15,
+            "accepted_lines": 209,
+            "overriden_lines": 0
+          },
+          "app/saas/routes.py": {
+            "total_additions": 10,
+            "total_deletions": 2,
+            "accepted_lines": 498,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 62,
+            "total_deletions": 1,
+            "accepted_lines": 1192,
+            "overriden_lines": 0
+          },
+          "app/web/templates/contact_sales.html": {
+            "total_additions": 92,
+            "total_deletions": 0,
+            "accepted_lines": 92,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 194,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 249,
+            "overriden_lines": 0
+          },
+          "app/web/templates/signup.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 81,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_marketing.py": {
+            "total_additions": 108,
+            "total_deletions": 0,
+            "accepted_lines": 160,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
