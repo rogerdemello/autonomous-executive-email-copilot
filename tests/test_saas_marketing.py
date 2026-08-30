@@ -50,3 +50,111 @@ def test_marketing_is_public_even_with_operator_token(client, monkeypatch):
     # the operator API_AUTH_TOKEN gate.
     monkeypatch.setenv("API_AUTH_TOKEN", "operator-secret")
     assert client.get("/welcome").status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# The contact-sales funnel
+# --------------------------------------------------------------------------- #
+import re
+import uuid
+
+CSRF_RE = re.compile(r'name="csrf_token" value="([^"]+)"')
+
+
+def _csrf(html: str) -> str:
+    match = CSRF_RE.search(html)
+    assert match
+    return match.group(1)
+
+
+def _lead_emails() -> set[str]:
+    from app.saas.repository import SalesLeadRepository
+
+    return {lead["email"] for lead in SalesLeadRepository().list(limit=500)}
+
+
+class TestContactSalesForm:
+    def test_form_renders_publicly(self, client):
+        response = client.get("/contact-sales")
+        assert response.status_code == 200
+        assert "Request a walkthrough" in response.text
+
+    def test_landing_cta_points_at_the_form(self, client):
+        assert 'href="/contact-sales"' in client.get("/").text
+
+    def test_post_without_csrf_is_rejected(self, client):
+        response = client.post("/contact-sales", data={"email": "p@example.com"})
+        assert response.status_code == 403
+
+    def test_submission_persists_a_lead(self, client):
+        from app.core.security import lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        email = f"lead-{uuid.uuid4().hex[:10]}@example.com"
+        page = client.get("/contact-sales").text
+        response = client.post(
+            "/contact-sales",
+            data={
+                "csrf_token": _csrf(page),
+                "email": email,
+                "name": "Pat Prospect",
+                "company": "Prospect Co",
+                "seats": "12",
+                "message": "We drown in email.",
+            },
+        )
+        assert response.status_code == 200
+        assert "Thanks" in response.text
+        assert email in _lead_emails()
+
+    def test_honeypot_pretends_success_but_drops_the_lead(self, client):
+        from app.core.security import lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        email = f"bot-{uuid.uuid4().hex[:10]}@example.com"
+        page = client.get("/contact-sales").text
+        response = client.post(
+            "/contact-sales",
+            data={
+                "csrf_token": _csrf(page),
+                "email": email,
+                "website": "https://spam.example",
+            },
+        )
+        assert response.status_code == 200
+        assert "Thanks" in response.text
+        assert email not in _lead_emails()
+
+    def test_submissions_are_throttled(self, client):
+        from app.core.security import LEAD_SUBMISSIONS_PER_MINUTE, lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        page = client.get("/contact-sales").text
+        statuses = []
+        for i in range(LEAD_SUBMISSIONS_PER_MINUTE + 1):
+            statuses.append(
+                client.post(
+                    "/contact-sales",
+                    data={
+                        "csrf_token": _csrf(page),
+                        "email": f"burst-{i}-{uuid.uuid4().hex[:6]}@example.com",
+                    },
+                ).status_code
+            )
+        assert statuses[-1] == 429
+        assert all(code == 200 for code in statuses[:-1])
+        lead_rate_limiter.reset()
+
+    def test_json_endpoint_is_throttled_too(self, client):
+        from app.core.security import LEAD_SUBMISSIONS_PER_MINUTE, lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        statuses = [
+            client.post(
+                "/billing/contact-sales",
+                json={"email": f"api-{i}-{uuid.uuid4().hex[:6]}@example.com"},
+            ).status_code
+            for i in range(LEAD_SUBMISSIONS_PER_MINUTE + 1)
+        ]
+        assert statuses[-1] == 429
+        lead_rate_limiter.reset()

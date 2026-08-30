@@ -167,7 +167,12 @@ class BillingService:
         return lead
 
     def _notify_sales(self, lead: dict) -> None:
-        """Best-effort out-of-band notification. Never raises into the request."""
+        """Best-effort out-of-band notification. Never raises into the request.
+
+        The webhook POST runs on a daemon thread: it happens inside the
+        prospect's form submission, and a slow Slack endpoint must cost them
+        nothing — the lead is already persisted either way.
+        """
         settings = get_settings()
         logger.info(
             "sales_lead captured kind=%s email=%s company=%s seats=%s",
@@ -179,20 +184,26 @@ class BillingService:
         webhook = (settings.sales_webhook_url or "").strip()
         if not webhook:
             return
-        try:
-            import httpx
 
-            text = (
-                f":moneybag: *New {lead.get('kind')} lead*\n"
-                f"• Email: {lead.get('email')}\n"
-                f"• Name: {lead.get('name') or '—'}\n"
-                f"• Company: {lead.get('company') or '—'}\n"
-                f"• Seats: {lead.get('seats') or '—'}\n"
-                f"• Message: {lead.get('message') or '—'}"
-            )
-            httpx.post(webhook, json={"text": text}, timeout=5.0)
-        except Exception:  # pragma: no cover - notification is best-effort
-            logger.warning("Failed to post sales lead to webhook", exc_info=True)
+        def _post() -> None:
+            try:
+                import httpx
+
+                text = (
+                    f":moneybag: *New {lead.get('kind')} lead*\n"
+                    f"• Email: {lead.get('email')}\n"
+                    f"• Name: {lead.get('name') or '—'}\n"
+                    f"• Company: {lead.get('company') or '—'}\n"
+                    f"• Seats: {lead.get('seats') or '—'}\n"
+                    f"• Message: {lead.get('message') or '—'}"
+                )
+                httpx.post(webhook, json={"text": text}, timeout=5.0)
+            except Exception:  # pragma: no cover - notification is best-effort
+                logger.warning("Failed to post sales lead to webhook", exc_info=True)
+
+        import threading
+
+        threading.Thread(target=_post, name="sales-lead-webhook", daemon=True).start()
 
 
 __all__ = ["BillingService", "BillingError"]

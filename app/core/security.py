@@ -168,6 +168,17 @@ rate_limiter = FixedWindowRateLimiter()
 login_rate_limiter = FixedWindowRateLimiter()
 
 
+# Lead capture (contact-sales) is unauthenticated by design; its own limiter
+# instance with a fixed, deliberately tight cap keeps it from being a spam or
+# DB-fill vector without a config knob nobody would tune.
+lead_rate_limiter = FixedWindowRateLimiter()
+LEAD_SUBMISSIONS_PER_MINUTE = 5
+
+
+def lead_submission_allowed(ip: str) -> bool:
+    return lead_rate_limiter.allow(f"lead:{ip}", LEAD_SUBMISSIONS_PER_MINUTE)
+
+
 def login_attempt_allowed(ip: str, email: str, limit_per_minute: int) -> bool:
     """Fixed-window cap on sign-in attempts, per client IP AND per account.
 

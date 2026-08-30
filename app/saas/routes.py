@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
-from app.core.security import login_attempt_allowed
+from app.core.security import lead_submission_allowed, login_attempt_allowed
 
 from . import licensing
 from .auth import AuthError, AuthService
@@ -78,6 +78,8 @@ SAAS_SELF_AUTH_PREFIXES = (
     "/signup",
     "/logout",
     "/static",
+    # Public lead-capture form (CSRF + honeypot + its own throttle).
+    "/contact-sales",
     # The operator API enforces its own bearer token on EVERY method (including
     # GET) — stricter than the gateway, which must therefore not double-gate it.
     "/operator",
@@ -478,7 +480,13 @@ def activate_license(
 
 
 @billing_router.post("/contact-sales")
-def contact_sales(body: ContactSalesRequest) -> dict:
+def contact_sales(body: ContactSalesRequest, request: Request) -> dict:
+    if not lead_submission_allowed(_client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many submissions. Wait a minute and try again.",
+            headers={"Retry-After": "60"},
+        )
     lead = _billing.capture_lead(
         email=body.email,
         kind=body.kind or "contact_sales",

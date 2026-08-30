@@ -1,0 +1,92 @@
+{% extends "_public.html" %}
+
+{% block title %}Talk to sales — Executive Email Copilot{% endblock %}
+
+{% block main %}
+<div class="auth">
+  <div class="auth__card">
+    <p class="eyebrow">Sales-led onboarding</p>
+    <h1>Talk to sales</h1>
+    <p class="auth__sub">
+      Tell us about your team and we'll set up a walkthrough on your own data,
+      then provision your workspace.
+    </p>
+
+    {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+
+    {% if submitted %}
+      <div class="banner banner--ok">
+        Thanks — we've got it. Expect a reply at <b>{{ form.email }}</b> within
+        one business day.
+      </div>
+      <p class="auth__alt"><a href="/">Back to the overview</a></p>
+    {% else %}
+      <form method="post" action="/contact-sales" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        {# Honeypot: hidden from people, filled by naive bots. Non-empty
+           submissions are silently dropped. #}
+        <input
+          type="text"
+          name="website"
+          value=""
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+          style="position: absolute; left: -9999px"
+        />
+
+        <div class="field">
+          <label for="email">Work email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            value="{{ form.email or '' }}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="name">Your name</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            autocomplete="name"
+            value="{{ form.name or '' }}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="company">Company</label>
+          <input id="company" name="company" type="text" value="{{ form.company or '' }}" />
+        </div>
+
+        <div class="field">
+          <label for="seats">How many executives / seats?</label>
+          <input
+            id="seats"
+            name="seats"
+            type="number"
+            min="1"
+            max="100000"
+            value="{{ form.seats or '' }}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="message">Anything we should know?</label>
+          <textarea id="message" name="message" rows="4" maxlength="4000">{{ form.message or '' }}</textarea>
+        </div>
+
+        <button class="btn btn--primary btn--block" type="submit">Request a walkthrough</button>
+      </form>
+
+      <p class="auth__alt">
+        Prefer email? <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

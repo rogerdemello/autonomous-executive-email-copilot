@@ -26,7 +26,7 @@ from fastapi.templating import Jinja2Templates
 from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_account_email, demo_message_count
 from app.core.config import get_settings
 from app.core.paths import TEMPLATES_DIR
-from app.core.security import login_attempt_allowed
+from app.core.security import lead_submission_allowed, login_attempt_allowed
 from app.saas import licensing, oauth, rbac
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingError, BillingService
@@ -272,6 +272,66 @@ def welcome_redirect() -> RedirectResponse:
 def pricing_redirect() -> RedirectResponse:
     """Sales-led product: no public pricing. Old links land on the homepage."""
     return RedirectResponse(url="/", status_code=301)
+
+
+@web_router.get("/contact-sales", response_class=HTMLResponse)
+def contact_sales_form(request: Request) -> HTMLResponse:
+    return _render(request, "contact_sales.html", {"form": {}})
+
+
+@web_router.post("/contact-sales")
+def contact_sales_submit(
+    request: Request,
+    email: str = Form(""),
+    name: str = Form(""),
+    company: str = Form(""),
+    seats: str = Form(""),
+    message: str = Form(""),
+    website: str = Form(""),  # honeypot — humans never see or fill it
+    csrf_token: str = Form(""),
+) -> HTMLResponse:
+    verify_csrf(request, csrf_token)
+    form = {"email": email, "name": name, "company": company, "seats": seats, "message": message}
+
+    if website.strip():
+        # A filled honeypot is a bot. Pretend success so it learns nothing;
+        # persist nothing.
+        return _render(request, "contact_sales.html", {"form": form, "submitted": True})
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not lead_submission_allowed(client_ip):
+        return _render(
+            request,
+            "contact_sales.html",
+            {"form": form, "error": "Too many submissions. Wait a minute and try again."},
+            status_code=429,
+        )
+
+    email = email.strip()
+    if "@" not in email or len(email) > 320:
+        return _render(
+            request,
+            "contact_sales.html",
+            {"form": form, "error": "Enter a valid work email so we can reply."},
+            status_code=400,
+        )
+
+    seats_value: int | None = None
+    if seats.strip():
+        try:
+            seats_value = max(1, min(int(seats), 100000))
+        except ValueError:
+            seats_value = None
+
+    BillingService().capture_lead(
+        email=email,
+        kind="contact_sales",
+        name=name.strip() or None,
+        company=company.strip() or None,
+        seats=seats_value,
+        message=message.strip()[:4000] or None,
+    )
+    return _render(request, "contact_sales.html", {"form": form, "submitted": True})
 
 
 # --------------------------------------------------------------------------- #
@@ -1099,6 +1159,7 @@ _WEB_PATH_PREFIXES = (
     "/forgot-password",
     "/reset-password",
     "/pricing",
+    "/contact-sales",
     "/welcome",
 )
 
