@@ -1,0 +1,82 @@
+pyproject.toml
+  s_e4929838d9f5ed::t_28775d5a1573fb 27
+tests/test_db_engine.py
+  s_e4929838d9f5ed::t_d570c0269ad34f 89-98
+  s_e4929838d9f5ed::t_31fd8b8b12ec1c 40-59
+app/core/db.py
+  s_e4929838d9f5ed::t_c23357bdda979b 33-38,41-47
+requirements.txt
+  s_e4929838d9f5ed::t_a73181c270af9e 17
+.github/workflows/ci.yml
+  s_e4929838d9f5ed::t_f682062215c5b4 66-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "9a5256831e848646bf2aba972c3162ade92d692b",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:a9e8a656fc0ff8c4f1f146ede0636273b9775d4b46b3d422968f1cc2aaa04bd3",
+      "total_additions": 84,
+      "total_deletions": 6,
+      "accepted_lines": 789,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:a9e8a656fc0ff8c4f1f146ede0636273b9775d4b46b3d422968f1cc2aaa04bd3",
+      "stats": {
+        "total_additions": 84,
+        "total_deletions": 6,
+        "accepted_lines": 789,
+        "overriden_lines": 0,
+        "files": {
+          ".github/workflows/ci.yml": {
+            "total_additions": 39,
+            "total_deletions": 0,
+            "accepted_lines": 190,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 13,
+            "total_deletions": 3,
+            "accepted_lines": 341,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 118,
+            "overriden_lines": 0
+          },
+          "requirements.txt": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 21,
+            "overriden_lines": 0
+          },
+          "tests/test_db_engine.py": {
+            "total_additions": 30,
+            "total_deletions": 3,
+            "accepted_lines": 119,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
