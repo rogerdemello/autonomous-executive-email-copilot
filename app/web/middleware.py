@@ -52,9 +52,7 @@ class SecurityHeadersMiddleware:
                 headers.setdefault("X-Content-Type-Options", "nosniff")
                 headers.setdefault("X-Frame-Options", "DENY")
                 headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-                headers.setdefault(
-                    "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
-                )
+                headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
                 if path not in _CSP_EXEMPT_PATHS:
                     headers.setdefault("Content-Security-Policy", _CSP)
                 if get_settings().is_production:

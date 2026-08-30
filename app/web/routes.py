@@ -23,7 +23,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_account_email, demo_message_count
+from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_message_count
 from app.core.config import get_settings
 from app.core.paths import TEMPLATES_DIR
 from app.core.security import lead_submission_allowed, login_attempt_allowed
@@ -73,9 +73,7 @@ _audit = AuditRepository()
 # The demo workspace's identity lives with the seeder; re-exported here because
 # tests and scripts historically import these names from this module.
 from app.saas.demo_seed import (  # noqa: E402
-    DEMO_ORG_NAME,
     DEMO_OWNER_EMAIL,
-    DEMO_OWNER_NAME,
     DEMO_OWNER_PASSWORD,
 )
 

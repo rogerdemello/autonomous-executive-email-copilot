@@ -243,9 +243,14 @@ class TestLoginThrottle:
         login_rate_limiter.reset()
 
     def test_web_login_429s_past_the_limit(self, client, monkeypatch):
+        from app.core import security
         from app.core.security import login_rate_limiter
 
         monkeypatch.setenv("LOGIN_RATE_LIMIT_PER_MINUTE", "2")
+        # Freeze the limiter's clock: bcrypt makes each failed attempt slow
+        # enough that three of them can straddle a real minute boundary, which
+        # resets the fixed window mid-test.
+        monkeypatch.setattr(security.time, "time", lambda: 1_000_000.0)
         login_rate_limiter.reset()
         statuses = []
         for _ in range(3):
@@ -264,9 +269,12 @@ class TestLoginThrottle:
         login_rate_limiter.reset()
 
     def test_api_login_429s_past_the_limit(self, client, monkeypatch):
+        from app.core import security
         from app.core.security import login_rate_limiter
 
         monkeypatch.setenv("LOGIN_RATE_LIMIT_PER_MINUTE", "2")
+        # Same frozen clock as the web variant — see the comment there.
+        monkeypatch.setattr(security.time, "time", lambda: 1_000_000.0)
         login_rate_limiter.reset()
         statuses = [
             client.post(

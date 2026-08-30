@@ -69,9 +69,7 @@ def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
         # Clear prior triage so the next walkthrough starts where a first run
         # does, and re-mint the trial: an expired plan blocks sync/approvals.
         with get_session() as session:
-            session.query(ProposedAction).filter(
-                ProposedAction.org_id == owner["org_id"]
-            ).delete()
+            session.query(ProposedAction).filter(ProposedAction.org_id == owner["org_id"]).delete()
             session.query(ProcessedMessage).filter(
                 ProcessedMessage.org_id == owner["org_id"]
             ).delete()

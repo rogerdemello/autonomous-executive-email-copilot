@@ -81,9 +81,7 @@ class TestCustomerLifecycle:
         try:
             # The workspace shows up on the customer list with its org_id.
             listing = client.get("/operator/orgs", headers=operator).json()
-            row = next(
-                r for r in listing["organizations"] if r["organization"]["id"] == org_id
-            )
+            row = next(r for r in listing["organizations"] if r["organization"]["id"] == org_id)
             assert row["owner_email"] == owner_email
             assert row["entitlement"]["is_valid"]
 
