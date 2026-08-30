@@ -84,6 +84,37 @@ class ContactSalesRequest(BaseModel):
     kind: str = Field(default="contact_sales", max_length=32)
 
 
+# --- Operator API (token-gated sales/ops surface) ---------------------------
+class ProvisionOrgRequest(BaseModel):
+    org_name: str = Field(min_length=1, max_length=255)
+    owner_email: EmailStr
+    owner_name: str = Field(default="", max_length=255)
+    # Omit to have a temporary password generated and returned once.
+    password: str | None = Field(default=None, min_length=8, max_length=256)
+    plan: str = Field(default="trial", max_length=32)
+    seats: int | None = Field(default=None, ge=1, le=100000)
+    valid_days: int | None = Field(default=None, ge=1, le=36500)
+
+
+class MintLicenseRequest(BaseModel):
+    org_id: str = Field(min_length=1, max_length=64)
+    plan: str = Field(min_length=1, max_length=32)
+    seats: int | None = Field(default=None, ge=1, le=100000)
+    valid_days: int | None = Field(default=None, ge=1, le=36500)
+
+
+class RevokeLicenseRequest(BaseModel):
+    org_id: str = Field(min_length=1, max_length=64)
+    # Omit to revoke EVERY active license for the org (the full cut-off).
+    # Naming one key is a downgrade: entitlement falls back to the next most
+    # recent active license (e.g. the original trial).
+    key_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class LeadStatusRequest(BaseModel):
+    status: str = Field(pattern=r"^(new|contacted|closed)$")
+
+
 class EntitlementOut(BaseModel):
     plan: str
     seats: int
@@ -104,6 +135,10 @@ __all__ = [
     "UpdateMemberRoleRequest",
     "ActivateLicenseRequest",
     "ContactSalesRequest",
+    "ProvisionOrgRequest",
+    "MintLicenseRequest",
+    "RevokeLicenseRequest",
+    "LeadStatusRequest",
     "EntitlementOut",
     "ROLE_OWNER",
     "ROLE_ADMIN",

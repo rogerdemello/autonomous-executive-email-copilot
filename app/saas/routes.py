@@ -78,6 +78,9 @@ SAAS_SELF_AUTH_PREFIXES = (
     "/signup",
     "/logout",
     "/static",
+    # The operator API enforces its own bearer token on EVERY method (including
+    # GET) — stricter than the gateway, which must therefore not double-gate it.
+    "/operator",
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])

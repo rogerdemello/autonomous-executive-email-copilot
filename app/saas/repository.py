@@ -70,6 +70,17 @@ class OrganizationRepository:
                 session.query(Organization.id).filter(Organization.slug == slug).first() is not None
             )
 
+    def list_all(self, limit: int = 200) -> list[dict[str, Any]]:
+        """Every organization, newest first. Operator surface only."""
+        with get_session() as session:
+            rows = (
+                session.query(Organization)
+                .order_by(Organization.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
 
 class UserRepository:
     def create(
@@ -216,6 +227,22 @@ class LicenseRepository:
         with get_session() as session:
             lic = session.query(License).filter(License.key_id == key_id).first()
             return lic.to_dict() if lic else None
+
+    def revoke_all_for_org(self, org_id: str) -> int:
+        """Revoke every active license for the org — the full cut-off.
+
+        Revoking a single key merely falls back to the next most recent active
+        license (e.g. the original trial), which is a downgrade, not a stop.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(License)
+                .filter(License.org_id == org_id, License.status == "active")
+                .all()
+            )
+            for lic in rows:
+                lic.status = "revoked"
+            return len(rows)
 
     def revoke(self, org_id: str, key_id: str) -> bool:
         with get_session() as session:
@@ -766,3 +793,13 @@ class SalesLeadRepository:
         with get_session() as session:
             rows = session.query(SalesLead).order_by(SalesLead.created_at.desc()).limit(limit).all()
             return [r.to_dict() for r in rows]
+
+    def set_status(self, lead_id: int, status: str) -> dict[str, Any] | None:
+        """Move a lead through the funnel (new -> contacted -> closed)."""
+        with get_session() as session:
+            lead = session.get(SalesLead, lead_id)
+            if not lead:
+                return None
+            lead.status = status
+            session.flush()
+            return lead.to_dict()
