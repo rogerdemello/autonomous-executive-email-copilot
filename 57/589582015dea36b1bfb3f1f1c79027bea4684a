@@ -1,0 +1,100 @@
+docs/OAUTH_SETUP.md
+  s_e4929838d9f5ed::t_f9008acfc35c2a 1-80
+docs/PROVISIONING_RUNBOOK.md
+  s_e4929838d9f5ed::t_da8938b3626d85 1-125
+docs/COMMERCIAL.md
+  s_e4929838d9f5ed::t_ce84b8870afffb 72-75,77-78
+  s_e4929838d9f5ed::t_372fb9a56195ca 141-142
+DEPLOYMENT_GUIDE.md
+  s_e4929838d9f5ed::t_0802159efc9ad7 88-100,102-104
+  s_e4929838d9f5ed::t_f2de9f2b8ab1a2 43-58,62,64-77,101
+render.yaml
+  s_e4929838d9f5ed::t_a0dd534636c0f8 2-4,7-9,11-18,28-67,82-83,85,87-93,95-98
+.env.example
+  s_e4929838d9f5ed::t_c88b3eaa781824 127-129,131-132,136-140
+  s_e4929838d9f5ed::t_345fba9b263102 158-166
+README.md
+  s_e4929838d9f5ed::t_9d659bef7944f3 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "57589582015dea36b1bfb3f1f1c79027bea4684a",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:bd9b9422dc585432d582d8225743957852a4847b3e3bf2f25b1a55d9efcde4e1",
+      "total_additions": 351,
+      "total_deletions": 40,
+      "accepted_lines": 859,
+      "overriden_lines": 3
+    }
+  },
+  "sessions": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:bd9b9422dc585432d582d8225743957852a4847b3e3bf2f25b1a55d9efcde4e1",
+      "stats": {
+        "total_additions": 351,
+        "total_deletions": 40,
+        "accepted_lines": 859,
+        "overriden_lines": 3,
+        "files": {
+          ".env.example": {
+            "total_additions": 19,
+            "total_deletions": 3,
+            "accepted_lines": 218,
+            "overriden_lines": 0
+          },
+          "DEPLOYMENT_GUIDE.md": {
+            "total_additions": 47,
+            "total_deletions": 15,
+            "accepted_lines": 133,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "docs/COMMERCIAL.md": {
+            "total_additions": 11,
+            "total_deletions": 6,
+            "accepted_lines": 234,
+            "overriden_lines": 3
+          },
+          "docs/OAUTH_SETUP.md": {
+            "total_additions": 80,
+            "total_deletions": 0,
+            "accepted_lines": 80,
+            "overriden_lines": 0
+          },
+          "docs/PROVISIONING_RUNBOOK.md": {
+            "total_additions": 125,
+            "total_deletions": 0,
+            "accepted_lines": 125,
+            "overriden_lines": 0
+          },
+          "render.yaml": {
+            "total_additions": 68,
+            "total_deletions": 16,
+            "accepted_lines": 68,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
