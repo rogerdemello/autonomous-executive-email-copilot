@@ -1,0 +1,104 @@
+tests/test_operator_api.py
+  s_e4929838d9f5ed::t_5231424c5519ce 1-113,116-127,137-203
+  s_e4929838d9f5ed::t_108bed26bda1fa 114-115,128-136
+app/saas/repository.py
+  s_e4929838d9f5ed::t_db69fc04c22831 796-805
+  s_e4929838d9f5ed::t_1984b0ab0125e7 231-246
+  s_e4929838d9f5ed::t_d636c2c66377ad 73-83
+app/saas/routes.py
+  s_e4929838d9f5ed::t_d30c45154130ff 81-83
+scripts/issue_license.py
+  s_e4929838d9f5ed::t_fa4d430e86dd44 12-22
+app/saas/operator_routes.py
+  s_e4929838d9f5ed::t_500d2df377c95f 1-160,176-178,181-182,189-225
+  s_e4929838d9f5ed::t_e11713874f9996 161-175,179-180,183-188
+app/main.py
+  s_e4929838d9f5ed::t_44960dcad26ecc 235
+  s_e4929838d9f5ed::t_2d36607187e77b 250
+app/saas/schemas.py
+  s_e4929838d9f5ed::t_b44a50d9016ea4 87-107,112-117
+  s_e4929838d9f5ed::t_7e4faeea09e4ad 138-141
+  s_e4929838d9f5ed::t_e6a70fc33aef95 108-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "3d687760a3bfe33e0738272016cd7ed5fa4b9510",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:296144537deeb5fffa3b604e45112b1f18a2d8146d50a9281bea485e1e5b28c8",
+      "total_additions": 525,
+      "total_deletions": 9,
+      "accepted_lines": 1989,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:296144537deeb5fffa3b604e45112b1f18a2d8146d50a9281bea485e1e5b28c8",
+      "stats": {
+        "total_additions": 525,
+        "total_deletions": 9,
+        "accepted_lines": 1989,
+        "overriden_lines": 0,
+        "files": {
+          "app/main.py": {
+            "total_additions": 2,
+            "total_deletions": 0,
+            "accepted_lines": 2,
+            "overriden_lines": 0
+          },
+          "app/saas/operator_routes.py": {
+            "total_additions": 232,
+            "total_deletions": 7,
+            "accepted_lines": 225,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 37,
+            "total_deletions": 0,
+            "accepted_lines": 805,
+            "overriden_lines": 0
+          },
+          "app/saas/routes.py": {
+            "total_additions": 3,
+            "total_deletions": 0,
+            "accepted_lines": 490,
+            "overriden_lines": 0
+          },
+          "app/saas/schemas.py": {
+            "total_additions": 36,
+            "total_deletions": 1,
+            "accepted_lines": 146,
+            "overriden_lines": 0
+          },
+          "scripts/issue_license.py": {
+            "total_additions": 11,
+            "total_deletions": 0,
+            "accepted_lines": 118,
+            "overriden_lines": 0
+          },
+          "tests/test_operator_api.py": {
+            "total_additions": 204,
+            "total_deletions": 1,
+            "accepted_lines": 203,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
