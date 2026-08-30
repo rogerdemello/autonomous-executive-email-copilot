@@ -136,6 +136,16 @@ async def lifespan(_app: FastAPI):
             enable_console=False,
         )
         _OTEL_CONFIGURED = True
+    if get_settings().demo_seed_on_startup:
+        # Deployments without a shell (Render) boot straight into a presentable
+        # demo. Best-effort: a seed failure is logged, never fatal — the service
+        # must come up either way.
+        try:
+            from app.saas.demo_seed import seed_demo
+
+            seed_demo()
+        except Exception:  # noqa: BLE001 - seeding must not block startup
+            logger.exception("Demo seed on startup failed; continuing without it")
     sync_worker = None
     if get_settings().sync_worker_enabled:
         from app.saas.sync_worker import BackgroundSyncWorker

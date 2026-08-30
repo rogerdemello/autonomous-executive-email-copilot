@@ -56,6 +56,30 @@ def get_current_user(request: Request) -> dict:
     return user
 
 
+def reject_shared_demo_account(user: dict) -> None:
+    """Block the shared demo login from destructive/administrative actions.
+
+    When the login page advertises the demo credential (``demo_login_active``),
+    anyone on the internet holds that session — so the demo owner must not be
+    able to change the password (locking out the next sales call), delete or
+    export the workspace, manage members, activate licenses, or disconnect the
+    mailbox. Triage itself (approve / reject / sync) stays allowed: that IS the
+    demo. Inert when the demo login is not advertised, so a private deployment
+    that happens to reuse the demo email is unaffected.
+    """
+    from app.core.config import get_settings
+
+    from .demo_seed import DEMO_OWNER_EMAIL
+
+    if not get_settings().demo_login_active:
+        return
+    if (user.get("email") or "").lower() == DEMO_OWNER_EMAIL.lower():
+        raise HTTPException(
+            status_code=403,
+            detail="The shared demo account can't do this. Sign up for your own workspace.",
+        )
+
+
 def require_role(minimum: str):
     """Dependency factory: require the current user's role >= ``minimum``."""
 

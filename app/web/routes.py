@@ -30,7 +30,7 @@ from app.core.security import login_attempt_allowed
 from app.saas import licensing, oauth, rbac
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingError, BillingService
-from app.saas.deps import SESSION_COOKIE
+from app.saas.deps import SESSION_COOKIE, reject_shared_demo_account
 from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
 from app.saas.models_db import ROLE_ADMIN, ROLE_OWNER, ROLES
@@ -70,11 +70,14 @@ _messages = ProcessedMessageRepository()
 _actions = ProposedActionRepository()
 _audit = AuditRepository()
 
-# How the demo workspace is seeded, and what the login page offers to a visitor.
-DEMO_ORG_NAME = "Northwind Industries"
-DEMO_OWNER_EMAIL = demo_account_email()
-DEMO_OWNER_PASSWORD = "demo1234"
-DEMO_OWNER_NAME = "Alex Chen"
+# The demo workspace's identity lives with the seeder; re-exported here because
+# tests and scripts historically import these names from this module.
+from app.saas.demo_seed import (  # noqa: E402
+    DEMO_ORG_NAME,
+    DEMO_OWNER_EMAIL,
+    DEMO_OWNER_NAME,
+    DEMO_OWNER_PASSWORD,
+)
 
 _ACTION_LABELS = {
     "reply": "Send a reply",
@@ -275,15 +278,21 @@ def pricing_redirect() -> RedirectResponse:
 # Authentication
 # --------------------------------------------------------------------------- #
 def _demo_credentials() -> dict | None:
-    """Credentials to advertise on the login page — never in production.
+    """Credentials to advertise on the login page.
 
-    Two conditions, and the order matters. ``ENVIRONMENT=production`` blocks this
-    outright: if someone seeds the demo workspace on a public deployment, this
-    would otherwise print a working password on an unauthenticated page. Only
-    then do we check the account exists, so a non-production instance without the
-    demo shows no hint for an account nobody can use.
+    Gated on ``demo_login_active``: off in production unless the operator sets
+    ``DEMO_LOGIN_ENABLED=true`` explicitly — the posture for a public demo
+    deployment that sells with the prefilled login. Advertising the credential
+    is safe there because it is already public (repo, README, docs/DEMO.md),
+    the workspace holds only fixture data and no OAuth tokens, and the shared
+    account is blocked from every destructive/administrative action (see
+    ``reject_shared_demo_account``). The remaining risk is vandalism of the
+    demo itself, which ``POST /operator/demo/reseed`` undoes in seconds.
+
+    The account-exists check comes second so a deployment without the demo
+    shows no hint for an account nobody can use.
     """
-    if get_settings().is_production:
+    if not get_settings().demo_login_active:
         return None
     if not _users.get_by_email_global(DEMO_OWNER_EMAIL):
         return None
@@ -581,6 +590,8 @@ def connect_provider(request: Request, provider_key: str, csrf_token: str = Form
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    # The shared demo login must not attach a real mailbox to the shared org.
+    reject_shared_demo_account(user)
     try:
         authorize_url = _mailbox_service.start_connect(
             org_id=user["org_id"],
@@ -611,6 +622,7 @@ def disconnect_mailbox(
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
     _mailbox_service.disconnect(
         org_id=user["org_id"], user_id=user["id"], connection_id=connection_id
     )
@@ -912,6 +924,7 @@ def invite_member_web(
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
 
     import secrets
 
@@ -948,6 +961,7 @@ def change_member_role_web(
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
     try:
         OrgService().change_member_role(actor=user, member_id=member_id, role=role)
     except OrgError as exc:
@@ -960,6 +974,7 @@ def remove_member_web(request: Request, member_id: str, csrf_token: str = Form("
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
     try:
         OrgService().remove_member(actor=user, member_id=member_id)
     except OrgError as exc:
@@ -979,6 +994,7 @@ def change_password_web(
 ) -> Response:
     verify_csrf(request, csrf_token)
     user = _require_user(request)
+    reject_shared_demo_account(user)
     if len(new_password) < 8:
         return _render_settings(
             request, user, error="Choose a new password of at least 8 characters.", status_code=400
@@ -1004,6 +1020,7 @@ def activate_license_web(
     user = _require_user(request)
     if user["role"] != ROLE_OWNER:
         raise HTTPException(status_code=403, detail="Only the owner can activate a license")
+    reject_shared_demo_account(user)
     try:
         _billing.activate_license(
             org_id=user["org_id"], license_key=license_key.strip(), actor_user_id=user["id"]
@@ -1019,6 +1036,7 @@ def export_org_web(request: Request) -> Response:
     user = _require_user(request)
     if user["role"] != ROLE_OWNER:
         raise HTTPException(status_code=403, detail="Only the owner can export the workspace")
+    reject_shared_demo_account(user)
     from app.saas.data_lifecycle import DataLifecycleService
 
     bundle = DataLifecycleService().export_org(user["org_id"])
@@ -1043,6 +1061,7 @@ def delete_org_web(
     user = _require_user(request)
     if user["role"] != ROLE_OWNER:
         raise HTTPException(status_code=403, detail="Only the owner can delete the workspace")
+    reject_shared_demo_account(user)
     org = _orgs.get(user["org_id"])
     if not org or confirm.strip() != org["slug"]:
         return _render_settings(

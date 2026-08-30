@@ -163,6 +163,19 @@ class Settings(BaseSettings):
     # Self-serve signup toggle. When False, only an operator can provision orgs
     # (pure sales-led onboarding). Default True so the trial funnel works.
     signup_enabled: bool = True
+    # Advertise the seeded demo workspace's credentials (prefilled login form).
+    # Unset = auto: on outside production, off in production. A public demo
+    # deployment sets true explicitly — the credential is already public and the
+    # shared account is blocked from destructive actions, so this only opts the
+    # login page into saying so. See Settings.demo_login_active.
+    demo_login_enabled: bool | None = None
+    # Seed (or refresh) the demo workspace during startup. For deployments with
+    # no shell (Render): the container boots straight into a presentable demo.
+    demo_seed_on_startup: bool = False
+    # Bearer token for the /operator/* admin API (provision orgs, mint/revoke
+    # licenses, read leads, reseed the demo). Unset (default) removes the
+    # surface entirely — endpoints 404.
+    operator_token: str | None = None
     # Where "Contact sales" leads and license requests are announced (optional
     # webhook, e.g. Slack incoming webhook). When unset, leads are persisted +
     # logged only.
@@ -248,6 +261,13 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return (self.environment or "").strip().lower() == "production"
+
+    @property
+    def demo_login_active(self) -> bool:
+        """Whether the login page advertises (and prefills) the demo account."""
+        if self.demo_login_enabled is not None:
+            return self.demo_login_enabled
+        return not self.is_production
 
     @property
     def sso_enabled(self) -> bool:

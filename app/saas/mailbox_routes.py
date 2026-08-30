@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from . import oauth
-from .deps import get_current_user, require_role
+from .deps import get_current_user, reject_shared_demo_account, require_role
 from .mailbox import MailboxError, MailboxService
 from .models_db import ROLE_ADMIN
 
@@ -42,6 +42,8 @@ def connect(
 ) -> dict:
     """Begin an OAuth connect; returns the provider consent URL for the client
     to redirect to (``window.location = authorize_url``)."""
+    # The shared demo login must not attach a real mailbox to the shared org.
+    reject_shared_demo_account(actor)
     try:
         url = _service.start_connect(
             org_id=actor["org_id"],
@@ -101,6 +103,7 @@ def disconnect(
     connection_id: str,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
+    reject_shared_demo_account(actor)
     ok = _service.disconnect(
         org_id=actor["org_id"], user_id=actor["id"], connection_id=connection_id
     )
