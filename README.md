@@ -36,6 +36,7 @@ Open **http://localhost:8000** and walk:
 | Step | What you see |
 |---|---|
 | `/` | The landing page — what the product is |
+| `/contact-sales` | The lead-capture form (no public pricing — sales-led) |
 | `/login` | Pre-filled with the demo account — just press **Sign in** |
 | `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
 | `/app/inbox` | 50 triaged messages, with the copilot's reasoning and its drafts |

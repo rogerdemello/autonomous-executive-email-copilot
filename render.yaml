@@ -1,14 +1,21 @@
 # Render Blueprint — deploys the Dockerfile as a single web service (FastAPI
-# serving both the JSON API and the server-rendered UI). Render injects $PORT,
-# which the container binds automatically (see Dockerfile / app.main:main).
+# serving both the JSON API and the server-rendered UI) plus a managed
+# Postgres. Render injects $PORT, which the container binds automatically
+# (see Dockerfile / app.main:main).
 #
 # Deploy: push to GitHub, then in Render → New → Blueprint and point it at this
-# repo. Set any secrets below in the Render dashboard (they are marked
-# `sync: false`, so they are never stored in git).
+# repo. Values marked `sync: false` are set in the Render dashboard (never in
+# git); `generateValue: true` secrets are minted once by Render and persist
+# across deploys.
 #
-# Note: the default SQLite store lives on the container's ephemeral filesystem
-# and resets on redeploy/restart. For durable storage set DATABASE_URL to a
-# Postgres connection string (e.g. a Render Postgres instance).
+# ⚠ BACK UP the generated AUTH_SECRET_KEY (dashboard → Environment). It signs
+# every session, license key, CSRF token, and the OAuth-token encryption key.
+# Deleting/recreating the service regenerates it, which invalidates every
+# license key you have ever issued to a customer.
+#
+# ⚠ Render's FREE Postgres expires ~30 days after creation and is then
+# deleted. Fine for trying the demo; a customer-facing deployment must use a
+# paid plan (basic-256mb or higher) or point DATABASE_URL elsewhere.
 services:
   - type: web
     name: exec-email-copilot
@@ -18,14 +25,52 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      # --- LLM provider (optional; deterministic agents need no key) ---
+      # --- Production posture -------------------------------------------------
+      - key: ENVIRONMENT
+        value: production
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: SIGNUP_ENABLED
+        value: "false" # sales-led: the operator provisions workspaces
+      - key: APP_PUBLIC_URL
+        value: https://exec-email-copilot.onrender.com
+      - key: ALLOWED_HOSTS
+        value: exec-email-copilot.onrender.com
+      # --- The public demo ----------------------------------------------------
+      - key: DEMO_LOGIN_ENABLED
+        value: "true" # prefilled demo login; the shared account is guarded
+      - key: DEMO_SEED_ON_STARTUP
+        value: "true" # boot straight into a presentable demo (no shell needed)
+      # --- Operator API + benchmark-surface lock ------------------------------
+      - key: OPERATOR_TOKEN
+        generateValue: true # read it in the dashboard; used for /operator/*
+      - key: API_AUTH_TOKEN
+        generateValue: true # closes the benchmark POST + sensitive-read surface
+      # --- Abuse limits -------------------------------------------------------
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "120"
+      - key: LOGIN_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      # --- Durable storage ----------------------------------------------------
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exec-email-copilot-db
+          property: connectionString
+      # --- Sales funnel (set in the dashboard) --------------------------------
+      - key: SALES_CONTACT_EMAIL
+        sync: false
+      - key: SALES_WEBHOOK_URL
+        sync: false # optional Slack incoming webhook for new leads
+      # --- CORS (pin to the public origin) ------------------------------------
+      - key: CORS_ORIGINS
+        value: https://exec-email-copilot.onrender.com
+      # --- LLM provider (optional; the demo replays cached drafts) ------------
       - key: OPENAI_API_KEY
         sync: false
       - key: API_BASE_URL
         sync: false
       - key: MODEL_NAME
         sync: false
-      # --- Native Azure OpenAI (optional alternative provider) ---
       - key: AZURE_OPENAI_ENDPOINT
         sync: false
       - key: AZURE_OPENAI_API_KEY
@@ -34,13 +79,20 @@ services:
         sync: false
       - key: AZURE_OPENAI_DEPLOYMENT_NAME
         sync: false
-      # --- Optional durable database (Postgres); SQLite if unset ---
-      - key: DATABASE_URL
+      # --- Transactional email (optional; console logging until configured) ---
+      - key: EMAIL_PROVIDER
         sync: false
-      # --- Security hardening (recommended on a public URL) ---
-      - key: API_AUTH_TOKEN
+      - key: EMAIL_FROM
         sync: false
-      - key: CORS_ORIGINS
-        value: https://exec-email-copilot.onrender.com
-      - key: RATE_LIMIT_PER_MINUTE
+      - key: SMTP_HOST
         sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+
+databases:
+  - name: exec-email-copilot-db
+    plan: free # ⚠ expires after ~30 days — use a paid plan for customers
