@@ -16,7 +16,7 @@
     {% if not signup_enabled %}
       <div class="banner">
         Self-serve signup is switched off on this deployment.
-        <a href="/pricing#contact">Talk to sales</a> to have a workspace provisioned.
+        <a href="mailto:{{ sales_email }}">Talk to sales</a> to have a workspace provisioned.
       </div>
     {% else %}
       <form method="post" action="/signup" novalidate>

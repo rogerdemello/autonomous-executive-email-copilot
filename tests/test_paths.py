@@ -27,7 +27,6 @@ class TestPackageAssets:
             "_public.html",
             "_app.html",
             "landing.html",
-            "pricing.html",
             "login.html",
             "signup.html",
             "connect.html",

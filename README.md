@@ -36,8 +36,7 @@ Open **http://localhost:8000** and walk:
 | Step | What you see |
 |---|---|
 | `/` | The landing page — what the product is |
-| `/pricing` | Plans, generated from the licensing registry so the copy can't drift |
-| `/login` | Sign in as `alex.chen@northwind.example` / `demo1234` |
+| `/login` | Pre-filled with the demo account — just press **Sign in** |
 | `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
 | `/app/inbox` | 50 triaged messages, with the copilot's reasoning and its drafts |
 | `/app/approvals` | The 11 actions waiting on a human |

@@ -75,13 +75,11 @@ class TestPublicPages:
         assert "runs itself" in response.text
         assert "Start free trial" in response.text
 
-    def test_pricing_lists_every_plan(self, client):
-        from app.saas import licensing
-
-        response = client.get("/pricing")
-        assert response.status_code == 200
-        for plan in licensing.PLANS.values():
-            assert plan.name in response.text
+    def test_pricing_redirects_home(self, client):
+        """No public pricing — the product is sales-led; old links land home."""
+        response = client.get("/pricing", follow_redirects=False)
+        assert response.status_code == 301
+        assert response.headers["location"] == "/"
 
     def test_welcome_redirects_to_root(self, client):
         """The landing page moved; previously-shared links must still work."""

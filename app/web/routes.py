@@ -264,11 +264,10 @@ def welcome_redirect() -> RedirectResponse:
     return RedirectResponse(url="/", status_code=301)
 
 
-@web_router.get("/pricing", response_class=HTMLResponse)
-def pricing(request: Request) -> HTMLResponse:
-    order = ["trial", "team", "business", "enterprise"]
-    plans = [licensing.PLANS[key] for key in order if key in licensing.PLANS]
-    return _render(request, "pricing.html", {"plans": plans})
+@web_router.get("/pricing", include_in_schema=False)
+def pricing_redirect() -> RedirectResponse:
+    """Sales-led product: no public pricing. Old links land on the homepage."""
+    return RedirectResponse(url="/", status_code=301)
 
 
 # --------------------------------------------------------------------------- #
