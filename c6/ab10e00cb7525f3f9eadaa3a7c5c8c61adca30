@@ -1,0 +1,125 @@
+app/web/templates/login.html
+  s_e4929838d9f5ed::t_6eab7fc2cef1af 59-61
+  s_e4929838d9f5ed::t_2940357b10e5ed 27,39
+app/web/templates/settings.html
+  s_e4929838d9f5ed::t_01a9adb3bb4390 97
+app/web/templates/landing.html
+  s_e4929838d9f5ed::t_84e9feff82d71b 191
+app/saas/marketing.py
+  s_e4929838d9f5ed::t_7dc03415b0ba29 3-7,15
+tests/test_web_pages.py
+  s_e4929838d9f5ed::t_d3b13b9d2f8712 78-82
+README.md
+  s_e4929838d9f5ed::t_748f147625e402 39
+app/web/routes.py
+  s_e4929838d9f5ed::t_22abd9259780ca 267-270
+tests/test_saas_marketing.py
+  s_e4929838d9f5ed::t_86ae4f5ae469e8 31-39,42-43,45,48
+  s_e4929838d9f5ed::t_e52c48bc3695d2 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "c6ab10e00cb7525f3f9eadaa3a7c5c8c61adca30",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:f62a3e84758bffa1a05c8009ed3f2bb06d22feaf2dd4d30d1494c9f98790f88e",
+      "total_additions": 38,
+      "total_deletions": 63,
+      "accepted_lines": 2766,
+      "overriden_lines": 1
+    }
+  },
+  "sessions": {
+    "s_e4929838d9f5ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9cfc11a1-005e-4ead-92f9-d0ea7225deb5",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:f62a3e84758bffa1a05c8009ed3f2bb06d22feaf2dd4d30d1494c9f98790f88e",
+      "stats": {
+        "total_additions": 38,
+        "total_deletions": 63,
+        "accepted_lines": 2766,
+        "overriden_lines": 1,
+        "files": {
+          "README.md": {
+            "total_additions": 1,
+            "total_deletions": 2,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "app/saas/marketing.py": {
+            "total_additions": 6,
+            "total_deletions": 24,
+            "accepted_lines": 49,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 4,
+            "total_deletions": 5,
+            "accepted_lines": 1097,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_public.html": {
+            "total_additions": 0,
+            "total_deletions": 1,
+            "accepted_lines": 36,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 194,
+            "overriden_lines": 0
+          },
+          "app/web/templates/login.html": {
+            "total_additions": 5,
+            "total_deletions": 3,
+            "accepted_lines": 66,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 249,
+            "overriden_lines": 0
+          },
+          "app/web/templates/signup.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 80,
+            "overriden_lines": 1
+          },
+          "tests/test_paths.py": {
+            "total_additions": 0,
+            "total_deletions": 1,
+            "accepted_lines": 79,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_marketing.py": {
+            "total_additions": 14,
+            "total_deletions": 17,
+            "accepted_lines": 52,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 5,
+            "total_deletions": 7,
+            "accepted_lines": 863,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
