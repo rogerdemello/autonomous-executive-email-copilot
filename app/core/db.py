@@ -30,11 +30,21 @@ def resolve_database_url() -> str:
 
     Honors ``DATABASE_URL`` (via :class:`app.core.config.Settings`) when set, falling
     back to the zero-config local SQLite database otherwise.
+
+    Postgres URLs are normalized to the psycopg3 driver we actually ship:
+    managed platforms hand out ``postgres://`` (which SQLAlchemy 2 rejects
+    outright — Render's ``connectionString`` is the motivating case) and the
+    plain ``postgresql://`` scheme selects psycopg2 (not installed). Explicit
+    ``postgresql+<driver>://`` URLs are respected untouched.
     """
     configured = get_settings().database_url
-    if configured and configured.strip():
-        return configured.strip()
-    return DEFAULT_SQLITE_URL
+    if not (configured and configured.strip()):
+        return DEFAULT_SQLITE_URL
+    url = configured.strip()
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
 
 
 def build_engine_kwargs(database_url: str) -> dict:

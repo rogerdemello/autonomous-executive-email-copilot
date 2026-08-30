@@ -63,6 +63,45 @@ jobs:
           name: draft-quality-report
           path: draft_quality_report.json
 
+  # The deploy docs' recommended posture is DATABASE_URL=Postgres; this job is
+  # the proof it actually works — driver import, migrations, and the SaaS
+  # schema against a real server, not just SQLite.
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: copilot
+          POSTGRES_PASSWORD: copilot
+          POSTGRES_DB: copilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U copilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The short scheme on purpose: exercises the postgres:// normalization
+      # exactly as Render's connectionString arrives.
+      DATABASE_URL: postgres://copilot:copilot@localhost:5432/copilot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: DB-touching suites against real Postgres
+        run: >-
+          python -m pytest -q
+          tests/test_db_engine.py tests/test_db_migration.py
+          tests/test_repositories.py tests/test_saas_api.py
+          tests/test_saas_auth_core.py tests/test_saas_licensing.py
+          tests/test_saas_data_lifecycle.py tests/test_operator_api.py
+          tests/test_demo_guardrails.py
+
   invariant-harness:
     runs-on: ubuntu-latest
     steps:
