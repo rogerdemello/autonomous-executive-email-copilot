@@ -1,6 +1,6 @@
 {% extends "_app.html" %}
 
-{% block title %}Inbox — Executive Email Copilot{% endblock %}
+{% block title %}Inbox · Executive Email Copilot{% endblock %}
 {% block heading %}Inbox{% endblock %}
 {% block lede %}What the copilot is working on right now.{% endblock %}
 
@@ -21,6 +21,9 @@
 {% endblock %}
 
 {% block main %}
+{# Older processes (or future render paths) may not pass labels; degrade to
+   "no label chips" rather than a 500. #}
+{% set labels = labels | default({}) %}
 {% if not connections %}
   <div class="card">
     <div class="empty">
@@ -88,7 +91,11 @@
             >
               <span class="row">
                 <span class="from">{{ message.sender_name or message.sender }}</span>
-                <span class="chip chip--{{ message.priority_hint }}">{{ message.priority_hint }}</span>
+                {% if labels.get(message.id) == 'spam' %}
+                  <span class="chip chip--danger">spam</span>
+                {% else %}
+                  <span class="chip chip--{{ message.priority_hint }}">{{ message.priority_hint }}</span>
+                {% endif %}
               </span>
               <span class="subj">{{ message.subject }}</span>
               <span class="row">
@@ -109,7 +116,14 @@
     <div class="card">
       <div class="card__head">
         <span class="card__title">Message</span>
-        <span class="chip chip--neutral">{{ role_labels.get(selected.sender_role, selected.sender_role or "External") }}</span>
+        <span>
+          {% if labels.get(selected.id) == 'spam' %}
+            <span class="chip chip--danger" title="Classified as spam. The copilot will never engage it">spam</span>
+          {% elif labels.get(selected.id) == 'urgent' %}
+            <span class="chip chip--crit">urgent</span>
+          {% endif %}
+          <span class="chip chip--neutral">{{ role_labels.get(selected.sender_role, selected.sender_role or "External") }}</span>
+        </span>
       </div>
       <div class="card__body">
         <h2 class="reader__subject">{{ selected.subject }}</h2>

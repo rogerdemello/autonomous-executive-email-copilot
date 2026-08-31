@@ -117,7 +117,7 @@ _FEATURE_LABELS = {
 def _short_time(value: Any) -> str:
     """Render an ISO timestamp as something a human reads at a glance."""
     if not value:
-        return "—"
+        return "-"
     try:
         moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except (TypeError, ValueError):
@@ -737,9 +737,10 @@ def app_root() -> RedirectResponse:
 
 
 @web_router.get("/app/inbox", response_class=HTMLResponse)
-def inbox(request: Request, message: str | None = None) -> HTMLResponse:
+def inbox(request: Request, message: str | None = None, notice: str | None = None) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "inbox")
+    context["notice"] = _REVIEW_NOTICES.get(notice or "")
 
     listing = _messages.list_for_org(user["org_id"], limit=100)
     messages = listing.get("messages", [])
@@ -754,6 +755,14 @@ def inbox(request: Request, message: str | None = None) -> HTMLResponse:
 
     if selected:
         actions = _actions.list_for_org(user["org_id"], limit=500).get("actions", [])
+        # The classifier's verdict (spam / normal / urgent) is shown as a label,
+        # not an action block, so classify actions are filtered out below but
+        # their labels are surfaced per message.
+        context["labels"] = {
+            a["message_id"]: a["label"]
+            for a in actions
+            if a["action_type"] == "classify" and a.get("label")
+        }
         selected_actions = [
             a
             for a in actions
@@ -765,6 +774,7 @@ def inbox(request: Request, message: str | None = None) -> HTMLResponse:
         stored = next((a["rationale"] for a in selected_actions if a.get("rationale")), None)
         context["selected_rationale"] = stored or _rationale_for(user["org_id"], selected)
     else:
+        context["labels"] = {}
         context["selected_actions"] = []
         context["selected_rationale"] = []
 
@@ -792,12 +802,22 @@ def _rationale_for(org_id: str, message: dict) -> list[str]:
         f"Sender looks {_ROLE_LABELS.get(message.get('sender_role'), 'external').lower()}; "
         f"business value scored {message.get('business_value') or 0:.2f}.",
         f"Priority inferred as {message.get('priority_hint') or 'unknown'}, "
-        f"target response within {message.get('deadline_minutes') or '—'} minutes.",
+        f"target response within {message.get('deadline_minutes') or '-'} minutes.",
     ]
     risk = message.get("risk_tag")
     if risk and risk != "none":
         points.append(f"Risk vocabulary matched '{risk}', which drives where this is routed.")
     return points
+
+
+# Post-redirect notices for review decisions, keyed rather than free-text so
+# the query string can never render attacker-chosen copy (same rule as the
+# settings notices below).
+_REVIEW_NOTICES = {
+    "sent": "Approved. The reply was sent, and the decision is on the audit log.",
+    "approved": "Approved. The action was applied, and the decision is on the audit log.",
+    "rejected": "Rejected. Nothing was sent. The copilot learns from the call you made.",
+}
 
 
 @web_router.post("/app/actions/{action_id}/approve")
@@ -812,6 +832,7 @@ def approve_action(
     user = _require_user(request)
     _require_manage(user)
 
+    action = _actions.get(user["org_id"], action_id)
     provider = _provider_for_action(user["org_id"], action_id)
     try:
         _sync.approve(
@@ -823,7 +844,8 @@ def approve_action(
         )
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    return RedirectResponse(url=_back_to(request, message), status_code=303)
+    notice = "sent" if action and action["action_type"] == "reply" else "approved"
+    return RedirectResponse(url=_back_to(request, message, notice), status_code=303)
 
 
 @web_router.post("/app/actions/{action_id}/reject")
@@ -840,15 +862,22 @@ def reject_action(
         _sync.reject(org_id=user["org_id"], user_id=user["id"], action_id=action_id, comment=None)
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    return RedirectResponse(url=_back_to(request, message), status_code=303)
+    return RedirectResponse(url=_back_to(request, message, "rejected"), status_code=303)
 
 
-def _back_to(request: Request, message_id: str) -> str:
+def _back_to(request: Request, message_id: str, notice: str | None = None) -> str:
     """Return the reviewer to where they were, not to a generic page."""
+    suffix = f"notice={notice}" if notice else ""
     referer = request.headers.get("referer", "")
     if "/app/approvals" in referer:
-        return "/app/approvals"
-    return f"/app/inbox?message={message_id}" if message_id else "/app/inbox"
+        return f"/app/approvals?{suffix}" if suffix else "/app/approvals"
+    if message_id:
+        return (
+            f"/app/inbox?message={message_id}&{suffix}"
+            if suffix
+            else f"/app/inbox?message={message_id}"
+        )
+    return f"/app/inbox?{suffix}" if suffix else "/app/inbox"
 
 
 def _provider_for_action(org_id: str, action_id: str):
@@ -868,9 +897,10 @@ def _provider_for_action(org_id: str, action_id: str):
 
 
 @web_router.get("/app/approvals", response_class=HTMLResponse)
-def approvals(request: Request) -> HTMLResponse:
+def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "approvals")
+    context["notice"] = _REVIEW_NOTICES.get(notice or "")
 
     pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100).get("actions", [])
     items = []
@@ -920,7 +950,7 @@ def activity(request: Request) -> HTMLResponse:
 # the query string can never render attacker-chosen copy.
 _SETTINGS_NOTICES = {
     "password_changed": "Password updated.",
-    "license_activated": "License activated — your plan is live.",
+    "license_activated": "License activated. Your plan is live.",
     "role_updated": "Member role updated.",
     "member_removed": "Member removed from the workspace.",
 }

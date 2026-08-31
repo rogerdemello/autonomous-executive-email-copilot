@@ -28,6 +28,44 @@
     });
   });
 
+  // --- Scroll reveals ------------------------------------------------------
+  // Elements marked data-reveal fade/rise in as they enter the viewport. The
+  // hidden initial state only applies under html[data-js] (set by
+  // theme-init.js), so nothing can be stranded invisible if this file fails.
+  var revealables = document.querySelectorAll("[data-reveal]");
+  if (revealables.length) {
+    if ("IntersectionObserver" in window) {
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-in");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: "0px 0px -36px 0px" }
+      );
+      revealables.forEach(function (el) {
+        observer.observe(el);
+      });
+    } else {
+      revealables.forEach(function (el) {
+        el.classList.add("is-in");
+      });
+    }
+  }
+
+  // --- Sticky header shadow ------------------------------------------------
+  var siteHead = document.querySelector(".site-head");
+  if (siteHead) {
+    var onScroll = function () {
+      siteHead.classList.toggle("is-scrolled", window.scrollY > 8);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+
   // --- Confirm destructive submits ---------------------------------------
   document.querySelectorAll("form[data-confirm]").forEach(function (form) {
     form.addEventListener("submit", function (event) {

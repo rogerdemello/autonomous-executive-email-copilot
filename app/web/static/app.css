@@ -1,12 +1,41 @@
 /* Executive Email Copilot — one stylesheet for marketing and product.
  *
  * Identity: "quiet office" — deep ink-teal ground, warm brass highlight, a
- * serif display over a system sans. No framework blues, no gradients.
+ * serif display over a system sans. No framework blues, no colour-wash
+ * gradients (gradient functions appear only as dot-grid textures and masks).
  *
  * Every colour is a custom property declared once in :root. Raw hex must not
  * appear below the token block — that is what keeps light/dark honest, since
  * the theme toggle only ever reassigns these variables.
  */
+
+/* ========================================================================== */
+/* Fonts — self-hosted variable fonts (the CSP allows same-origin only).      */
+/* Fraunces carries the editorial display voice; Inter carries UI and body.   */
+/* ========================================================================== */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/static/fonts/fraunces-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/static/fonts/fraunces-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ========================================================================== */
 /* Tokens                                                                     */
@@ -24,10 +53,11 @@
   --good: #2e8f66;
   --warn: #b5842a;
   --crit: #bd5138;
+  --grid-dot: color-mix(in srgb, var(--ink) 16%, transparent);
   --shadow: 20px 40px 80px -50px rgba(16, 40, 40, 0.5);
   --shadow-sm: 0 8px 20px -14px rgba(16, 40, 40, 0.55);
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
 }
 
@@ -45,6 +75,7 @@
     --good: #4bbd88;
     --warn: #d3a44a;
     --crit: #db6f55;
+    --grid-dot: color-mix(in srgb, var(--ink) 9%, transparent);
     --shadow: 24px 46px 90px -50px rgba(0, 0, 0, 0.75);
     --shadow-sm: 0 8px 20px -14px rgba(0, 0, 0, 0.8);
   }
@@ -65,6 +96,7 @@
   --good: #2e8f66;
   --warn: #b5842a;
   --crit: #bd5138;
+  --grid-dot: color-mix(in srgb, var(--ink) 16%, transparent);
   --shadow: 20px 40px 80px -50px rgba(16, 40, 40, 0.5);
   --shadow-sm: 0 8px 20px -14px rgba(16, 40, 40, 0.55);
 }
@@ -82,6 +114,7 @@
   --good: #4bbd88;
   --warn: #d3a44a;
   --crit: #db6f55;
+  --grid-dot: color-mix(in srgb, var(--ink) 9%, transparent);
   --shadow: 24px 46px 90px -50px rgba(0, 0, 0, 0.75);
   --shadow-sm: 0 8px 20px -14px rgba(0, 0, 0, 0.8);
 }
@@ -782,15 +815,57 @@ table.bench td.task {
   margin: 12px auto 28px;
 }
 
-footer {
+.site-foot {
   border-top: 1px solid var(--line);
-  padding: 28px 0 44px;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  background: var(--panel);
+}
+
+.foot {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 32px;
+  align-items: start;
+  padding: 44px 0 40px;
+}
+
+.foot__brand p {
   color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 34ch;
+  margin: 14px 0 0;
+}
+
+.foot__links {
+  display: grid;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.foot__links a {
+  color: var(--muted);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.foot__links a:hover {
+  color: var(--ink);
+}
+
+.foot__meta {
+  display: grid;
+  gap: 10px;
   font-size: 0.85rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .foot {
+    grid-template-columns: 1fr;
+  }
+  .foot__meta {
+    text-align: left;
+  }
 }
 
 /* ========================================================================== */
@@ -1402,4 +1477,742 @@ table.data td.when {
   margin: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+/* ========================================================================== */
+/* Motion & marketing v2                                                      */
+/*                                                                            */
+/* Everything below is craft, not chrome: scroll reveals, a sticky header, a  */
+/* living triage demo, and micro-interactions. All of it is gated behind      */
+/* html[data-js] or degrades to a static page, and the reduced-motion block   */
+/* at the very end switches the whole layer off.                              */
+/* ========================================================================== */
+
+/* --- Shared easing & entrance ------------------------------------------- */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Scroll reveals ------------------------------------------------------ */
+/* Hidden state exists only when theme-init.js stamped data-js, so a blocked
+ * script can never strand a section invisible. app.js adds .is-in on entry. */
+[data-js] [data-reveal] {
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--d, 0s);
+}
+
+[data-js] [data-reveal]:not(.is-in) {
+  opacity: 0;
+  transform: translateY(22px);
+}
+
+/* --- Sticky header ------------------------------------------------------- */
+.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.site-head.is-scrolled {
+  border-bottom-color: var(--line);
+}
+
+/* Nav links get a drawn underline instead of a colour swap alone. */
+.top nav a.hide {
+  position: relative;
+}
+
+.top nav a.hide::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.top nav a.hide:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* --- Hero entrance & texture --------------------------------------------- */
+.hero {
+  position: relative;
+}
+
+/* A faint dot-grid drafting texture behind the hero: a pattern, not a colour
+ * wash. The fade is a straight vertical dissolve; a radial halo reads as a
+ * glow in dark mode, and this site does not glow. */
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -60px -6vw 0;
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 96%);
+  mask-image: linear-gradient(to bottom, #000 40%, transparent 96%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.hero__copy > * {
+  animation: enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.hero__copy > .eyebrow {
+  animation-delay: 0.05s;
+}
+
+.hero__copy > h1 {
+  animation-delay: 0.12s;
+}
+
+.hero__copy > .lede {
+  animation-delay: 0.2s;
+}
+
+.hero__copy > .cta {
+  animation-delay: 0.28s;
+}
+
+.hero__copy > .note {
+  animation-delay: 0.36s;
+}
+
+.hero .triage {
+  animation: enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
+}
+
+/* --- Hero v3: centered copy over a framed product screenshot ------------- */
+.hero-v3 {
+  position: relative;
+  text-align: center;
+  padding: 44px 0 84px;
+}
+
+/* Same drafting texture as the old hero, fading out before the screenshot. */
+.hero-v3::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -60px -6vw auto;
+  height: 520px;
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 95%);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent 95%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.hero-v3__copy > * {
+  animation: enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.hero-v3__copy > .badge {
+  animation-delay: 0.05s;
+}
+
+.hero-v3__copy > h1 {
+  animation-delay: 0.12s;
+}
+
+.hero-v3__copy > .lede {
+  animation-delay: 0.2s;
+}
+
+.hero-v3__copy > .cta {
+  animation-delay: 0.28s;
+}
+
+.hero-v3__copy > .note {
+  animation-delay: 0.36s;
+}
+
+.hero-v3 h1 {
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+  line-height: 1.03;
+  margin: 22px auto 20px;
+  max-width: 18ch;
+}
+
+.hero-v3 h1 .soft {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.hero-v3 .lede {
+  margin: 0 auto 30px;
+  max-width: 52ch;
+}
+
+.cta--center {
+  justify-content: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 16px 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.badge:hover {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.badge__new {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Browser-style frame around real product screenshots. */
+.shot {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.shot__bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.shot__url {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hero-shot {
+  position: relative;
+  margin-top: 56px;
+  animation: enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+}
+
+/* Floating status chips on the hero screenshot: the product's three promises,
+ * bobbing gently. Decorative only (aria-hidden). They straddle the frame's
+ * top and bottom edges so they never cover the screenshot's actual content,
+ * only the browser-chrome bar and the cut-off bottom row. */
+.float-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: bob 6s ease-in-out infinite;
+}
+
+.float-chip--1 {
+  top: -17px;
+  left: 4%;
+}
+
+.float-chip--2 {
+  top: -17px;
+  right: 4%;
+  animation-delay: 1.6s;
+}
+
+/* The bottom chip bobs downward, away from the screenshot. */
+.float-chip--3 {
+  bottom: -17px;
+  left: 8%;
+  animation-delay: 3.2s;
+  animation-name: bob-down;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes bob-down {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(9px);
+  }
+}
+
+@media (max-width: 900px) {
+  .float-chip {
+    display: none;
+  }
+}
+
+/* --- Product tour: zig-zag rows of text + screenshot ---------------------- */
+.tour {
+  display: grid;
+  gap: 72px;
+}
+
+.tour__row {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.tour__row--flip .tour__text {
+  order: 2;
+}
+
+.tour__row--flip .shot {
+  order: 1;
+}
+
+.tour__text .mark {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--brass);
+}
+
+.tour__text h3 {
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  margin: 14px 0 10px;
+}
+
+.tour__text > p {
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.tour__text b {
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .tour__row,
+  .tour__row--flip {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .tour__row--flip .tour__text {
+    order: 0;
+  }
+  .tour__row--flip .shot {
+    order: 1;
+  }
+}
+
+/* --- Working-day photo ---------------------------------------------------- */
+.day-photo {
+  margin: 26px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.day-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: saturate(0.85);
+}
+
+.day-photo figcaption {
+  padding: 11px 16px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+/* --- Living triage demo -------------------------------------------------- */
+/* The fourth mail resolves on a loop: "Deciding…" crossfades into a sent
+ * confirmation, then the cycle restarts — the product's whole promise in one
+ * repeated beat. Both chips share the same grid cell and simply swap. */
+.mail--live .chip--wait {
+  animation: wait-cycle 9s linear 2.2s infinite;
+}
+
+.mail--live .chip--resolve {
+  opacity: 0;
+  animation: resolve-cycle 9s linear 2.2s infinite;
+}
+
+@keyframes wait-cycle {
+  0%,
+  44% {
+    opacity: 1;
+  }
+  50%,
+  94% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes resolve-cycle {
+  0%,
+  46% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  52%,
+  90% {
+    opacity: 1;
+    transform: none;
+  }
+  96%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* --- Capability ticker --------------------------------------------------- */
+.ticker {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  padding: 15px 0;
+}
+
+.ticker__track {
+  display: flex;
+  gap: 44px;
+  width: max-content;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  animation: ticker 36s linear infinite;
+}
+
+.ticker:hover .ticker__track {
+  animation-play-state: paused;
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* --- Pillar micro-interactions ------------------------------------------- */
+.pillar {
+  position: relative;
+  transition: background 0.35s ease;
+}
+
+.pillar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--brass);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pillar:hover {
+  background: color-mix(in srgb, var(--accent) 4%, var(--paper));
+}
+
+.pillar:hover::before {
+  transform: scaleX(1);
+}
+
+/* --- "Under the hood" intelligence section -------------------------------- */
+.sec-head__note {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+}
+
+.stack-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+/* Four capability cards read best as a 2×2 on desktop; the shared mobile
+ * breakpoint below collapses them to one column with the other pillars. */
+.pillars--quad {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* --- "A working day" timeline -------------------------------------------- */
+.day-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 48px 64px;
+  align-items: start;
+}
+
+.day-grid .sec-head {
+  position: sticky;
+  top: 110px;
+  margin-bottom: 0;
+}
+
+.day-grid__note {
+  margin: 14px 0 0;
+  font-size: 0.95rem;
+}
+
+.day {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.day__item {
+  display: grid;
+  grid-template-columns: 56px 20px 1fr;
+  gap: 0 16px;
+  padding-bottom: 36px;
+}
+
+.day__item:last-child {
+  padding-bottom: 0;
+}
+
+.day__time {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  color: var(--brass);
+  padding-top: 3px;
+  text-align: right;
+}
+
+.day__node {
+  position: relative;
+}
+
+.day__node::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--paper);
+  border: 2px solid var(--accent);
+  box-sizing: border-box;
+}
+
+.day__item:not(:last-child) .day__node::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  bottom: -4px;
+  left: 50%;
+  width: 1px;
+  background: var(--line);
+}
+
+.day__body h3 {
+  margin: 0 0 6px;
+  font-size: 1.08rem;
+}
+
+.day__body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.93rem;
+  max-width: 52ch;
+}
+
+.day__body em {
+  color: var(--warn);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* --- Benchmark bars ------------------------------------------------------ */
+/* Each score cell carries a thin bar sized by --v (a 0–1 fraction set inline)
+ * that draws in when the table's reveal fires. Without JS the bars are simply
+ * full-width and static. */
+table.bench td.num {
+  position: relative;
+}
+
+table.bench .bar {
+  position: absolute;
+  left: 14px;
+  bottom: 6px;
+  height: 3px;
+  width: calc((100% - 28px) * var(--v, 1));
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  transform-origin: left;
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s);
+}
+
+table.bench td.lead .bar {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-js] [data-reveal]:not(.is-in) .bar {
+  transform: scaleX(0);
+}
+
+/* --- CTA arrows & closing flourish --------------------------------------- */
+.btn .arr {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn:hover .arr {
+  transform: translateX(4px);
+}
+
+.close__mark {
+  display: inline-block;
+  font-size: 1.5rem;
+  color: var(--brass);
+  letter-spacing: 0;
+  animation: slow-spin 14s linear infinite;
+}
+
+@keyframes slow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Auth card entrance --------------------------------------------------- */
+.auth__card {
+  animation: enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* --- Marketing responsive fixes ------------------------------------------ */
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 24px 0 56px;
+  }
+  .scores {
+    grid-template-columns: 1fr;
+  }
+  .pillars {
+    grid-template-columns: 1fr;
+  }
+  .day-grid {
+    grid-template-columns: 1fr;
+  }
+  .day-grid .sec-head {
+    position: static;
+    margin-bottom: 8px;
+  }
+}
+
+/* --- Reduced motion: the whole layer off ---------------------------------- */
+/* Must stay last. The earlier reduced-motion block already restores the
+ * hero mails; this one silences everything added above and un-hides any
+ * reveal state so the page reads as a calm static document. */
+@media (prefers-reduced-motion: reduce) {
+  .hero__copy > *,
+  .hero .triage,
+  .hero-v3__copy > *,
+  .hero-shot,
+  .float-chip,
+  .auth__card,
+  .close__mark,
+  .mail--live .chip--wait,
+  .ticker__track {
+    animation: none;
+  }
+  .mail--live .chip--resolve {
+    animation: none;
+    opacity: 0;
+  }
+  [data-js] [data-reveal] {
+    transition: none;
+  }
+  [data-js] [data-reveal]:not(.is-in) {
+    opacity: 1;
+    transform: none;
+  }
+  [data-js] [data-reveal]:not(.is-in) .bar {
+    transform: none;
+  }
+  table.bench .bar,
+  .btn .arr,
+  .top nav a.hide::after,
+  .pillar,
+  .pillar::before {
+    transition: none;
+  }
 }

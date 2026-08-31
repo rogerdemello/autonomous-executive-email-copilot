@@ -1,73 +1,88 @@
 {% extends "_public.html" %}
 
-{% block title %}Executive Email Copilot — the corner-office inbox that runs itself{% endblock %}
+{% block title %}Executive Email Copilot · the corner-office inbox that runs itself{% endblock %}
 
 {% block main %}
-<section class="wrap hero" style="border-top: 0">
-  <div>
-    <p class="eyebrow">Autonomous Executive Email Copilot</p>
+<section class="wrap hero-v3" style="border-top: 0">
+  <div class="hero-v3__copy">
+    <a class="badge" href="/#tour">
+      <span class="badge__new">New</span> Spam filtering &amp; verified drafts
+      <span class="arr">→</span>
+    </a>
     <h1>The corner-office inbox that <span class="soft">runs itself.</span></h1>
     <p class="lede">
-      An agent that triages, prioritizes, drafts, and escalates high-stakes email — with your
-      sign-off where it matters, and a benchmark behind every decision.
+      An assistant that understands the whole inbox. It summarizes long threads, filters the spam,
+      surfaces what matters, and drafts context-aware replies, with your sign-off where it counts.
     </p>
-    <div class="cta">
-      <a class="btn btn--primary" href="/signup">Start free trial</a>
-      <a class="btn" href="/#how">See how it works</a>
+    <div class="cta cta--center">
+      <a class="btn btn--primary" href="/signup">Start free trial <span class="arr">→</span></a>
+      <a class="btn" href="/#tour">See it work</a>
     </div>
     <p class="note">No card to start · <b>14-day trial</b> · SSO &amp; audit log on Business+</p>
   </div>
 
-  <div
-    class="triage"
-    role="img"
-    aria-label="A mailbox where the copilot has triaged four incoming emails: a client reply, a legal escalation, an internal deferral, and one still being decided."
-  >
-    <div class="triage__bar">
-      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-      <span class="triage__title">Live triage</span>
+  <div class="hero-shot">
+    <div class="shot shot--hero">
+      <div class="shot__bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="shot__url">emailcopilot · inbox</span>
+      </div>
+      <img
+        src="/static/img/product-inbox.png"
+        width="1440"
+        height="900"
+        alt="The copilot's inbox: 50 messages triaged, 81 actions applied automatically, an urgent legal claim opened with the copilot's rationale and a model-drafted escalation held for approval."
+      />
     </div>
-    <div class="mail">
-      <span class="mail__from">Priya Nair · Northwind</span>
-      <span class="chip chip--reply">Reply</span>
-      <span class="mail__subj">Re: renewal terms for Q3 — needs a number today</span>
+    <div class="float-chip float-chip--1" aria-hidden="true">
+      <span class="chip chip--danger">spam</span> filed, no reply sent
     </div>
-    <div class="mail">
-      <span class="mail__from">Legal — outside counsel</span>
-      <span class="chip chip--escalate">Escalate</span>
-      <span class="mail__subj">Draft indemnification clause · flagged: legal</span>
+    <div class="float-chip float-chip--2" aria-hidden="true">
+      <span class="chip chip--good">verified</span> draft matches the source
     </div>
-    <div class="mail">
-      <span class="mail__from">All-hands logistics</span>
-      <span class="chip chip--defer">Defer</span>
-      <span class="mail__subj">Room booking for the offsite — low priority</span>
-    </div>
-    <div class="mail">
-      <span class="mail__from">CFO · budget review</span>
-      <span class="chip chip--wait">Deciding…</span>
-      <span class="mail__subj">Q3 forecast — awaiting your approval to reply</span>
-    </div>
-    <div class="triage__foot">
-      <span class="pulse"></span> Copilot working the inbox · 2 actions held for approval
+    <div class="float-chip float-chip--3" aria-hidden="true">
+      <span class="chip chip--warn">held</span> awaiting your approval
     </div>
   </div>
 </section>
 
+<div class="ticker" aria-hidden="true">
+  <div class="ticker__track">
+    <span>Threads summarized in seconds</span><span>·</span>
+    <span>Drafts grounded in context</span><span>·</span>
+    <span>Fact-checked before you see them</span><span>·</span>
+    <span>Approvals held for humans</span><span>·</span>
+    <span>Legal &amp; finance auto-routed</span><span>·</span>
+    <span>Every action audit-logged</span><span>·</span>
+    <span>Tenant-isolated by design</span><span>·</span>
+    <span>Benchmarked before it ships</span><span>·</span>
+    <span>Threads summarized in seconds</span><span>·</span>
+    <span>Drafts grounded in context</span><span>·</span>
+    <span>Fact-checked before you see them</span><span>·</span>
+    <span>Approvals held for humans</span><span>·</span>
+    <span>Legal &amp; finance auto-routed</span><span>·</span>
+    <span>Every action audit-logged</span><span>·</span>
+    <span>Tenant-isolated by design</span><span>·</span>
+    <span>Benchmarked before it ships</span><span>·</span>
+  </div>
+</div>
+
 <section id="how" class="wrap">
-  <div class="sec-head">
+  <div class="sec-head" data-reveal>
     <p class="eyebrow">What it does</p>
     <h2>Built for the people whose inbox can't wait.</h2>
   </div>
   <div class="pillars">
-    <div class="pillar">
+    <div class="pillar" data-reveal>
       <span class="mark">01 · TRIAGE</span>
       <h3>Reads the room, not just the subject</h3>
       <p>
-        Classifies, prioritizes, and drafts across a high-volume mailbox — weighing deadlines,
-        business value, and risk so nothing critical slips.
+        Summarizes long threads, surfaces the messages that actually matter, and drafts across a
+        high-volume mailbox, weighing deadlines, business value, and risk so nothing critical
+        slips.
       </p>
     </div>
-    <div class="pillar">
+    <div class="pillar" data-reveal style="--d: 0.12s">
       <span class="mark">02 · CONTROL</span>
       <h3>Approvals where they matter</h3>
       <p>
@@ -75,25 +90,202 @@
         right owner automatically.
       </p>
     </div>
-    <div class="pillar">
+    <div class="pillar" data-reveal style="--d: 0.24s">
       <span class="mark">03 · TRUST</span>
       <h3>Tenant-isolated &amp; audited</h3>
       <p>
         Every organization's data stays its own. SSO, a full audit log, and encrypted mailbox
-        tokens — designed for procurement.
+        tokens, designed for procurement.
       </p>
     </div>
   </div>
 </section>
 
+<section id="tour" class="wrap">
+  <div class="sec-head" data-reveal>
+    <p class="eyebrow">See it work</p>
+    <h2>Real product. Real inbox. No mockups.</h2>
+  </div>
+  <div class="tour">
+    <div class="tour__row">
+      <div class="tour__text" data-reveal>
+        <span class="mark">CLASSIFY · SPAM</span>
+        <h3>Junk never reaches you</h3>
+        <p>
+          Every message is classified as <b>spam</b>, normal, or urgent before anything else
+          happens. Spam is filed with no reply and no human attention spent; the copilot never
+          engages it, and the manufactured "urgency" of a promo email earns nothing.
+        </p>
+        <ul class="rationale">
+          <li>Spam is labeled and filed automatically; it only ever adds a label.</li>
+          <li>The rationale is shown, so you can see exactly why it was filed.</li>
+          <li>Urgent mail is ranked to the top with a deadline attached.</li>
+        </ul>
+      </div>
+      <div class="shot" data-reveal style="--d: 0.12s">
+        <div class="shot__bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="shot__url">emailcopilot · classification</span>
+        </div>
+        <img
+          src="/static/img/product-spam.png"
+          width="1000"
+          height="625"
+          loading="lazy"
+          alt="A promotional email classified as spam. The copilot's rationale reads: promotional vocabulary throughout, the urgency is manufactured, filed without a reply, no human attention spent."
+        />
+      </div>
+    </div>
+    <div class="tour__row tour__row--flip">
+      <div class="tour__text" data-reveal>
+        <span class="mark">DRAFT · EDIT · APPROVE</span>
+        <h3>A professional reply, ready for your pen</h3>
+        <p>
+          For mail worth answering, the copilot writes the reply, fact-checks it against the source
+          message, and waits. The draft opens in an editor; <b>amend it freely before approving</b>.
+          Your edits are what get sent, and they teach the copilot your workspace's voice.
+        </p>
+        <ul class="rationale">
+          <li>Model-drafted, with confidence shown next to the draft.</li>
+          <li>Verified against the source; invented numbers or names get flagged.</li>
+          <li>Nothing sends until you press "Approve &amp; send".</li>
+        </ul>
+      </div>
+      <div class="shot" data-reveal style="--d: 0.12s">
+        <div class="shot__bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="shot__url">emailcopilot · approvals</span>
+        </div>
+        <img
+          src="/static/img/product-approve.png"
+          width="1000"
+          height="393"
+          loading="lazy"
+          alt="An approval card: a model-drafted, verified reply sits in an editable text area above Approve &amp; send and Reject buttons, with the note: edit freely, your edits are sent."
+        />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="intelligence" class="wrap">
+  <div class="sec-head" data-reveal>
+    <p class="eyebrow">Under the hood</p>
+    <h2>An assistant that reads before it writes.</h2>
+    <p class="muted sec-head__note">
+      LLMs, retrieval, semantic signals, and tool calling, assembled so every action is grounded
+      in your mailbox, explained to you, and yours to approve.
+    </p>
+    <div class="stack-row">
+      <span class="chip chip--accent">LLMs</span>
+      <span class="chip chip--accent">RAG</span>
+      <span class="chip chip--accent">Semantic search</span>
+      <span class="chip chip--accent">Tool calling</span>
+    </div>
+  </div>
+  <div class="pillars pillars--quad">
+    <div class="pillar" data-reveal>
+      <span class="mark">RETRIEVE</span>
+      <h3>Context before content</h3>
+      <p>
+        Before it acts, the copilot retrieves the thread's history and the sender's role,
+        deadlines, and risk signals, so a reply answers the conversation, not just the last
+        message.
+      </p>
+    </div>
+    <div class="pillar" data-reveal style="--d: 0.1s">
+      <span class="mark">REASON</span>
+      <h3>Tools, not guesswork</h3>
+      <p>
+        The model acts through typed tools (classify, prioritize, reply, defer, escalate), each
+        call carrying its reason and confidence, never free-form text parsed on hope.
+      </p>
+    </div>
+    <div class="pillar" data-reveal style="--d: 0.2s">
+      <span class="mark">VERIFY</span>
+      <h3>Drafts are fact-checked</h3>
+      <p>
+        Every draft is read back against the message it answers. A number the source never said, or
+        a name it never mentioned, is flagged and shown right beside the approve button.
+      </p>
+    </div>
+    <div class="pillar" data-reveal style="--d: 0.3s">
+      <span class="mark">GUARD</span>
+      <h3>Injection-aware by default</h3>
+      <p>
+        Incoming mail is treated as untrusted input. Prompt-injection patterns and risky content
+        are detected, and anything with legal or financial stakes always routes to a human.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="day" class="wrap">
+  <div class="day-grid">
+    <div class="sec-head" data-reveal>
+      <p class="eyebrow">A working day</p>
+      <h2>You open the inbox once. It was managed all day.</h2>
+      <p class="muted day-grid__note">
+        The copilot works continuously; you spend minutes, not hours. Anything consequential waits
+        for you; everything else is already handled and on the record.
+      </p>
+      {# Photo: Unsplash (free license), served locally to satisfy the img-src 'self' CSP. #}
+      <figure class="day-photo" data-reveal>
+        <img
+          src="/static/img/office.jpg"
+          width="1200"
+          height="801"
+          loading="lazy"
+          alt="A calm, modern office in the morning; nobody is at a desk answering email."
+        />
+        <figcaption>The inbox is handled. The office can wait until nine.</figcaption>
+      </figure>
+    </div>
+    <ol class="day">
+      <li class="day__item" data-reveal>
+        <span class="day__time">06:40</span>
+        <span class="day__node" aria-hidden="true"></span>
+        <div class="day__body">
+          <h3>Overnight mail triaged</h3>
+          <p>38 messages classified and prioritized before your first coffee: three marked critical, the rest filed or deferred.</p>
+        </div>
+      </li>
+      <li class="day__item" data-reveal style="--d: 0.1s">
+        <span class="day__time">08:15</span>
+        <span class="day__node" aria-hidden="true"></span>
+        <div class="day__body">
+          <h3>Two replies drafted, waiting for you</h3>
+          <p>Each draft sits in Approvals with the copilot's rationale beside it. Amend, approve, or reject; one click either way.</p>
+        </div>
+      </li>
+      <li class="day__item" data-reveal style="--d: 0.2s">
+        <span class="day__time">11:02</span>
+        <span class="day__node" aria-hidden="true"></span>
+        <div class="day__body">
+          <h3>Counsel thread escalated</h3>
+          <p>An indemnification clause is flagged <em>legal</em> and routed to the right owner; it never risks an autopilot reply.</p>
+        </div>
+      </li>
+      <li class="day__item" data-reveal style="--d: 0.3s">
+        <span class="day__time">16:30</span>
+        <span class="day__node" aria-hidden="true"></span>
+        <div class="day__body">
+          <h3>Everything on the record</h3>
+          <p>Every classification, draft, and escalation is in the audit log: searchable, exportable, and owned by your tenant.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
 <section id="proof" class="proof">
   <div class="wrap">
-    <div class="sec-head">
+    <div class="sec-head" data-reveal>
       <p class="eyebrow">Measured, not guessed</p>
       <h2>Every policy is scored before it touches a real inbox.</h2>
     </div>
     <div class="scores">
-      <div class="table-wrap">
+      <div class="table-wrap" data-reveal>
         <table class="bench">
           <thead>
             <tr>
@@ -106,30 +298,30 @@
           <tbody>
             <tr>
               <td class="task">Classification</td>
-              <td class="num lead">1.00</td>
-              <td class="num">0.80</td>
-              <td class="num">0.17</td>
+              <td class="num lead"><span class="bar" style="--v: 1"></span>1.00</td>
+              <td class="num"><span class="bar" style="--v: 0.8; --d: 0.1s"></span>0.80</td>
+              <td class="num"><span class="bar" style="--v: 0.17; --d: 0.2s"></span>0.17</td>
             </tr>
             <tr>
               <td class="task">Prioritization</td>
-              <td class="num lead">1.00</td>
-              <td class="num lead">1.00</td>
-              <td class="num lead">1.00</td>
+              <td class="num lead"><span class="bar" style="--v: 1; --d: 0.1s"></span>1.00</td>
+              <td class="num lead"><span class="bar" style="--v: 1; --d: 0.2s"></span>1.00</td>
+              <td class="num lead"><span class="bar" style="--v: 1; --d: 0.3s"></span>1.00</td>
             </tr>
             <tr>
               <td class="task">Full management</td>
-              <td class="num lead">0.67</td>
-              <td class="num">0.09</td>
-              <td class="num">0.62</td>
+              <td class="num lead"><span class="bar" style="--v: 0.67; --d: 0.2s"></span>0.67</td>
+              <td class="num"><span class="bar" style="--v: 0.09; --d: 0.3s"></span>0.09</td>
+              <td class="num"><span class="bar" style="--v: 0.62; --d: 0.4s"></span>0.62</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div>
+      <div data-reveal style="--d: 0.12s">
         <p style="margin-top: 0" class="muted">
           Scores are bounded to the open interval <span class="mono">(0,1)</span>, deterministic
           across seeds, and reproducible from a single command. The frontier LLM is competitive on
-          full management and honestly weaker on narrow classification — a finding, not a slogan.
+          full management and honestly weaker on narrow classification. A finding, not a slogan.
         </p>
         <div class="statline">
           <div class="stat">
@@ -151,12 +343,12 @@
 </section>
 
 <section class="wrap">
-  <div class="sec-head">
+  <div class="sec-head" data-reveal>
     <p class="eyebrow">Security &amp; compliance</p>
     <h2>Answers ready before procurement asks.</h2>
   </div>
   <div class="pillars">
-    <div class="pillar">
+    <div class="pillar" data-reveal>
       <span class="mark">DATA</span>
       <h3>Encrypted at rest, scoped per tenant</h3>
       <p>
@@ -164,15 +356,15 @@
         its organization id, and all access goes through tenant-scoped repositories.
       </p>
     </div>
-    <div class="pillar">
+    <div class="pillar" data-reveal style="--d: 0.12s">
       <span class="mark">ACCESS</span>
       <h3>SSO and least privilege</h3>
       <p>
-        OIDC single sign-on with RS256 id_token verification. Three ranked roles — owner, admin,
-        member — with no path to grant a role above your own.
+        OIDC single sign-on with RS256 id_token verification. Three ranked roles (owner, admin,
+        member) with no path to grant a role above your own.
       </p>
     </div>
-    <div class="pillar">
+    <div class="pillar" data-reveal style="--d: 0.24s">
       <span class="mark">RECORDS</span>
       <h3>Audit log, export, and erasure</h3>
       <p>
@@ -184,11 +376,14 @@
 </section>
 
 <section class="wrap close">
-  <h2>Give every executive an inbox that runs itself.</h2>
-  <p>Start a free trial today, or walk through a rollout across your leadership team with us.</p>
-  <div class="cta" style="justify-content: center">
-    <a class="btn btn--primary" href="/signup">Start free trial</a>
-    <a class="btn" href="/contact-sales">Talk to sales</a>
+  <div data-reveal>
+    <p class="eyebrow close__mark">✳</p>
+    <h2>Give every executive an inbox that runs itself.</h2>
+    <p>Start a free trial today, or walk through a rollout across your leadership team with us.</p>
+    <div class="cta" style="justify-content: center">
+      <a class="btn btn--primary" href="/signup">Start free trial <span class="arr">→</span></a>
+      <a class="btn" href="/contact-sales">Talk to sales</a>
+    </div>
   </div>
 </section>
 {% endblock %}

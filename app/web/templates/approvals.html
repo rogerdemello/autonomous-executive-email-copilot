@@ -1,6 +1,6 @@
 {% extends "_app.html" %}
 
-{% block title %}Approvals — Executive Email Copilot{% endblock %}
+{% block title %}Approvals · Executive Email Copilot{% endblock %}
 {% block heading %}Approvals{% endblock %}
 {% block lede %}Actions that reach the outside world wait here for a human.{% endblock %}
 
@@ -24,7 +24,7 @@
       <h3>Nothing waiting on you</h3>
       <p>
         Replies and escalations pause here before they are sent. Classifications and deferrals apply
-        on their own — they only ever add a label.
+        on their own; they only ever add a label.
       </p>
       <a class="btn" href="/app/inbox">Back to the inbox</a>
     </div>
@@ -73,7 +73,7 @@
           </ul>
         {% endif %}
 
-        {# What verification flagged — the reviewer's "look here first". #}
+        {# What verification flagged: the reviewer's "look here first". #}
         {% if item.action.verification_status == 'flagged' and item.action.verification_notes %}
           <ul class="rationale rationale--flagged">
             {% for note in item.action.verification_notes %}<li>⚠ {{ note }}</li>{% endfor %}
@@ -86,9 +86,9 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
             {% if item.action.content %}
               <textarea class="draft" name="content" rows="6"
-                        aria-label="Draft to send — you can edit it before approving">{{ item.action.content }}</textarea>
+                        aria-label="Draft to send. You can edit it before approving">{{ item.action.content }}</textarea>
               <p class="muted" style="margin: 0 0 12px; font-size: 0.8rem">
-                Edit freely — your edits are sent, and they teach the copilot this workspace's voice.
+                Edit freely. Your edits are sent, and they teach the copilot this workspace's voice.
               </p>
             {% endif %}
           </form>

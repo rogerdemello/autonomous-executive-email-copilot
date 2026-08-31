@@ -9,4 +9,7 @@
   } catch (e) {
     /* private mode: fall back to prefers-color-scheme */
   }
+  // Stamp that scripting is live. Scroll-reveal styles are gated on this
+  // attribute so a blocked script leaves every section fully visible.
+  document.documentElement.setAttribute("data-js", "");
 })();

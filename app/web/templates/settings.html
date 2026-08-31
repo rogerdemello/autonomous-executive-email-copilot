@@ -1,6 +1,6 @@
 {% extends "_app.html" %}
 
-{% block title %}Settings — Executive Email Copilot{% endblock %}
+{% block title %}Settings · Executive Email Copilot{% endblock %}
 {% block heading %}Settings{% endblock %}
 {% block lede %}Your workspace, plan, and the people in it.{% endblock %}
 
@@ -49,7 +49,7 @@
       {% if entitlement %}
         {% if not entitlement.active %}
           <div class="banner banner--error" role="alert">
-            This plan is inactive — syncing and approvals are paused until a
+            This plan is inactive. Syncing and approvals are paused until a
             license is activated.
           </div>
         {% endif %}
@@ -118,7 +118,7 @@
       <tbody>
         {% for member in members %}
           <tr>
-            <td>{{ member.full_name or "—" }}</td>
+            <td>{{ member.full_name or "-" }}</td>
             <td class="mono">{{ member.email }}</td>
             <td>
               {% if can_manage and member.id != current_user.id and member.role in assignable_roles %}
