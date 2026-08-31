@@ -27,17 +27,29 @@
   </div>
 
   <div class="hero-shot">
-    <div class="shot shot--hero">
+    {# WebP with a PNG fallback, and only the widths that are ever displayed:
+       the frame maxes out around 1120 CSS px, so 2240 is the useful ceiling.
+       The original 2880px PNG was 508 KB for a 1120px slot. `fetchpriority`
+       because this is the LCP element. #}
+    <div class="shot">
       <div class="shot__bar">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="shot__url">emailcopilot · inbox</span>
       </div>
-      <img
-        src="/static/img/product-inbox.png"
-        width="1440"
-        height="900"
-        alt="The copilot's inbox: 50 messages triaged, 81 actions applied automatically, an urgent legal claim opened with the copilot's rationale and a model-drafted escalation held for approval."
-      />
+      <picture>
+        <source
+          type="image/webp"
+          srcset="/static/img/product-inbox-1440.webp 1440w, /static/img/product-inbox-2240.webp 2240w"
+          sizes="(max-width: 1180px) 92vw, 1120px"
+        />
+        <img
+          src="/static/img/product-inbox.png"
+          width="1440"
+          height="900"
+          fetchpriority="high"
+          alt="The copilot's inbox: 50 messages triaged, 81 actions applied automatically, an urgent legal claim opened with the copilot's rationale and a model-drafted escalation held for approval."
+        />
+      </picture>
     </div>
     <div class="float-chip float-chip--1" aria-hidden="true">
       <span class="chip chip--danger">spam</span> filed, no reply sent
@@ -132,13 +144,20 @@
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
           <span class="shot__url">emailcopilot · classification</span>
         </div>
-        <img
-          src="/static/img/product-spam.png"
-          width="1000"
-          height="625"
-          loading="lazy"
-          alt="A promotional email classified as spam. The copilot's rationale reads: promotional vocabulary throughout, the urgency is manufactured, filed without a reply, no human attention spent."
-        />
+        <picture>
+          <source
+            type="image/webp"
+            srcset="/static/img/product-spam-1000.webp 1000w, /static/img/product-spam-1600.webp 1600w"
+            sizes="(max-width: 900px) 92vw, 620px"
+          />
+          <img
+            src="/static/img/product-spam.png"
+            width="1000"
+            height="625"
+            loading="lazy"
+            alt="A promotional email classified as spam. The copilot's rationale reads: promotional vocabulary throughout, the urgency is manufactured, filed without a reply, no human attention spent."
+          />
+        </picture>
       </div>
     </div>
     <div class="tour__row tour__row--flip">
@@ -161,13 +180,20 @@
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
           <span class="shot__url">emailcopilot · approvals</span>
         </div>
-        <img
-          src="/static/img/product-approve.png"
-          width="1000"
-          height="393"
-          loading="lazy"
-          alt="An approval card: a model-drafted, verified reply sits in an editable text area above Approve &amp; send and Reject buttons, with the note: edit freely, your edits are sent."
-        />
+        <picture>
+          <source
+            type="image/webp"
+            srcset="/static/img/product-approve-1000.webp 1000w, /static/img/product-approve-1600.webp 1600w"
+            sizes="(max-width: 900px) 92vw, 620px"
+          />
+          <img
+            src="/static/img/product-approve.png"
+            width="1000"
+            height="393"
+            loading="lazy"
+            alt="An approval card: a model-drafted, verified reply sits in an editable text area above Approve &amp; send and Reject buttons, with the note: edit freely, your edits are sent."
+          />
+        </picture>
       </div>
     </div>
   </div>
@@ -232,35 +258,53 @@
       <h2>You open the inbox once. It was managed all day.</h2>
       <p class="muted day-grid__note">
         The copilot works continuously; you spend minutes, not hours. Anything consequential waits
-        for you; everything else is already handled and on the record.
+        for you; everything else is already handled and on the record. The counts below are a real
+        run of the policy over the demo mailbox you can open yourself; the clock times are the
+        shape of a day, not a measurement.
       </p>
       {# Photo: Unsplash (free license), served locally to satisfy the img-src 'self' CSP. #}
       <figure class="day-photo" data-reveal>
-        <img
-          src="/static/img/office.jpg"
-          width="1200"
-          height="801"
-          loading="lazy"
-          alt="A calm, modern office in the morning; nobody is at a desk answering email."
-        />
+        <picture>
+          <source type="image/webp" srcset="/static/img/office-1200.webp" />
+          <img
+            src="/static/img/office.jpg"
+            width="1200"
+            height="801"
+            loading="lazy"
+            alt="A calm, modern office in the morning; nobody is at a desk answering email."
+          />
+        </picture>
         <figcaption>The inbox is handled. The office can wait until nine.</figcaption>
       </figure>
     </div>
+    {# The counts come from data/landing_metrics.json: the shipped demo mailbox
+       put through the same enrich -> policy -> proposals path a connected
+       Gmail account takes. Edit a fixture subject line and these move. The
+       times are the shape of a day, not a measurement, which is what the
+       caption below says. #}
     <ol class="day">
       <li class="day__item" data-reveal>
         <span class="day__time">06:40</span>
         <span class="day__node" aria-hidden="true"></span>
         <div class="day__body">
           <h3>Overnight mail triaged</h3>
-          <p>38 messages classified and prioritized before your first coffee: three marked critical, the rest filed or deferred.</p>
+          <p>
+            {{ bench.demo.messages }} messages classified and ranked before your first coffee:
+            {{ bench.demo.urgent }} marked urgent, {{ bench.demo.spam_filed }} filed as spam,
+            {{ bench.demo.deferred }} deferred with a label.
+          </p>
         </div>
       </li>
       <li class="day__item" data-reveal style="--d: 0.1s">
         <span class="day__time">08:15</span>
         <span class="day__node" aria-hidden="true"></span>
         <div class="day__body">
-          <h3>Two replies drafted, waiting for you</h3>
-          <p>Each draft sits in Approvals with the copilot's rationale beside it. Amend, approve, or reject; one click either way.</p>
+          <h3>{{ bench.demo.held_for_approval }} actions waiting for you</h3>
+          <p>
+            {{ bench.demo.replies_drafted }} drafted replies and
+            {{ bench.demo.escalated }} escalations, each sitting in Approvals with the copilot's
+            rationale beside it. Amend, approve, or reject; one click either way.
+          </p>
         </div>
       </li>
       <li class="day__item" data-reveal style="--d: 0.2s">
@@ -275,8 +319,11 @@
         <span class="day__time">16:30</span>
         <span class="day__node" aria-hidden="true"></span>
         <div class="day__body">
-          <h3>Everything on the record</h3>
-          <p>Every classification, draft, and escalation is in the audit log: searchable, exportable, and owned by your tenant.</p>
+          <h3>{{ bench.demo.auto_applied }} actions applied without you</h3>
+          <p>
+            Every classification, draft, and escalation is in the audit log: searchable,
+            exportable, and owned by your tenant.
+          </p>
         </div>
       </li>
     </ol>
@@ -289,59 +336,80 @@
       <p class="eyebrow">Measured, not guessed</p>
       <h2>Every policy is scored before it touches a real inbox.</h2>
     </div>
+    {# Every number below comes from data/landing_metrics.json, written by
+       scripts/build_landing_metrics.py and re-verified in CI. A missing
+       artifact raises rather than falling back to invented values — under a
+       heading that says "measured", a silent fallback is the one failure that
+       must not be possible. The `lead` class marks the best score in a row;
+       it is computed here rather than asserted. #}
     <div class="scores">
       <div class="table-wrap" data-reveal>
         <table class="bench">
           <thead>
             <tr>
               <th>Task</th>
-              <th style="text-align: right">Heuristic</th>
-              <th style="text-align: right">Multi-agent</th>
-              <th style="text-align: right">LLM (gpt-4o)</th>
+              {% for column in bench.columns %}
+                <th class="num-head">{{ column.label }}</th>
+              {% endfor %}
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td class="task">Classification</td>
-              <td class="num lead"><span class="bar" style="--v: 1"></span>1.00</td>
-              <td class="num"><span class="bar" style="--v: 0.8; --d: 0.1s"></span>0.80</td>
-              <td class="num"><span class="bar" style="--v: 0.17; --d: 0.2s"></span>0.17</td>
-            </tr>
-            <tr>
-              <td class="task">Prioritization</td>
-              <td class="num lead"><span class="bar" style="--v: 1; --d: 0.1s"></span>1.00</td>
-              <td class="num lead"><span class="bar" style="--v: 1; --d: 0.2s"></span>1.00</td>
-              <td class="num lead"><span class="bar" style="--v: 1; --d: 0.3s"></span>1.00</td>
-            </tr>
-            <tr>
-              <td class="task">Full management</td>
-              <td class="num lead"><span class="bar" style="--v: 0.67; --d: 0.2s"></span>0.67</td>
-              <td class="num"><span class="bar" style="--v: 0.09; --d: 0.3s"></span>0.09</td>
-              <td class="num"><span class="bar" style="--v: 0.62; --d: 0.4s"></span>0.62</td>
-            </tr>
+            {% for row in bench.rows %}
+              {% set row_index = loop.index0 %}
+              {% set scores = bench.columns | map(attribute='cells') | map(attribute=row.task_id) | map(attribute='score') | list %}
+              {% set best = scores | max %}
+              <tr>
+                <td class="task">{{ row.label }}</td>
+                {% for column in bench.columns %}
+                  {% set score = column.cells[row.task_id].score %}
+                  {# The bars draw in on a diagonal, so the eye reads the table
+                     in the order the numbers matter. #}
+                  <td class="num{% if score == best %} lead{% endif %}">
+                    <span
+                      class="bar"
+                      style="--v: {{ score }}; --d: {{ '%.2f' | format((row_index + loop.index0) * 0.1) }}s"
+                    ></span>{{ "%.2f" | format(score) }}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
-      <div data-reveal style="--d: 0.12s">
-        <p style="margin-top: 0" class="muted">
+      <div data-reveal class="scores__note">
+        <p class="muted scores__lede">
           Scores are bounded to the open interval <span class="mono">(0,1)</span>, deterministic
           across seeds, and reproducible from a single command. The frontier LLM is competitive on
           full management and honestly weaker on narrow classification. A finding, not a slogan.
         </p>
         <div class="statline">
           <div class="stat">
-            <div class="n">3×3×3</div>
+            <div class="n">
+              {{ bench.grid.tasks | length }}×{{ bench.grid.personas | length }}×{{ bench.grid.seeds | length }}
+            </div>
             <div class="l">tasks × personas × seeds</div>
           </div>
+          {% if bench.cost_usd_per_episode %}
+            <div class="stat">
+              <div class="n">≈${{ "%.3f" | format(bench.cost_usd_per_episode) }}</div>
+              <div class="l">per managed episode</div>
+            </div>
+          {% endif %}
           <div class="stat">
-            <div class="n">≈$0.009</div>
-            <div class="l">per managed episode</div>
-          </div>
-          <div class="stat">
-            <div class="n">100%</div>
-            <div class="l">actions audit-logged</div>
+            <div class="n">{{ bench.grid.episodes_per_column }}</div>
+            <div class="l">episodes scored per column</div>
           </div>
         </div>
+        <p class="muted scores__provenance">
+          {% set recorded = bench.columns | rejectattr('deterministic') | list %}
+          Regenerate with <span class="mono">{{ bench.reproduce }}</span>; CI re-runs the
+          deterministic columns on every build and fails if they have moved.
+          {%- if recorded %}
+            {{ recorded | map(attribute='label') | join(', ') }} needs a real provider key and
+            real money, so it is a recorded run
+            ({{ recorded[0].measured_at[:10] }}) rather than a reproduced one.
+          {%- endif %}
+        </p>
       </div>
     </div>
   </div>

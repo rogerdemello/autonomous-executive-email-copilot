@@ -238,9 +238,69 @@ h3 {
   color: var(--ink);
 }
 
+/* The mobile disclosure menu. Hidden above the breakpoint, where the real nav
+ * links are visible; below it, it is the only route to Sign in. */
+.mobile-nav {
+  display: none;
+  position: relative;
+}
+
+.mobile-nav > summary {
+  list-style: none;
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.mobile-nav > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mobile-nav[open] > summary {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.mobile-nav__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 190px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  z-index: 50;
+}
+
+.mobile-nav__panel a {
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.mobile-nav__panel a:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
 @media (max-width: 760px) {
   .top nav .hide {
     display: none;
+  }
+  .mobile-nav {
+    display: block;
   }
 }
 
@@ -690,10 +750,27 @@ table.bench thead th {
   font-weight: 500;
 }
 
-table.bench td.num {
+table.bench td.num,
+table.bench th.num-head {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.scores__note {
+  --d: 0.12s;
+}
+
+.scores__lede {
+  margin-top: 0;
+}
+
+/* Where the numbers came from, and which column CI can and cannot re-run.
+ * Small, but it is the difference between "measured" and "asserted". */
+.scores__provenance {
+  margin: 24px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
 }
 
 table.bench td.task {
@@ -1910,6 +1987,13 @@ table.data td.when {
   letter-spacing: 0.1em;
   color: var(--muted);
   text-transform: uppercase;
+}
+
+/* <picture> is inline by default, which would leave a baseline gap under the
+ * frame. Every screenshot is wrapped in one for the WebP source. */
+.shot picture,
+.day-photo picture {
+  display: block;
 }
 
 .shot img {

@@ -3,6 +3,8 @@ rule that no page anywhere publishes a price or names a plan tier."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -36,6 +38,62 @@ def test_landing_links_to_the_live_demo(client):
     body = client.get("/").text
     assert "Try the live demo" in body
     assert 'href="/login"' in body
+
+
+class TestBenchmarkIsMeasured:
+    """The proof section is headed "Measured, not guessed."
+
+    It used to be hardcoded <td> values and literal bar widths. These tests
+    hold the rendered page to the artifact, and the artifact to the benchmark.
+    """
+
+    def test_every_rendered_score_comes_from_the_artifact(self, client):
+        from app.web.routes import landing_metrics
+
+        body = client.get("/").text
+        artifact = landing_metrics()
+        assert artifact["columns"], "the artifact must carry at least one column"
+        for column in artifact["columns"]:
+            assert column["label"] in body
+            for cell in column["cells"].values():
+                assert f"{cell['score']:.2f}" in body
+                # The bar width is the score, not a separately-typed number.
+                assert f"--v: {cell['score']}" in body
+
+    def test_grid_tile_is_derived_not_asserted(self, client):
+        from app.web.routes import landing_metrics
+
+        grid = landing_metrics()["grid"]
+        shape = f"{len(grid['tasks'])}×{len(grid['personas'])}×{len(grid['seeds'])}"
+        assert shape in client.get("/").text
+
+    def test_working_day_counts_come_from_the_demo_mailbox(self, client):
+        """ "38 messages classified" described no run of anything. These are the
+        shipped demo mailbox through the real policy."""
+        from app.web.routes import landing_metrics
+
+        demo = landing_metrics()["demo"]
+        body = client.get("/").text
+        assert str(demo["messages"]) in body
+        assert str(demo["held_for_approval"]) in body
+        assert str(demo["auto_applied"]) in body
+
+    def test_a_missing_artifact_fails_loudly(self, monkeypatch, client):
+        """Never fall back to invented numbers under a heading that says
+        "measured" — a silent fallback is invisible in production."""
+        import app.web.routes as routes
+
+        monkeypatch.setattr(routes, "_landing_metrics_cache", None)
+        monkeypatch.setattr(routes, "_LANDING_METRICS_PATH", Path("no-such-artifact.json"))
+        with pytest.raises(RuntimeError, match="build_landing_metrics"):
+            routes.landing_metrics()
+
+    def test_the_artifact_agrees_with_a_fresh_benchmark_run(self):
+        """The gate CI runs. Slow-ish but deterministic and offline: it is the
+        only thing standing between the page and a stale number."""
+        import scripts.build_landing_metrics as build
+
+        assert build.check() == 0
 
 
 def test_security_txt_served(client):

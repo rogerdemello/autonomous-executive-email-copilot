@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    # security-scan-green carries the whole launch pass and is many commits
+    # ahead of main. Without it here, none of that work had ever run in CI —
+    # the triggers only fired on the default branch and on PRs.
+    branches: [main, master, security-scan-green]
   pull_request:
 
 concurrency:
@@ -53,6 +56,14 @@ jobs:
         with:
           files: coverage.xml
         continue-on-error: true  # don't fail CI when no token is configured
+      # "Measured, not guessed" is the heading over the landing page's proof
+      # section. This is what makes it enforceable: the deterministic benchmark
+      # columns and the demo-workspace counts are re-run and compared against
+      # the committed artifact the page renders, so a policy change that moves
+      # a score turns the build red instead of quietly making the page wrong.
+      - name: Landing benchmark artifact is still true
+        if: matrix.python-version == '3.12'
+        run: python scripts/build_landing_metrics.py --check
       - name: Draft-quality gate (deterministic rubric over the committed drafts)
         if: matrix.python-version == '3.12'
         run: python scripts/eval_drafts.py --json draft_quality_report.json

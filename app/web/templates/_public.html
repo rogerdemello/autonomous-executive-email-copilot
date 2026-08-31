@@ -24,6 +24,27 @@
         <a class="hide" href="/login">Sign in</a>
         <a class="btn btn--primary" href="/signup">Start free</a>
       {% endif %}
+
+      {# Everything with `.hide` disappears at 760px — including Sign in, which
+         left an existing customer on a phone with no way into the product from
+         the front page. A <details> disclosure rather than a JS drawer: the
+         rest of this site works with scripting off and the menu should too. #}
+      <details class="mobile-nav">
+        <summary aria-label="Open the menu">
+          <span aria-hidden="true">☰</span>
+        </summary>
+        <div class="mobile-nav__panel">
+          <a href="/#how">How it works</a>
+          <a href="/#tour">See it work</a>
+          <a href="/#proof">Proof</a>
+          {% if current_user %}
+            <a href="/app/inbox">Open app</a>
+          {% else %}
+            <a href="/login">Sign in</a>
+          {% endif %}
+          <a href="/contact-sales">Talk to us</a>
+        </div>
+      </details>
     </nav>
   </div>
 </header>

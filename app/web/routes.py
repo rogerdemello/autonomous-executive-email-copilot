@@ -25,7 +25,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_message_count
 from app.core.config import get_settings
-from app.core.paths import TEMPLATES_DIR
+from app.core.paths import DATA_ROOT, TEMPLATES_DIR
 from app.core.security import lead_submission_allowed, login_attempt_allowed
 from app.saas import licensing, oauth, rbac
 from app.saas.auth import AuthError, AuthService
@@ -254,11 +254,40 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Public pages
 # --------------------------------------------------------------------------- #
+_LANDING_METRICS_PATH = DATA_ROOT / "landing_metrics.json"
+_landing_metrics_cache: dict[str, Any] | None = None
+
+
+def landing_metrics() -> dict[str, Any]:
+    """The benchmark artifact the proof section renders.
+
+    Loaded once and cached: it is a small file that only changes when
+    ``scripts/build_landing_metrics.py`` runs.
+
+    A missing artifact is a **hard failure**, not a fallback to hardcoded
+    numbers. The section it feeds is headed "Measured, not guessed"; silently
+    degrading to invented values is the precise failure mode that heading
+    exists to rule out, and it would be invisible in production.
+    """
+    global _landing_metrics_cache
+    if _landing_metrics_cache is None:
+        try:
+            with open(_LANDING_METRICS_PATH, encoding="utf-8") as handle:
+                _landing_metrics_cache = json.load(handle)
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                f"Landing benchmark artifact missing or unreadable at "
+                f"{_LANDING_METRICS_PATH}. Generate it with: "
+                f"python scripts/build_landing_metrics.py"
+            ) from exc
+    return _landing_metrics_cache
+
+
 @web_router.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def landing(request: Request) -> HTMLResponse:
     # HEAD as well as GET: load balancers, uptime probes, and link unfurlers all
     # HEAD the root, and a 405 there reads as an outage.
-    return _render(request, "landing.html")
+    return _render(request, "landing.html", {"bench": landing_metrics()})
 
 
 @web_router.get("/welcome", include_in_schema=False)
