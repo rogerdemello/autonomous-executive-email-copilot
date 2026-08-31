@@ -1,0 +1,236 @@
+tests/test_security.py
+  s_cfcb9569c37279::t_7750d38ab7c91c 5,118-179
+.github/PULL_REQUEST_TEMPLATE.md
+  s_cfcb9569c37279::t_1dd44fcdeb41b1 26-27,29
+app/llm/tools.py
+  s_cfcb9569c37279::t_126c5681ffad70 4,6
+  s_cfcb9569c37279::t_913ebb736b5f85 178-182,184
+mypy.ini
+  s_cfcb9569c37279::t_bbcacf653e53c2 13-15,17-26
+tests/test_saas_licensing.py
+  s_cfcb9569c37279::t_4f9fcff36bfbf4 28-36,38-40
+CHANGELOG.md
+  s_cfcb9569c37279::t_1b63b3cec1b5ea 12-36,71-100
+  s_cfcb9569c37279::t_3d87f3175553f2 117-122
+app/saas/models_db.py
+  s_cfcb9569c37279::t_1dd44fcdeb41b1 54-56,81-86
+scripts/run_benchmark.py
+  s_cfcb9569c37279::t_fd8f4de83462ba 115-123
+app/saas/licensing.py
+  s_cfcb9569c37279::t_1dd44fcdeb41b1 119-123
+app/saas/mailbox_routes.py
+  s_cfcb9569c37279::t_bcac4c680539c0 115-116,118-122
+  s_cfcb9569c37279::t_6ef0c7d4051e77 65,69,76
+  s_cfcb9569c37279::t_9c0b231839c69a 117,123-131
+app/llm/providers/circuit_breaker.py
+  s_cfcb9569c37279::t_42926f075d11a8 129-133
+.github/workflows/ci.yml
+  s_cfcb9569c37279::t_1394c282ff0c14 200,202-204,206-224
+  s_cfcb9569c37279::t_fc2a8c98e72375 130-133
+app/live_api.py
+  s_cfcb9569c37279::t_913ebb736b5f85 93-97
+  s_cfcb9569c37279::t_126c5681ffad70 5,9
+README.md
+  s_cfcb9569c37279::t_36d2de838d7df1 1-621
+helm/exec-email-copilot/values.yaml
+  s_cfcb9569c37279::t_04847c6e045a7b 10-21,78-79,83-100,105-106,129-135,139-147
+helm/exec-email-copilot/templates/_preflight.tpl
+  s_cfcb9569c37279::t_221c43f0e01f89 1-72
+app/llm/providers/gemini_provider.py
+  s_cfcb9569c37279::t_7f5b88c38d6cce 61,67-71,73-74
+  s_cfcb9569c37279::t_a8591241273a59 4
+helm/exec-email-copilot/templates/deployment.yaml
+  s_cfcb9569c37279::t_045def963ac4ce 1,76-91
+app/core/security.py
+  s_cfcb9569c37279::t_508e9b71181ec1 81-84
+pyproject.toml
+  s_cfcb9569c37279::t_1dd44fcdeb41b1 69-72,74
+SECURITY.md
+  s_cfcb9569c37279::t_3d87f3175553f2 53-58
+docs/ROADMAP.md
+  s_cfcb9569c37279::t_fa450bb151ee0e 307-355
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "fb58efeaeab75e05da2a957a063076c8f20f7eb7",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:3a6e792cc013e16ad16db2ca994ebb9a61aae1c5541cc9f461e5668f0dd7151d",
+      "total_additions": 477,
+      "total_deletions": 159,
+      "accepted_lines": 4714,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:3a6e792cc013e16ad16db2ca994ebb9a61aae1c5541cc9f461e5668f0dd7151d",
+      "stats": {
+        "total_additions": 477,
+        "total_deletions": 159,
+        "accepted_lines": 4714,
+        "overriden_lines": 0,
+        "files": {
+          ".github/PULL_REQUEST_TEMPLATE.md": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 44,
+            "overriden_lines": 0
+          },
+          ".github/workflows/ci.yml": {
+            "total_additions": 27,
+            "total_deletions": 4,
+            "accepted_lines": 224,
+            "overriden_lines": 0
+          },
+          "CHANGELOG.md": {
+            "total_additions": 61,
+            "total_deletions": 10,
+            "accepted_lines": 197,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 4,
+            "total_deletions": 4,
+            "accepted_lines": 621,
+            "overriden_lines": 0
+          },
+          "SECURITY.md": {
+            "total_additions": 6,
+            "total_deletions": 1,
+            "accepted_lines": 93,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 0,
+            "total_deletions": 19,
+            "accepted_lines": 363,
+            "overriden_lines": 0
+          },
+          "app/core/security.py": {
+            "total_additions": 4,
+            "total_deletions": 0,
+            "accepted_lines": 198,
+            "overriden_lines": 0
+          },
+          "app/live_api.py": {
+            "total_additions": 7,
+            "total_deletions": 2,
+            "accepted_lines": 148,
+            "overriden_lines": 0
+          },
+          "app/llm/providers/circuit_breaker.py": {
+            "total_additions": 8,
+            "total_deletions": 7,
+            "accepted_lines": 285,
+            "overriden_lines": 0
+          },
+          "app/llm/providers/gemini_provider.py": {
+            "total_additions": 9,
+            "total_deletions": 4,
+            "accepted_lines": 113,
+            "overriden_lines": 0
+          },
+          "app/llm/tools.py": {
+            "total_additions": 8,
+            "total_deletions": 5,
+            "accepted_lines": 223,
+            "overriden_lines": 0
+          },
+          "app/saas/licensing.py": {
+            "total_additions": 5,
+            "total_deletions": 6,
+            "accepted_lines": 203,
+            "overriden_lines": 0
+          },
+          "app/saas/mailbox_routes.py": {
+            "total_additions": 34,
+            "total_deletions": 33,
+            "accepted_lines": 131,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 9,
+            "total_deletions": 3,
+            "accepted_lines": 475,
+            "overriden_lines": 0
+          },
+          "docs/ROADMAP.md": {
+            "total_additions": 52,
+            "total_deletions": 0,
+            "accepted_lines": 352,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/templates/_preflight.tpl": {
+            "total_additions": 72,
+            "total_deletions": 0,
+            "accepted_lines": 72,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/templates/deployment.yaml": {
+            "total_additions": 17,
+            "total_deletions": 0,
+            "accepted_lines": 150,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/values.yaml": {
+            "total_additions": 50,
+            "total_deletions": 4,
+            "accepted_lines": 191,
+            "overriden_lines": 0
+          },
+          "mypy.ini": {
+            "total_additions": 13,
+            "total_deletions": 28,
+            "accepted_lines": 35,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 5,
+            "total_deletions": 10,
+            "accepted_lines": 119,
+            "overriden_lines": 0
+          },
+          "scripts/run_benchmark.py": {
+            "total_additions": 8,
+            "total_deletions": 10,
+            "accepted_lines": 166,
+            "overriden_lines": 0
+          },
+          "tests/test_packaging.py": {
+            "total_additions": 0,
+            "total_deletions": 1,
+            "accepted_lines": 45,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_licensing.py": {
+            "total_additions": 12,
+            "total_deletions": 5,
+            "accepted_lines": 87,
+            "overriden_lines": 0
+          },
+          "tests/test_security.py": {
+            "total_additions": 63,
+            "total_deletions": 0,
+            "accepted_lines": 179,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
