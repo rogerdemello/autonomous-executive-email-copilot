@@ -17,6 +17,7 @@ from app.core.db import get_session
 
 from .models_db import (
     AuditLogEntry,
+    Commitment,
     License,
     MailboxConnection,
     Organization,
@@ -50,6 +51,7 @@ class DataLifecycleService:
                 "mailbox_connections": rows(MailboxConnection, MailboxConnection.org_id),
                 "processed_messages": rows(ProcessedMessage, ProcessedMessage.org_id),
                 "proposed_actions": rows(ProposedAction, ProposedAction.org_id),
+                "commitments": rows(Commitment, Commitment.org_id),
                 "audit_log": rows(AuditLogEntry, AuditLogEntry.org_id),
                 "sales_leads": rows(SalesLead, SalesLead.org_id),
             }
@@ -65,6 +67,7 @@ class DataLifecycleService:
             # Children first (FK-safe): actions -> messages -> licenses/mailboxes ->
             # audit/leads -> users -> the org itself.
             for label, model, column in (
+                ("commitments", Commitment, Commitment.org_id),
                 ("proposed_actions", ProposedAction, ProposedAction.org_id),
                 ("processed_messages", ProcessedMessage, ProcessedMessage.org_id),
                 ("licenses", License, License.org_id),

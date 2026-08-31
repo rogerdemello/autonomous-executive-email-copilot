@@ -95,8 +95,20 @@ class TestOAuthPure:
         assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
         assert "client_id=cid" in url
         assert "state=st" in url
-        assert "gmail.readonly" in url
+        assert "gmail.modify" in url
         assert "access_type=offline" in url
+
+    def test_google_does_not_request_redundant_readonly_scope(self):
+        """gmail.modify already grants read.
+
+        Requesting a scope the product does not need is a documented rejection
+        reason in Google's OAuth verification, and /privacy justifies each
+        requested scope one by one — a scope here with no row there is a
+        mismatch a reviewer will find.
+        """
+        scopes = oauth.get_provider("google").scopes
+        assert "https://www.googleapis.com/auth/gmail.readonly" not in scopes
+        assert "https://www.googleapis.com/auth/gmail.modify" in scopes
 
     def test_provider_availability(self, monkeypatch):
         assert not oauth.provider_available("google")  # no creds by default

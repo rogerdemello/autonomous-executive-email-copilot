@@ -67,7 +67,7 @@ from .core.approval import (
     reject_request as _reject_request,
 )
 from .core.config import get_settings
-from .core.db import migrate_db
+from .core.db import migrate_db, schema_is_current
 from .core.logging_config import configure_logging, get_request_id, set_request_id
 from .core.models import (
     Action,
@@ -94,7 +94,12 @@ from .live_api import dashboard_router
 configure_logging()
 logger = logging.getLogger(__name__)
 
-migrate_db()
+# NOTE: the schema migration deliberately does NOT run here. Running it at
+# import time made an unreachable database a hard import crash — the process
+# died before FastAPI existed, so /health/ready could never report the degraded
+# state it was written to report, and the container crash-looped with no
+# diagnosable endpoint. It now runs in the lifespan (see below), and readiness
+# asks the database directly via schema_is_current().
 repo = EpisodeRepository()
 preference_repo = UserPreferenceRepository()
 team_settings_repo = TeamSettingsRepository()
@@ -126,6 +131,14 @@ async def lifespan(_app: FastAPI):
             "secret. Set AUTH_SECRET_KEY to a long random value in production; "
             "all session tokens and license keys are signed with it."
         )
+    # Bring the schema up to date. A failure here is logged and leaves the
+    # service running but NOT ready: /health/ready returns 503, so an
+    # orchestrator withholds traffic and an operator gets a reachable process
+    # with a readable log instead of a crash loop.
+    try:
+        migrate_db()
+    except Exception:  # noqa: BLE001 - report not-ready rather than crash at boot
+        logger.exception("Schema migration failed at startup; service will report not-ready")
     global _OTEL_CONFIGURED
     if not _OTEL_CONFIGURED:
         settings = get_settings()
@@ -136,6 +149,16 @@ async def lifespan(_app: FastAPI):
             enable_console=False,
         )
         _OTEL_CONFIGURED = True
+    if get_settings().demo_seed_on_startup:
+        # Deployments without a shell (Render) boot straight into a presentable
+        # demo. Best-effort: a seed failure is logged, never fatal — the service
+        # must come up either way.
+        try:
+            from app.saas.demo_seed import seed_demo
+
+            seed_demo()
+        except Exception:  # noqa: BLE001 - seeding must not block startup
+            logger.exception("Demo seed on startup failed; continuing without it")
     sync_worker = None
     if get_settings().sync_worker_enabled:
         from app.saas.sync_worker import BackgroundSyncWorker
@@ -164,10 +187,14 @@ app = FastAPI(
     license_info={"name": "MIT"},
     lifespan=lifespan,
 )
+# Credentials only ride when origins are pinned: "*" + allow_credentials is a
+# combination browsers reject and that would otherwise hand any origin the
+# session cookie on a misconfigured deployment.
+_cors_origins = get_settings().cors_origin_list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origin_list,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -198,12 +225,27 @@ class _V1PathRewriteMiddleware:
 
 
 app.add_middleware(_V1PathRewriteMiddleware)
+
+# Baseline security headers on every response (HTML, JSON, static). Added after
+# CORS/rewrite so it wraps them (outermost of the three); TrustedHost outermost
+# of all so a forged Host header is rejected before any routing happens.
+from .web.middleware import SecurityHeadersMiddleware  # noqa: E402
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+_allowed_hosts = get_settings().allowed_host_list
+if _allowed_hosts != ["*"]:
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
+
 app.include_router(dashboard_router)
 
 # Commercial SaaS layer: accounts, organizations (tenants), RBAC, sales-led
 # licensing. Additive — it does not touch the benchmark/scoring routes.
 from .saas.mailbox_routes import mailbox_router  # noqa: E402
 from .saas.marketing import marketing_router  # noqa: E402
+from .saas.operator_routes import operator_router  # noqa: E402
 from .saas.processing_routes import inbox_router  # noqa: E402
 from .saas.routes import (  # noqa: E402
     SAAS_SELF_AUTH_PREFIXES,
@@ -218,6 +260,7 @@ app.include_router(billing_router)
 app.include_router(mailbox_router)
 app.include_router(inbox_router)
 app.include_router(marketing_router)
+app.include_router(operator_router)
 
 from .web.routes import (  # noqa: E402
     _LoginRedirect,
@@ -377,7 +420,13 @@ def liveness() -> dict[str, str]:
 
 @app.get("/health/ready")
 def readiness() -> Response:
-    """Readiness: dependencies (the database) are reachable."""
+    """Readiness: the schema is migrated and the database is reachable."""
+    if not schema_is_current():
+        # The startup migration failed or the DB is behind the code. Serving
+        # traffic against an unmigrated schema produces confusing column errors
+        # deep inside a request; failing the probe keeps traffic away instead.
+        logger.warning("Readiness probe failed: schema is missing or behind")
+        return JSONResponse(status_code=503, content={"status": "not_ready", "reason": "schema"})
     try:
         # A trivial lookup exercises the DB connection without side effects.
         repo.get_episode(episode_id="__readiness_probe__")
@@ -1062,29 +1111,61 @@ def alerts_endpoint() -> dict:
     }
 
 
-def _parse_metrics_to_dict() -> dict:
-    output = get_metrics_output()
-    result = {}
-    for line in output.strip().split("\n"):
-        if line:
-            parts = line.split("{")
-            name = parts[0]
-            if len(parts) > 1:
-                label_part = parts[1].rstrip("}")
-                labels = {}
-                for label in label_part.split(","):
-                    if "=" in label:
-                        k, v = label.split("=", 1)
-                        labels[k] = v.strip('"')
+def parse_metrics_text(output: str) -> dict[str, float]:
+    """Flatten Prometheus exposition text into a dict for alert rules.
+
+    Every series is keyed twice:
+
+    - by its full identity (``requests_total_method=GET_path=/health_status=200``)
+    - by its bare metric name (``requests_total``), summed across all label sets
+
+    Two bugs made every default rule in :mod:`telemetry.alerts` unable to fire,
+    whatever the service did, and both are fixed here:
+
+    1. An *unlabelled* line is ``name value`` separated by a space, but the name
+       was taken as everything before the first ``{`` — so ``episodes_failed_total 3``
+       was stored under the key ``"episodes_failed_total 3"``. Rules reading
+       ``episodes_failed_total`` found nothing. Fixed by splitting off the value.
+    2. A *labelled* line was stored only under its composite key. Since
+       ``record_request`` always passes labels, ``requests_total`` never existed
+       as a key at all. Fixed by also accumulating the label-free total.
+
+    Pure function of its input so it can be tested deterministically — the
+    metrics registry is process-global, so a test that scrapes it is at the
+    mercy of every other test that ran first.
+    """
+    result: dict[str, float] = {}
+    for raw in output.strip().split("\n"):
+        line = raw.strip()
+        if not line or line.startswith("#"):  # skip HELP/TYPE comment lines
+            continue
+        try:
+            value = float(line.split()[-1])
+        except ValueError:
+            continue
+        head = line.split("{", 1)
+        # The metric name is the first whitespace-delimited token, which strips
+        # the trailing value off an unlabelled line.
+        name = head[0].split()[0]
+        key = name
+        if len(head) > 1:
+            labels = {}
+            for label in head[1].split("}")[0].split(","):
+                if "=" in label:
+                    k, v = label.split("=", 1)
+                    labels[k] = v.strip('"')
+            if labels:
                 key = name + "_" + "_".join(f"{k}={v}" for k, v in sorted(labels.items()))
-            else:
-                key = name
-            value_part = line.split()[-1]
-            try:
-                result[key] = float(value_part)
-            except ValueError:
-                pass
+        result[key] = value
+        if key != name:
+            # Sum the label dimensions away so `requests_total` means what a
+            # rule author expects: every request, regardless of path or status.
+            result[name] = result.get(name, 0.0) + value
     return result
+
+
+def _parse_metrics_to_dict() -> dict:
+    return parse_metrics_text(get_metrics_output())
 
 
 def main() -> None:
@@ -1099,7 +1180,15 @@ def main() -> None:
     import uvicorn
 
     port = int(os.environ.get("PORT", "8000"))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)  # nosec B104 - container service binds all interfaces by design
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",  # nosec B104 - container service binds all interfaces by design
+        port=port,
+        # Same proxy posture as the Dockerfile CMD: real client IPs behind a
+        # platform proxy; spoofable only if the process is exposed directly.
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover - manual invocation

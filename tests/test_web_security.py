@@ -177,3 +177,111 @@ class TestDemoCredentialDisclosure:
         html = client.get("/login").text
         assert DEMO_OWNER_PASSWORD not in html
         assert "Demo workspace" not in html
+
+
+# --------------------------------------------------------------------------- #
+# Security headers
+# --------------------------------------------------------------------------- #
+class TestSecurityHeaders:
+    def test_baseline_headers_on_every_surface(self, client):
+        for path in ("/", "/login", "/health"):
+            headers = client.get(path).headers
+            assert headers["X-Content-Type-Options"] == "nosniff", path
+            assert headers["X-Frame-Options"] == "DENY", path
+            assert headers["Referrer-Policy"] == "strict-origin-when-cross-origin", path
+            assert "Content-Security-Policy" in headers, path
+            assert "frame-ancestors 'none'" in headers["Content-Security-Policy"], path
+
+    def test_docs_pages_are_exempt_from_csp_only(self, client):
+        """Swagger UI loads its assets from a CDN; a same-origin CSP blanks it.
+
+        The exemption is CSP alone — the other headers still apply."""
+        headers = client.get("/docs").headers
+        assert "Content-Security-Policy" not in headers
+        assert headers["X-Content-Type-Options"] == "nosniff"
+
+    def test_hsts_only_in_production(self, client, monkeypatch):
+        """HSTS from a plain-HTTP dev server would poison localhost for HTTPS."""
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        assert "Strict-Transport-Security" not in client.get("/health").headers
+
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("AUTH_SECRET_KEY", "a-long-random-production-secret")
+        hsts = client.get("/health").headers.get("Strict-Transport-Security", "")
+        assert "max-age=31536000" in hsts
+
+    def test_csp_allows_no_inline_scripts(self):
+        """base.html moved its theme snippet into /static/theme-init.js so the
+        CSP can hold the line at script-src 'self'. Pin both halves."""
+        from app.core.paths import STATIC_DIR, TEMPLATES_DIR
+
+        assert (STATIC_DIR / "theme-init.js").is_file()
+        base = (TEMPLATES_DIR / "base.html").read_text(encoding="utf-8")
+        assert "<script>" not in base
+
+
+# --------------------------------------------------------------------------- #
+# Login throttle
+# --------------------------------------------------------------------------- #
+class TestLoginThrottle:
+    def test_off_by_default(self, client, monkeypatch):
+        from app.core.security import login_rate_limiter
+
+        monkeypatch.delenv("LOGIN_RATE_LIMIT_PER_MINUTE", raising=False)
+        login_rate_limiter.reset()
+        for _ in range(5):
+            page = client.get("/login").text
+            response = client.post(
+                "/login",
+                data={
+                    "csrf_token": csrf_from(page),
+                    "email": "nobody@example.com",
+                    "password": "wrong-password",
+                },
+            )
+            assert response.status_code == 401
+        login_rate_limiter.reset()
+
+    def test_web_login_429s_past_the_limit(self, client, monkeypatch):
+        from app.core import security
+        from app.core.security import login_rate_limiter
+
+        monkeypatch.setenv("LOGIN_RATE_LIMIT_PER_MINUTE", "2")
+        # Freeze the limiter's clock: bcrypt makes each failed attempt slow
+        # enough that three of them can straddle a real minute boundary, which
+        # resets the fixed window mid-test.
+        monkeypatch.setattr(security.time, "time", lambda: 1_000_000.0)
+        login_rate_limiter.reset()
+        statuses = []
+        for _ in range(3):
+            page = client.get("/login").text
+            response = client.post(
+                "/login",
+                data={
+                    "csrf_token": csrf_from(page),
+                    "email": "nobody@example.com",
+                    "password": "wrong-password",
+                },
+            )
+            statuses.append(response.status_code)
+        assert statuses == [401, 401, 429]
+        assert "Too many sign-in attempts" in response.text
+        login_rate_limiter.reset()
+
+    def test_api_login_429s_past_the_limit(self, client, monkeypatch):
+        from app.core import security
+        from app.core.security import login_rate_limiter
+
+        monkeypatch.setenv("LOGIN_RATE_LIMIT_PER_MINUTE", "2")
+        # Same frozen clock as the web variant — see the comment there.
+        monkeypatch.setattr(security.time, "time", lambda: 1_000_000.0)
+        login_rate_limiter.reset()
+        statuses = [
+            client.post(
+                "/auth/login",
+                json={"email": "nobody@example.com", "password": "wrong-password"},
+            ).status_code
+            for _ in range(3)
+        ]
+        assert statuses == [401, 401, 429]
+        login_rate_limiter.reset()

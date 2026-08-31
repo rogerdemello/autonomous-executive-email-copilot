@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "generated_at": "2026-08-31T11:53:18+00:00",
+  "grid": {
+    "tasks": [
+      "easy_classification",
+      "medium_prioritization",
+      "hard_full_management"
+    ],
+    "personas": [
+      "strict_ceo",
+      "balanced",
+      "chill_manager"
+    ],
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "episodes_per_column": 27
+  },
+  "rows": [
+    {
+      "task_id": "easy_classification",
+      "label": "Classification"
+    },
+    {
+      "task_id": "medium_prioritization",
+      "label": "Prioritization"
+    },
+    {
+      "task_id": "hard_full_management",
+      "label": "Full management"
+    }
+  ],
+  "columns": [
+    {
+      "agent": "baseline",
+      "label": "Heuristic",
+      "deterministic": true,
+      "measured_at": "2026-08-31T11:53:18+00:00",
+      "cells": {
+        "easy_classification": {
+          "score": 1.0,
+          "n": 9,
+          "cost_usd": 0.0
+        },
+        "medium_prioritization": {
+          "score": 1.0,
+          "n": 9,
+          "cost_usd": 0.0
+        },
+        "hard_full_management": {
+          "score": 0.669,
+          "n": 9,
+          "cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "agent": "multiagent",
+      "label": "Multi-agent",
+      "deterministic": true,
+      "measured_at": "2026-08-31T11:53:18+00:00",
+      "cells": {
+        "easy_classification": {
+          "score": 0.8,
+          "n": 9,
+          "cost_usd": 0.0
+        },
+        "medium_prioritization": {
+          "score": 1.0,
+          "n": 9,
+          "cost_usd": 0.0
+        },
+        "hard_full_management": {
+          "score": 0.0857,
+          "n": 9,
+          "cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "agent": "llm",
+      "label": "LLM (gpt-4o)",
+      "deterministic": false,
+      "measured_at": "2026-06-14T00:00:00+00:00",
+      "provenance": "Recorded run against Azure OpenAI gpt-4o over this same grid; see docs/WHITEPAPER.md. Re-measure with: python scripts/build_landing_metrics.py --agents baseline multiagent llm",
+      "model": "gpt-4o",
+      "cells": {
+        "easy_classification": {
+          "score": 0.17,
+          "n": 9,
+          "cost_usd": 0.009
+        },
+        "medium_prioritization": {
+          "score": 1.0,
+          "n": 9,
+          "cost_usd": 0.009
+        },
+        "hard_full_management": {
+          "score": 0.62,
+          "n": 9,
+          "cost_usd": 0.009
+        }
+      }
+    }
+  ],
+  "cost_usd_per_episode": 0.009,
+  "demo": {
+    "messages": 51,
+    "classified": 51,
+    "urgent": 12,
+    "spam_filed": 8,
+    "deferred": 31,
+    "replies_drafted": 6,
+    "escalated": 6,
+    "held_for_approval": 12,
+    "auto_applied": 82
+  },
+  "reproduce": "python scripts/build_landing_metrics.py"
+}

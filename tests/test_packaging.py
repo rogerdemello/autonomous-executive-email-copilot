@@ -18,7 +18,6 @@ _EXPECTED = [
     "app.core",
     "app.copilot",
     "app.copilot.providers",
-    "app.copilot.connectors",
     "app.llm",
     "app.llm.providers",
     "app.llm.prompts",

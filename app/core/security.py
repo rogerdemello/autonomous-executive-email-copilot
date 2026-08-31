@@ -66,6 +66,9 @@ DEFAULT_TENANT = "default"
 # open-by-default posture is unchanged — with no token configured, everything
 # stays open for local/eval use.
 SENSITIVE_READ_PREFIXES = (
+    # Prometheus metrics leak operational detail (paths, error rates, episode
+    # counts); once an operator configures a token, reading them requires it.
+    "/metrics",
     "/approval",
     "/episodes",
     "/preferences",
@@ -75,6 +78,10 @@ SENSITIVE_READ_PREFIXES = (
     "/dashboard",
     "/alerts",
     "/state",
+    # A rendered episode report is the same episode data as /episodes, in a
+    # PDF. It was the one read on this surface that stayed anonymous with a
+    # token configured, purely because nobody listed it here.
+    "/reports",
 )
 
 
@@ -158,3 +165,34 @@ class FixedWindowRateLimiter:
 
 # Shared limiter instance used by the API middleware.
 rate_limiter = FixedWindowRateLimiter()
+
+# Separate instance for sign-in attempts so login throttling and the general
+# request limit can't consume each other's windows (and each can be reset
+# independently in tests).
+login_rate_limiter = FixedWindowRateLimiter()
+
+
+# Lead capture (contact-sales) is unauthenticated by design; its own limiter
+# instance with a fixed, deliberately tight cap keeps it from being a spam or
+# DB-fill vector without a config knob nobody would tune.
+lead_rate_limiter = FixedWindowRateLimiter()
+LEAD_SUBMISSIONS_PER_MINUTE = 5
+
+
+def lead_submission_allowed(ip: str) -> bool:
+    return lead_rate_limiter.allow(f"lead:{ip}", LEAD_SUBMISSIONS_PER_MINUTE)
+
+
+def login_attempt_allowed(ip: str, email: str, limit_per_minute: int) -> bool:
+    """Fixed-window cap on sign-in attempts, per client IP AND per account.
+
+    The per-email key blunts a distributed guess against one account; the
+    per-IP key blunts one host spraying many accounts. Both windows are
+    consumed on every attempt (no short-circuit) so the counters agree.
+    A non-positive limit disables the throttle.
+    """
+    if limit_per_minute <= 0:
+        return True
+    ip_ok = login_rate_limiter.allow(f"login:ip:{ip}", limit_per_minute)
+    email_ok = login_rate_limiter.allow(f"login:email:{email.strip().lower()}", limit_per_minute)
+    return ip_ok and email_ok

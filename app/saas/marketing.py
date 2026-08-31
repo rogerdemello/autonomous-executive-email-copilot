@@ -1,10 +1,11 @@
 """Machine-readable marketing endpoints.
 
-The human-facing landing and pricing pages are templates in :mod:`app.web`.
-What stays here is the data behind them: ``/api/pricing`` serves the plan
-registry directly from :data:`licensing.PLANS`, so published pricing can never
-drift from what the entitlement system actually grants — and ``security.txt``,
-which is generated rather than checked in, for the same reason.
+The human-facing pages are templates in :mod:`app.web`. Acquisition is
+self-serve — sign up, connect a mailbox, 14-day trial — and there is
+deliberately no published price anywhere: continued access is arranged through
+a conversation and granted as a signed key by the licensing/entitlement
+system. What stays here is ``security.txt``, which is generated rather than
+checked in so it can never drift from the deployment's real contact address.
 """
 
 from __future__ import annotations
@@ -12,11 +13,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
 
 from app.core.config import get_settings
-
-from . import licensing
 
 marketing_router = APIRouter(tags=["marketing"])
 
@@ -24,22 +23,6 @@ marketing_router = APIRouter(tags=["marketing"])
 SECURITY_POLICY_URL = (
     "https://github.com/rogerdemello/autonomous-executive-email-copilot/blob/main/SECURITY.md"
 )
-
-
-@marketing_router.get("/api/pricing", include_in_schema=True)
-def pricing_json() -> JSONResponse:
-    """Machine-readable pricing, sourced from the entitlement plan registry."""
-    plans = [
-        {
-            "key": p.key,
-            "name": p.name,
-            "seats": p.seats,
-            "features": list(p.features),
-            "price_display": p.price_display,
-        }
-        for p in licensing.PLANS.values()
-    ]
-    return JSONResponse({"plans": plans})
 
 
 @marketing_router.get(

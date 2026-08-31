@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal
+from typing import Any, Literal, cast, get_args
 
-from app.core.models import Action
+from app.core.models import Action, ActionType
 
 ActionTypeStr = Literal["classify", "reply", "defer", "escalate", "prioritize"]
 LabelTypeStr = Literal["spam", "normal", "urgent"]
@@ -175,10 +175,13 @@ def parse_tool_call_to_action(function_name: str, arguments: str) -> Action | No
     except json.JSONDecodeError:
         return None
 
-    action_type = function_name
-    valid_types: list[str] = ["classify", "reply", "defer", "escalate", "prioritize"]
-    if action_type not in valid_types:
+    # Derived from the Literal rather than retyped beside it: a hand-written
+    # copy of the same five strings is a list that silently stops matching the
+    # type it is supposed to validate against.
+    valid_types = get_args(ActionType)
+    if function_name not in valid_types:
         return None
+    action_type = cast(ActionType, function_name)
 
     return Action(
         action_type=action_type,

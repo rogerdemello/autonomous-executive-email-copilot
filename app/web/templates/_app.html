@@ -3,6 +3,10 @@
 {# Chrome for the signed-in product: sidebar nav + page header. #}
 
 {% block body %}
+{# The skip link .visually-hidden was written for. Sidebar nav is five links
+   plus a sign-out form, which every keyboard and screen-reader user had to
+   walk past on every page load to reach the content. #}
+<a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
   <aside class="side">
     <a class="logo" href="/app/inbox"><span class="glyph">EC</span> Email Copilot</a>
@@ -13,16 +17,40 @@
         Approvals
         {% if pending_count %}<span class="count">{{ pending_count }}</span>{% endif %}
       </a>
+      <a href="/app/waiting" {% if active == 'waiting' %}aria-current="page"{% endif %}>
+        Waiting on
+        {% if waiting and waiting.overdue %}
+          <span class="count count--overdue" title="{{ waiting.overdue }} past their date">{{ waiting.overdue }}</span>
+        {% elif waiting and waiting.open %}
+          <span class="count count--quiet">{{ waiting.open }}</span>
+        {% endif %}
+      </a>
       <a href="/app/activity" {% if active == 'activity' %}aria-current="page"{% endif %}>Activity</a>
       <a href="/app/connect" {% if active == 'connect' %}aria-current="page"{% endif %}>Mailboxes</a>
       <a href="/app/settings" {% if active == 'settings' %}aria-current="page"{% endif %}>Settings</a>
     </nav>
 
+    {# The product's whole argument, on every page. A draft that has been read
+       back against its source is the thing none of the alternatives do, and
+       the count was sitting in the database rendering as a single chip. #}
+    {% if verification and verification.checked %}
+      <div class="verify-badge">
+        <div class="verify-badge__n">{{ verification.checked }}</div>
+        <div class="verify-badge__l">drafts verified against their source</div>
+        {% if verification.claims_caught %}
+          <div class="verify-badge__caught">
+            <span class="chip chip--warn">{{ verification.claims_caught }}</span>
+            unsupported claim{{ 's' if verification.claims_caught != 1 }} caught
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
     <div class="side__foot">
       <div class="who">{{ current_user.full_name or current_user.email }}</div>
       <div>{{ organization.name }} · {{ current_user.role }}</div>
-      <div style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
-        <form method="post" action="/logout" style="margin: 0">
+      <div class="side__actions">
+        <form method="post" action="/logout">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
           <button class="btn btn--sm" type="submit">Sign out</button>
         </form>
@@ -38,7 +66,9 @@
     </div>
   </aside>
 
-  <div class="main">
+  {# A landmark, not a div: this is the one region of the page a screen-reader
+     user wants to jump straight to, and there was no way to name it. #}
+  <main class="main" id="content">
     <header class="main__head">
       <div>
         <h1>{% block heading %}{% endblock %}</h1>
@@ -49,9 +79,12 @@
 
     <div class="main__body">
       {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
-      {% if notice %}<div class="banner banner--ok">{{ notice }}</div>{% endif %}
+      {# role="status" so a post-approval notice is announced rather than
+         silently appearing. settings.html used to be the only page that got
+         this, by re-rendering its own copy of the banner. #}
+      {% if notice %}<div class="banner banner--ok" role="status">{{ notice }}</div>{% endif %}
       {% block main %}{% endblock %}
     </div>
-  </div>
+  </main>
 </div>
 {% endblock %}

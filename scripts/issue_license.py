@@ -9,6 +9,17 @@ revoked later. The key is handed to the customer, who activates it via
 The key is signed with ``AUTH_SECRET_KEY`` — it MUST match the running server's
 secret, or activation will fail signature verification.
 
+NOTE: against a deployed instance, use the operator API instead — the server
+already holds the production signing secret and database, so nothing secret
+has to leave the box:
+
+    curl -X POST https://<app>/operator/licenses \
+      -H "Authorization: Bearer $OPERATOR_TOKEN" \
+      -d '{"org_id": "<org_id>", "plan": "business", "valid_days": 365}'
+
+This script remains the local/dev path (and works wherever your shell's
+DATABASE_URL and AUTH_SECRET_KEY point at the target instance's).
+
 Examples
 --------
     # Mint a 1-year Business license for org <id> and print the key

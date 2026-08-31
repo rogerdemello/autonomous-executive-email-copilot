@@ -7,8 +7,18 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
-# Replica count for horizontal scaling (stateless API servers).
-replicaCount: 2
+# Replica count.
+#
+# ONE, deliberately. The app is a stateless API *except* for the background
+# sync worker, which has no leader election and no distributed lock
+# (app/saas/sync_worker.py): two replicas sync every connected mailbox twice
+# on every sweep. templates/_preflight.tpl refuses to render replicaCount > 1
+# while SYNC_WORKER_ENABLED is true, or without DATABASE_URL, rather than
+# letting either fail quietly in production.
+#
+# To scale out: set DATABASE_URL to Postgres, set SYNC_WORKER_ENABLED=false
+# here, and run the worker as its own single-replica Deployment.
+replicaCount: 1
 
 # Service configuration.
 service:
@@ -65,15 +75,35 @@ probes:
 # MODEL_NAME / LLM_PROVIDER are configuration, not secrets, and these are the
 # names app/core/config.py actually reads (the old secret carried LLM_MODEL,
 # which nothing consumes).
+# Several of these are enforced by templates/_preflight.tpl: the chart refuses
+# to render without them rather than booting with an unsafe default.
 extraEnv:
   - name: LOG_LEVEL
     value: info
+  # Required. Makes the app hard-fail on unsafe configuration at startup
+  # instead of logging a warning and serving traffic anyway.
+  - name: ENVIRONMENT
+    value: production
+  # Required, and must be your real hostname(s). At "*" a forged Host header
+  # can influence the absolute URLs the app builds (password-reset links, the
+  # OAuth redirect URI).
+  - name: ALLOWED_HOSTS
+    value: copilot.example.com
+  # Required, and must be your real origin. At "*" the app disables
+  # credentialed CORS entirely, so a browser client cannot hold a session.
+  - name: CORS_ORIGINS
+    value: https://copilot.example.com
+  # Used to build user-facing links (password reset, member invites).
+  - name: APP_PUBLIC_URL
+    value: https://copilot.example.com
+  # Closes the benchmark/simulator surface (POSTs and its sensitive reads).
+  # Leave empty only for a private evaluation cluster.
   - name: API_AUTH_TOKEN
     value: ""
   - name: RATE_LIMIT_PER_MINUTE
     value: "60"
-  - name: CORS_ORIGINS
-    value: "*"
+  - name: LOGIN_RATE_LIMIT_PER_MINUTE
+    value: "10"
   - name: OTEL_EXPORTER_OTLP_ENDPOINT
     value: ""
   - name: MODEL_NAME
@@ -96,9 +126,25 @@ existingSecret: ""
 # Values used to create a default secret when existingSecret is empty.
 # Secrets only — model/provider selection lives in extraEnv above.
 secret:
+  # REQUIRED — the chart refuses to render without it. Signs every session
+  # token and license key, and derives the key that encrypts customers'
+  # mailbox OAuth tokens. Generate with:
+  #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+  # Back it up. Rotating it invalidates every session, every license key you
+  # have issued, and every stored mailbox token.
+  AUTH_SECRET_KEY: ""
   OPENAI_API_KEY: ""
   ANTHROPIC_API_KEY: ""
   GOOGLE_API_KEY: ""
+  # Optional; the deployment mounts these only when present. Without the OAuth
+  # pairs no real mailbox can be connected, and without SMTP a password reset
+  # is logged rather than sent while the UI says it was sent.
+  GOOGLE_OAUTH_CLIENT_ID: ""
+  GOOGLE_OAUTH_CLIENT_SECRET: ""
+  MICROSOFT_OAUTH_CLIENT_ID: ""
+  MICROSOFT_OAUTH_CLIENT_SECRET: ""
+  SMTP_USER: ""
+  SMTP_PASSWORD: ""
 
 # PersistentVolumeClaim for the data directory (SQLite store, draft cache,
 # scenario fixtures). When enabled, an init container seeds the volume from

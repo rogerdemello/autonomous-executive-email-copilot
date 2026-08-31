@@ -126,10 +126,11 @@ class CircuitBreakingProvider(LLMProvider):
             failure_threshold=3,
             recovery_timeout=30.0,
         )
-
-    @property
-    def provider_name(self) -> str:
-        return f"{self._primary.provider_name}+circuit"
+        # Set here rather than exposed as a read-only property: `provider_name`
+        # is a writeable attribute on LLMProvider, and a property cannot
+        # override one. Same value, and it now agrees with the interface this
+        # class claims to implement.
+        self.provider_name = f"{primary.provider_name}+circuit"
 
     @property
     def capabilities(self) -> set[str]:

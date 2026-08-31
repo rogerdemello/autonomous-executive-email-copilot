@@ -37,6 +37,26 @@ def test_resolve_database_url_ignores_blank(monkeypatch):
     assert db.resolve_database_url() == db.DEFAULT_SQLITE_URL
 
 
+@pytest.mark.parametrize(
+    "raw",
+    [
+        # Render / Heroku hand out the short scheme, which SQLAlchemy 2 rejects.
+        "postgres://user:pass@host:5432/copilot",
+        # The plain scheme selects psycopg2, which is not the driver we ship.
+        "postgresql://user:pass@host:5432/copilot",
+    ],
+)
+def test_resolve_database_url_normalizes_postgres_schemes(monkeypatch, raw):
+    monkeypatch.setenv("DATABASE_URL", raw)
+    assert db.resolve_database_url() == "postgresql+psycopg://user:pass@host:5432/copilot"
+
+
+def test_resolve_database_url_respects_explicit_driver(monkeypatch):
+    """An explicit +driver choice is the operator's; never rewrite it."""
+    monkeypatch.setenv("DATABASE_URL", POSTGRES2_URL)
+    assert db.resolve_database_url() == POSTGRES2_URL
+
+
 def test_engine_kwargs_for_sqlite():
     """SQLite keeps its connect args and gets no pool tuning."""
     kwargs = db.build_engine_kwargs(db.DEFAULT_SQLITE_URL)
@@ -66,9 +86,16 @@ def test_engine_kwargs_for_postgres_has_pool_tuning(url):
 
 
 def test_default_engine_is_sqlite_and_crud_works():
-    """The module-level engine defaults to SQLite and existing CRUD still works."""
-    assert db.engine.dialect.name == "sqlite"
-    assert db.DATABASE_URL.startswith("sqlite:///")
+    """The module-level engine defaults to SQLite and existing CRUD still works.
+
+    The SQLite assertions only apply when nothing overrode the default — the
+    CI Postgres job runs this same suite with DATABASE_URL pointing at a real
+    server, where the CRUD half is exactly what we want exercised."""
+    import os
+
+    if not os.environ.get("DATABASE_URL"):
+        assert db.engine.dialect.name == "sqlite"
+        assert db.DATABASE_URL.startswith("sqlite:///")
 
     db.init_db()
     repo = EpisodeRepository()

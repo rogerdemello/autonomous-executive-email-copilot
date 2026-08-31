@@ -125,7 +125,11 @@ def high_error_rate_rule(threshold: float = 0.1) -> AlertRule:
 
 def cost_spike_rule(threshold: float = 100.0) -> AlertRule:
     def condition(metrics: dict) -> bool:
-        total_cost = metrics.get("cost_usd_total", 0)
+        # `llm_cost_usd_total` is what the LLM path actually records (see
+        # telemetry.metrics.record_llm_usage, called from app/llm/drafter.py and
+        # app/llm/agent.py). The old `cost_usd_total` was never emitted by
+        # anything, so this rule could not fire.
+        total_cost = metrics.get("llm_cost_usd_total", 0)
         return total_cost > threshold
 
     return AlertRule(

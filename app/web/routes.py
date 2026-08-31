@@ -17,19 +17,20 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_account_email, demo_message_count
+from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_message_count
 from app.core.config import get_settings
-from app.core.paths import TEMPLATES_DIR
+from app.core.paths import DATA_ROOT, TEMPLATES_DIR
+from app.core.security import lead_submission_allowed, login_attempt_allowed
 from app.saas import licensing, oauth, rbac
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingError, BillingService
-from app.saas.deps import SESSION_COOKIE
+from app.saas.deps import SESSION_COOKIE, reject_shared_demo_account
 from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
 from app.saas.models_db import ROLE_ADMIN, ROLE_OWNER, ROLES
@@ -38,6 +39,7 @@ from app.saas.provider_factory import BrokenConnectionError, build_provider
 from app.saas.rbac import role_at_least
 from app.saas.repository import (
     AuditRepository,
+    CommitmentRepository,
     MailboxRepository,
     OrganizationRepository,
     ProcessedMessageRepository,
@@ -68,12 +70,14 @@ _mailboxes = MailboxRepository()
 _messages = ProcessedMessageRepository()
 _actions = ProposedActionRepository()
 _audit = AuditRepository()
+_commitments = CommitmentRepository()
 
-# How the demo workspace is seeded, and what the login page offers to a visitor.
-DEMO_ORG_NAME = "Northwind Industries"
-DEMO_OWNER_EMAIL = demo_account_email()
-DEMO_OWNER_PASSWORD = "demo1234"
-DEMO_OWNER_NAME = "Alex Chen"
+# The demo workspace's identity lives with the seeder; re-exported here because
+# tests and scripts historically import these names from this module.
+from app.saas.demo_seed import (  # noqa: E402
+    DEMO_OWNER_EMAIL,
+    DEMO_OWNER_PASSWORD,
+)
 
 _ACTION_LABELS = {
     "reply": "Send a reply",
@@ -99,13 +103,14 @@ _PROVIDER_LABELS = {
     "google": "Gmail",
     "microsoft": "Microsoft 365",
 }
+# Only the two feature flags that are actually *enforced* have labels, because
+# a label is what makes one renderable. The other four (approvals, analytics,
+# priority support, custom models) used to render as chips in Settings while
+# gating nothing whatsoever — a decorative claim about what the customer had
+# bought. If a flag starts gating something, give it a label then.
 _FEATURE_LABELS = {
-    licensing.FEATURE_APPROVALS: "Human-in-the-loop approvals",
-    licensing.FEATURE_ANALYTICS: "Analytics & reporting",
-    licensing.FEATURE_AUDIT_LOG: "Audit log",
-    licensing.FEATURE_SSO: "SSO (SAML/OIDC)",
-    licensing.FEATURE_PRIORITY_SUPPORT: "Priority support & SLA",
-    licensing.FEATURE_CUSTOM_MODELS: "Bring-your-own / custom models",
+    licensing.FEATURE_AUDIT_LOG: "Audit log",  # enforced: routes.activity
+    licensing.FEATURE_SSO: "SSO (SAML/OIDC)",  # enforced: saas.routes SSO login
 }
 
 
@@ -115,7 +120,7 @@ _FEATURE_LABELS = {
 def _short_time(value: Any) -> str:
     """Render an ISO timestamp as something a human reads at a glance."""
     if not value:
-        return "—"
+        return "-"
     try:
         moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except (TypeError, ValueError):
@@ -147,6 +152,18 @@ def _audit_detail(value: Any) -> str:
 
 templates.env.filters["short_time"] = _short_time
 templates.env.filters["audit_detail"] = _audit_detail
+
+
+def _client_ip(request: Request) -> str | None:
+    """The caller's address, for the audit log.
+
+    Every audit call on this router omitted this while the JSON API passed it,
+    so ``saas_audit_log.ip`` was NULL for the surface people actually use —
+    the one column an incident review reaches for first. Behind a platform
+    proxy uvicorn is started with ``--proxy-headers``, so ``request.client``
+    is already the real client rather than the proxy.
+    """
+    return request.client.host if request.client else None
 
 
 def _current_user(request: Request) -> dict | None:
@@ -236,7 +253,8 @@ def _safe_next(raw: str | None) -> str:
 
 
 def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
-    """Shared context for every signed-in page: org, role, pending badge."""
+    """Shared context for every signed-in page: org, role, pending badge, and
+    the two numbers that say what the copilot is for."""
     org = _orgs.get(user["org_id"]) or {"name": "Your workspace", "slug": ""}
     pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100)
     return {
@@ -245,17 +263,55 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
         "pending_count": pending.get("total", 0),
         "can_manage": role_at_least(user["role"], ROLE_ADMIN),
         "connections": _mailboxes.list_for_org(user["org_id"]),
+        # "142 drafts verified · 9 claims caught" is the claim no competitor
+        # can make, and it lived in the database being rendered as one chip on
+        # one page. Two grouped queries, on every signed-in page.
+        "verification": _actions.verification_summary(user["org_id"]),
+        # The overdue count drives the "Waiting on" badge in the sidebar: a
+        # follow-up tracker you have to remember to open is not a tracker.
+        "waiting": _commitments.summarize_for_org(
+            user["org_id"], datetime.now(timezone.utc).date().isoformat()
+        ),
     }
 
 
 # --------------------------------------------------------------------------- #
 # Public pages
 # --------------------------------------------------------------------------- #
+_LANDING_METRICS_PATH = DATA_ROOT / "landing_metrics.json"
+_landing_metrics_cache: dict[str, Any] | None = None
+
+
+def landing_metrics() -> dict[str, Any]:
+    """The benchmark artifact the proof section renders.
+
+    Loaded once and cached: it is a small file that only changes when
+    ``scripts/build_landing_metrics.py`` runs.
+
+    A missing artifact is a **hard failure**, not a fallback to hardcoded
+    numbers. The section it feeds is headed "Measured, not guessed"; silently
+    degrading to invented values is the precise failure mode that heading
+    exists to rule out, and it would be invisible in production.
+    """
+    global _landing_metrics_cache
+    if _landing_metrics_cache is None:
+        try:
+            with open(_LANDING_METRICS_PATH, encoding="utf-8") as handle:
+                _landing_metrics_cache = json.load(handle)
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                f"Landing benchmark artifact missing or unreadable at "
+                f"{_LANDING_METRICS_PATH}. Generate it with: "
+                f"python scripts/build_landing_metrics.py"
+            ) from exc
+    return _landing_metrics_cache
+
+
 @web_router.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def landing(request: Request) -> HTMLResponse:
     # HEAD as well as GET: load balancers, uptime probes, and link unfurlers all
     # HEAD the root, and a 405 there reads as an outage.
-    return _render(request, "landing.html")
+    return _render(request, "landing.html", {"bench": landing_metrics()})
 
 
 @web_router.get("/welcome", include_in_schema=False)
@@ -264,26 +320,113 @@ def welcome_redirect() -> RedirectResponse:
     return RedirectResponse(url="/", status_code=301)
 
 
-@web_router.get("/pricing", response_class=HTMLResponse)
-def pricing(request: Request) -> HTMLResponse:
-    order = ["trial", "team", "business", "enterprise"]
-    plans = [licensing.PLANS[key] for key in order if key in licensing.PLANS]
-    return _render(request, "pricing.html", {"plans": plans})
+@web_router.get("/pricing", include_in_schema=False)
+def pricing_redirect() -> RedirectResponse:
+    """There is no public pricing page. Old links land on the homepage.
+
+    Kept as a redirect rather than deleted: the page existed once, links to it
+    are in the wild, and a 301 costs one route while a 404 costs a visitor.
+    """
+    return RedirectResponse(url="/", status_code=301)
+
+
+@web_router.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request) -> HTMLResponse:
+    """The privacy policy.
+
+    On the critical path for Gmail: Google will not begin OAuth verification
+    for the restricted ``gmail.*`` scopes without a published privacy policy on
+    the app's own domain, and the policy must carry the Limited Use
+    disclosure. The scope table it renders is kept in sync with
+    :mod:`app.saas.oauth` by hand — a mismatch there is a rejection reason.
+    """
+    return _render(request, "privacy.html")
+
+
+@web_router.get("/terms", response_class=HTMLResponse)
+def terms(request: Request) -> HTMLResponse:
+    return _render(request, "terms.html")
+
+
+@web_router.get("/contact-sales", response_class=HTMLResponse)
+def contact_sales_form(request: Request) -> HTMLResponse:
+    return _render(request, "contact_sales.html", {"form": {}})
+
+
+@web_router.post("/contact-sales")
+def contact_sales_submit(
+    request: Request,
+    email: str = Form(""),
+    name: str = Form(""),
+    company: str = Form(""),
+    seats: str = Form(""),
+    message: str = Form(""),
+    website: str = Form(""),  # honeypot — humans never see or fill it
+    csrf_token: str = Form(""),
+) -> HTMLResponse:
+    verify_csrf(request, csrf_token)
+    form = {"email": email, "name": name, "company": company, "seats": seats, "message": message}
+
+    if website.strip():
+        # A filled honeypot is a bot. Pretend success so it learns nothing;
+        # persist nothing.
+        return _render(request, "contact_sales.html", {"form": form, "submitted": True})
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not lead_submission_allowed(client_ip):
+        return _render(
+            request,
+            "contact_sales.html",
+            {"form": form, "error": "Too many submissions. Wait a minute and try again."},
+            status_code=429,
+        )
+
+    email = email.strip()
+    if "@" not in email or len(email) > 320:
+        return _render(
+            request,
+            "contact_sales.html",
+            {"form": form, "error": "Enter a valid work email so we can reply."},
+            status_code=400,
+        )
+
+    seats_value: int | None = None
+    if seats.strip():
+        try:
+            seats_value = max(1, min(int(seats), 100000))
+        except ValueError:
+            seats_value = None
+
+    BillingService().capture_lead(
+        email=email,
+        kind="contact_sales",
+        name=name.strip() or None,
+        company=company.strip() or None,
+        seats=seats_value,
+        message=message.strip()[:4000] or None,
+    )
+    return _render(request, "contact_sales.html", {"form": form, "submitted": True})
 
 
 # --------------------------------------------------------------------------- #
 # Authentication
 # --------------------------------------------------------------------------- #
 def _demo_credentials() -> dict | None:
-    """Credentials to advertise on the login page — never in production.
+    """Credentials to advertise on the login page.
 
-    Two conditions, and the order matters. ``ENVIRONMENT=production`` blocks this
-    outright: if someone seeds the demo workspace on a public deployment, this
-    would otherwise print a working password on an unauthenticated page. Only
-    then do we check the account exists, so a non-production instance without the
-    demo shows no hint for an account nobody can use.
+    Gated on ``demo_login_active``: off in production unless the operator sets
+    ``DEMO_LOGIN_ENABLED=true`` explicitly — the posture for a public demo
+    deployment that sells with the prefilled login. Advertising the credential
+    is safe there because it is already public (repo, README, docs/DEMO.md),
+    the workspace holds only fixture data and no OAuth tokens, and the shared
+    account is blocked from every destructive/administrative action (see
+    ``reject_shared_demo_account``). The remaining risk is vandalism of the
+    demo itself, which ``POST /operator/demo/reseed`` undoes in seconds.
+
+    The account-exists check comes second so a deployment without the demo
+    shows no hint for an account nobody can use.
     """
-    if get_settings().is_production:
+    if not get_settings().demo_login_active:
         return None
     if not _users.get_by_email_global(DEMO_OWNER_EMAIL):
         return None
@@ -324,6 +467,20 @@ def login_submit(
     csrf_token: str = Form(""),
 ) -> Response:
     verify_csrf(request, csrf_token)
+    client_ip = request.client.host if request.client else "unknown"
+    if not login_attempt_allowed(client_ip, email, get_settings().login_rate_limit_per_minute):
+        return _render(
+            request,
+            "login.html",
+            {
+                "error": "Too many sign-in attempts. Wait a minute and try again.",
+                "email": email,
+                "next_url": _safe_next(next),
+                "sso_enabled": get_settings().sso_enabled,
+                "demo_credentials": _demo_credentials(),
+            },
+            status_code=429,
+        )
     try:
         user = _auth.authenticate(email=email, password=password)
     except AuthError as exc:
@@ -334,6 +491,7 @@ def login_submit(
             action="auth.login_failed",
             org_id=account["org_id"] if account else None,
             detail={"email": email, "surface": "web"},
+            ip=_client_ip(request),
         )
         return _render(
             request,
@@ -354,6 +512,7 @@ def login_submit(
         org_id=user["org_id"],
         actor_user_id=user["id"],
         detail={"email": user["email"], "surface": "web"},
+        ip=_client_ip(request),
     )
     response = RedirectResponse(url=_safe_next(next), status_code=303)
     set_session_cookie(response, token)
@@ -417,6 +576,7 @@ def signup_submit(
         org_id=org["id"],
         actor_user_id=user["id"],
         detail={"email": user["email"], "surface": "web"},
+        ip=_client_ip(request),
     )
     # Straight to connect: a workspace with no mailbox has nothing to show.
     response = RedirectResponse(url="/app/connect", status_code=303)
@@ -463,6 +623,7 @@ def forgot_password_submit(
             action="auth.password_reset_requested",
             org_id=account["org_id"] if account else None,
             detail={"email": email, "surface": "web"},
+            ip=_client_ip(request),
         )
     # The confirmation is identical whether or not the account exists, so this
     # form cannot be used to probe which emails are registered.
@@ -505,6 +666,7 @@ def reset_password_submit(
         org_id=user["org_id"],
         actor_user_id=user["id"],
         detail={"surface": "web"},
+        ip=_client_ip(request),
     )
     return RedirectResponse(url="/login?notice=reset", status_code=303)
 
@@ -557,6 +719,7 @@ def connect_demo(request: Request, csrf_token: str = Form("")) -> Response:
         actor_user_id=user["id"],
         target=connection["id"],
         detail={"provider": DEMO_PROVIDER_KEY, "account_email": DEMO_OWNER_EMAIL},
+        ip=_client_ip(request),
     )
     _sync_connection(user, connection)
     return RedirectResponse(url="/app/inbox", status_code=303)
@@ -567,6 +730,8 @@ def connect_provider(request: Request, provider_key: str, csrf_token: str = Form
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    # The shared demo login must not attach a real mailbox to the shared org.
+    reject_shared_demo_account(user)
     try:
         authorize_url = _mailbox_service.start_connect(
             org_id=user["org_id"],
@@ -597,6 +762,7 @@ def disconnect_mailbox(
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
     _mailbox_service.disconnect(
         org_id=user["org_id"], user_id=user["id"], connection_id=connection_id
     )
@@ -652,39 +818,120 @@ def app_root() -> RedirectResponse:
     return RedirectResponse(url="/app/inbox", status_code=307)
 
 
+# One screen of messages. Small enough that the list stays scannable, large
+# enough that a normal morning fits on one page.
+INBOX_PAGE_SIZE = 50
+
+# The classifier's own vocabulary, offered as filters. Anything else in the
+# query string is ignored rather than passed to the database.
+_INBOX_LABELS = ("urgent", "normal", "spam")
+_INBOX_PRIORITIES = ("high", "medium", "low")
+
+
 @web_router.get("/app/inbox", response_class=HTMLResponse)
-def inbox(request: Request, message: str | None = None) -> HTMLResponse:
+def inbox(
+    request: Request,
+    message: str | None = None,
+    notice: str | None = None,
+    q: str | None = None,
+    label: str | None = None,
+    priority: str | None = None,
+    page: int = 1,
+) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "inbox")
+    context["notice"] = _REVIEW_NOTICES.get(notice or "")
 
-    listing = _messages.list_for_org(user["org_id"], limit=100)
+    query = (q or "").strip()[:200]
+    label = label if label in _INBOX_LABELS else None
+    priority = priority if priority in _INBOX_PRIORITIES else None
+    page = max(1, page)
+
+    listing = _messages.list_for_org(
+        user["org_id"],
+        limit=INBOX_PAGE_SIZE,
+        offset=(page - 1) * INBOX_PAGE_SIZE,
+        q=query or None,
+        label=label,
+        priority=priority,
+    )
     messages = listing.get("messages", [])
+    total = listing.get("total", len(messages))
+
     context["messages"] = messages
-    context["message_total"] = listing.get("total", len(messages))
+    # The summary tiles describe the *workspace*, so they must not move when a
+    # filter is applied: "8 triaged" while a spam filter is on is a false
+    # statement about what the copilot did, and it is the first number on the
+    # page. `message_total` is the filtered count and drives the list header.
+    context["message_total"] = total
+    context["mailbox_total"] = _messages.list_for_org(user["org_id"], limit=1)["total"]
     context["summary"] = _actions.summarize_for_org(user["org_id"])
+    context["filters"] = {"q": query, "label": label, "priority": priority}
+    context["filter_labels"] = _INBOX_LABELS
+    context["filter_priorities"] = _INBOX_PRIORITIES
+    # Paging state the template renders directly, so it never has to recompute
+    # "which page am I on" from a total and a limit.
+    context["page"] = {
+        "number": page,
+        "size": INBOX_PAGE_SIZE,
+        "total": total,
+        "first": (page - 1) * INBOX_PAGE_SIZE + 1 if messages else 0,
+        "last": (page - 1) * INBOX_PAGE_SIZE + len(messages),
+        "has_prev": page > 1,
+        "has_next": page * INBOX_PAGE_SIZE < total,
+        "query": _query_string(q=query, label=label, priority=priority),
+    }
+
+    # Labels for exactly this page. Previously this listed the org's first 500
+    # actions and filtered in Python, so spam chips vanished from older
+    # messages on any tenant past that threshold.
+    context["labels"] = _actions.labels_for_messages(user["org_id"], [m["id"] for m in messages])
+    context["thread_sizes"] = _messages.thread_sizes(
+        user["org_id"], [m.get("thread_id") for m in messages]
+    )
 
     selected = None
-    if messages:
-        selected = next((m for m in messages if m["id"] == message), messages[0])
+    if message:
+        # Look the requested message up directly rather than searching the
+        # current page: a link from Approvals, or a bookmark, points at a
+        # message that a filter or a later page may well have excluded.
+        selected = _messages.get(user["org_id"], message)
+    if selected is None and messages:
+        selected = messages[0]
     context["selected"] = selected
 
     if selected:
-        actions = _actions.list_for_org(user["org_id"], limit=500).get("actions", [])
-        selected_actions = [
-            a
-            for a in actions
-            if a["message_id"] == selected["id"] and a["action_type"] != "classify"
-        ]
+        actions = _actions.list_for_message(user["org_id"], selected["id"])
+        # The classifier's verdict (spam / normal / urgent) is shown as a label,
+        # not an action block, so classify actions are filtered out below but
+        # their labels are surfaced per message.
+        selected_actions = [a for a in actions if a["action_type"] != "classify"]
         context["selected_actions"] = selected_actions
+        context["selected_label"] = next(
+            (a["label"] for a in actions if a["action_type"] == "classify" and a.get("label")),
+            None,
+        )
+        context["thread"] = (
+            _messages.list_thread(user["org_id"], selected.get("thread_id") or "")
+            if selected.get("thread_id")
+            else []
+        )
         # A stored rationale is the model's own reasoning about *this* decision;
         # prefer it over reasoning reconstructed from the signals after the fact.
         stored = next((a["rationale"] for a in selected_actions if a.get("rationale")), None)
         context["selected_rationale"] = stored or _rationale_for(user["org_id"], selected)
     else:
         context["selected_actions"] = []
+        context["selected_label"] = None
+        context["thread"] = []
         context["selected_rationale"] = []
 
     return _render(request, "inbox.html", context)
+
+
+def _query_string(**params: Any) -> str:
+    """Encode the non-empty params as a query fragment (no leading '?')."""
+    return urlencode({k: v for k, v in params.items() if v})
 
 
 def _rationale_for(org_id: str, message: dict) -> list[str]:
@@ -708,12 +955,22 @@ def _rationale_for(org_id: str, message: dict) -> list[str]:
         f"Sender looks {_ROLE_LABELS.get(message.get('sender_role'), 'external').lower()}; "
         f"business value scored {message.get('business_value') or 0:.2f}.",
         f"Priority inferred as {message.get('priority_hint') or 'unknown'}, "
-        f"target response within {message.get('deadline_minutes') or '—'} minutes.",
+        f"target response within {message.get('deadline_minutes') or '-'} minutes.",
     ]
     risk = message.get("risk_tag")
     if risk and risk != "none":
         points.append(f"Risk vocabulary matched '{risk}', which drives where this is routed.")
     return points
+
+
+# Post-redirect notices for review decisions, keyed rather than free-text so
+# the query string can never render attacker-chosen copy (same rule as the
+# settings notices below).
+_REVIEW_NOTICES = {
+    "sent": "Approved. The reply was sent, and the decision is on the audit log.",
+    "approved": "Approved. The action was applied, and the decision is on the audit log.",
+    "rejected": "Rejected. Nothing was sent. The copilot learns from the call you made.",
+}
 
 
 @web_router.post("/app/actions/{action_id}/approve")
@@ -728,6 +985,7 @@ def approve_action(
     user = _require_user(request)
     _require_manage(user)
 
+    action = _actions.get(user["org_id"], action_id)
     provider = _provider_for_action(user["org_id"], action_id)
     try:
         _sync.approve(
@@ -739,7 +997,8 @@ def approve_action(
         )
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    return RedirectResponse(url=_back_to(request, message), status_code=303)
+    notice = "sent" if action and action["action_type"] == "reply" else "approved"
+    return RedirectResponse(url=_back_to(request, message, notice), status_code=303)
 
 
 @web_router.post("/app/actions/{action_id}/reject")
@@ -756,15 +1015,22 @@ def reject_action(
         _sync.reject(org_id=user["org_id"], user_id=user["id"], action_id=action_id, comment=None)
     except ProcessingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    return RedirectResponse(url=_back_to(request, message), status_code=303)
+    return RedirectResponse(url=_back_to(request, message, "rejected"), status_code=303)
 
 
-def _back_to(request: Request, message_id: str) -> str:
+def _back_to(request: Request, message_id: str, notice: str | None = None) -> str:
     """Return the reviewer to where they were, not to a generic page."""
+    suffix = f"notice={notice}" if notice else ""
     referer = request.headers.get("referer", "")
     if "/app/approvals" in referer:
-        return "/app/approvals"
-    return f"/app/inbox?message={message_id}" if message_id else "/app/inbox"
+        return f"/app/approvals?{suffix}" if suffix else "/app/approvals"
+    if message_id:
+        return (
+            f"/app/inbox?message={message_id}&{suffix}"
+            if suffix
+            else f"/app/inbox?message={message_id}"
+        )
+    return f"/app/inbox?{suffix}" if suffix else "/app/inbox"
 
 
 def _provider_for_action(org_id: str, action_id: str):
@@ -784,25 +1050,42 @@ def _provider_for_action(org_id: str, action_id: str):
 
 
 @web_router.get("/app/approvals", response_class=HTMLResponse)
-def approvals(request: Request) -> HTMLResponse:
+def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "approvals")
+    context["notice"] = _REVIEW_NOTICES.get(notice or "")
 
-    pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100).get("actions", [])
-    items = []
-    for action in pending:
-        message = _messages.get(user["org_id"], action["message_id"])
-        if message:
-            items.append(
-                {
-                    "action": action,
-                    "message": message,
-                    # Approving is a decision; showing the reasoning next to the
-                    # button is what makes it an informed one.
-                    "rationale": action.get("rationale") or _rationale_for(user["org_id"], message),
-                }
-            )
-    context["actions"] = items
+    # One join, not one action query plus a message lookup per row. This is by
+    # design the busiest page in the product, so an N+1 here is the worst place
+    # for one.
+    pending = _actions.list_pending_with_messages(user["org_id"], limit=100)
+    context["actions"] = [
+        {
+            "action": item["action"],
+            "message": item["message"],
+            # Approving is a decision; showing the reasoning next to the button
+            # is what makes it an informed one.
+            "rationale": item["action"].get("rationale")
+            or _rationale_for(user["org_id"], item["message"]),
+        }
+        for item in pending["items"]
+    ]
+    context["pending_total"] = pending["total"]
+
+    # Approved actions the provider then refused. These were on no page at
+    # all, so a reviewer believed they had sent something they had not.
+    from app.saas.sync_service import MAX_SEND_RETRIES
+
+    failed = _actions.list_failed_sends(user["org_id"], max_retries=MAX_SEND_RETRIES + 1, limit=20)
+    context["failed_sends"] = [
+        {
+            "action": action,
+            "message": _messages.get(user["org_id"], action["message_id"]) or {},
+            "retryable": int(action.get("retry_count") or 0) < MAX_SEND_RETRIES,
+        }
+        for action in failed
+    ]
+
     # What the queue's past decisions have taught the copilot — shown beside
     # the queue those decisions came from, so the learning is auditable.
     from app.saas.learning import FeedbackService
@@ -811,23 +1094,146 @@ def approvals(request: Request) -> HTMLResponse:
     return _render(request, "approvals.html", context)
 
 
+# --------------------------------------------------------------------------- #
+# Waiting on: commitments in both directions
+# --------------------------------------------------------------------------- #
+WAITING_PAGE_SIZE = 100
+_COMMITMENT_DIRECTIONS = ("ours", "theirs")
+
+
+@web_router.get("/app/waiting", response_class=HTMLResponse)
+def waiting(
+    request: Request,
+    direction: str | None = None,
+    show: str | None = None,
+    notice: str | None = None,
+) -> HTMLResponse:
+    """What this workspace owes, and what it is waiting on.
+
+    The capability every competitor is missing and every review of them names.
+    An executive's real failure mode is not a mis-triaged message; it is a
+    promise made three weeks ago that nobody wrote down.
+    """
+    user = _require_user(request)
+    context = _app_context(request, user, "waiting")
+    context["notice"] = _WAITING_NOTICES.get(notice or "")
+
+    direction = direction if direction in _COMMITMENT_DIRECTIONS else None
+    status = "done" if show == "done" else "open"
+
+    listing = _commitments.list_for_org(
+        user["org_id"], status=status, direction=direction, limit=WAITING_PAGE_SIZE
+    )
+    today = datetime.now(timezone.utc).date().isoformat()
+    context["commitments"] = [
+        {**row, "overdue": bool(row["due_at"]) and row["due_at"] < today}
+        for row in listing["commitments"]
+    ]
+    context["filters"] = {"direction": direction, "show": status}
+    context["directions"] = _COMMITMENT_DIRECTIONS
+    return _render(request, "waiting.html", context)
+
+
+_WAITING_NOTICES = {
+    "done": "Marked done. It stays on the record under Done.",
+    "dropped": "Dismissed. The copilot will not raise it again.",
+    "reopened": "Reopened.",
+}
+
+
+@web_router.post("/app/commitments/{commitment_id}/{decision}")
+def resolve_commitment(
+    request: Request, commitment_id: str, decision: str, csrf_token: str = Form("")
+) -> Response:
+    """Mark a commitment done, dismiss it, or put it back.
+
+    "Dismissed" is a human saying this was never a real commitment. Keeping
+    that distinct from "done" is what makes the list worth reading: a tracker
+    you cannot correct becomes a tracker you stop opening.
+    """
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    status = {"done": "done", "dismiss": "dropped", "reopen": "open"}.get(decision)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Unknown decision")
+    if _commitments.get(user["org_id"], commitment_id) is None:
+        raise HTTPException(status_code=404, detail="That follow-up no longer exists")
+
+    _commitments.set_status(user["org_id"], commitment_id, status, actor_user_id=user["id"])
+    _audit.record(
+        action="commitment.resolve",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        target=commitment_id,
+        detail={"status": status},
+        ip=_client_ip(request),
+    )
+    notice = {"done": "done", "dropped": "dropped", "open": "reopened"}[status]
+    return RedirectResponse(url=f"/app/waiting?notice={notice}", status_code=303)
+
+
+ACTIVITY_PAGE_SIZE = 50
+
+
 @web_router.get("/app/activity", response_class=HTMLResponse)
-def activity(request: Request) -> HTMLResponse:
+def activity(
+    request: Request,
+    action: str | None = None,
+    actor: str | None = None,
+    page: int = 1,
+) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "activity")
     can_view = role_at_least(user["role"], ROLE_ADMIN)
     if can_view:
-        # Role decides who may look; the plan decides whether the feature
-        # exists at all. Renders as an error page with the upgrade path.
+        # Role decides who may look; the entitlement decides whether the
+        # feature exists at all. Renders as an error page with the way forward.
         try:
             _billing.require_feature(user["org_id"], licensing.FEATURE_AUDIT_LOG)
         except BillingError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     context["can_view"] = can_view
-    context["entries"] = _audit.list_for_org(user["org_id"], limit=100) if can_view else []
+
+    members = _users.list_for_org(user["org_id"])
     context["actor_names"] = {
-        member["id"]: member.get("full_name") or member["email"]
-        for member in _users.list_for_org(user["org_id"])
+        member["id"]: member.get("full_name") or member["email"] for member in members
+    }
+    context["members"] = members
+
+    if not can_view:
+        context["entries"] = []
+        context["available_actions"] = []
+        context["filters"] = {"action": None, "actor": None}
+        context["page"] = {"number": 1, "total": 0, "has_prev": False, "has_next": False}
+        return _render(request, "activity.html", context)
+
+    available = _audit.actions_for_org(user["org_id"])
+    # Only ever pass through a value the log actually contains: the filter is
+    # a dropdown, and an arbitrary query-string value has no business reaching
+    # a query or being echoed back into the page.
+    action = action if action in available else None
+    actor = actor if actor in context["actor_names"] else None
+    page = max(1, page)
+
+    result = _audit.page_for_org(
+        user["org_id"],
+        limit=ACTIVITY_PAGE_SIZE,
+        offset=(page - 1) * ACTIVITY_PAGE_SIZE,
+        action=action,
+        actor_user_id=actor,
+    )
+    context["entries"] = result["entries"]
+    context["available_actions"] = available
+    context["filters"] = {"action": action, "actor": actor}
+    context["page"] = {
+        "number": page,
+        "size": ACTIVITY_PAGE_SIZE,
+        "total": result["total"],
+        "first": (page - 1) * ACTIVITY_PAGE_SIZE + 1 if result["entries"] else 0,
+        "last": (page - 1) * ACTIVITY_PAGE_SIZE + len(result["entries"]),
+        "has_prev": page > 1,
+        "has_next": page * ACTIVITY_PAGE_SIZE < result["total"],
+        "query": _query_string(action=action, actor=actor),
     }
     return _render(request, "activity.html", context)
 
@@ -836,22 +1242,50 @@ def activity(request: Request) -> HTMLResponse:
 # the query string can never render attacker-chosen copy.
 _SETTINGS_NOTICES = {
     "password_changed": "Password updated.",
-    "license_activated": "License activated — your plan is live.",
+    "license_activated": "License activated. Your plan is live.",
     "role_updated": "Member role updated.",
     "member_removed": "Member removed from the workspace.",
 }
+
+
+def _days_remaining(expires_at: Any) -> int | None:
+    """Whole days left on an entitlement, floored at 0. None if undated."""
+    if not expires_at:
+        return None
+    try:
+        moment = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return max(0, (moment - datetime.now(timezone.utc)).days)
 
 
 def _settings_context(request: Request, user: dict) -> dict[str, Any]:
     context = _app_context(request, user, "settings")
     raw = _billing.current_entitlement(user["org_id"])
     members = _users.list_for_org(user["org_id"])
+    plan = raw.get("plan")
+    active = bool(raw.get("is_valid"))
+    # What Settings renders is *access*, not a price tier: a trial with a clock
+    # on it, or full access. The plan key stays server-side — naming a tier the
+    # customer cannot look up invites the question "what are the others?", and
+    # there is no page that answers it.
+    context["access"] = {
+        "active": active,
+        "is_trial": plan == "trial",
+        "days_remaining": _days_remaining(raw.get("expires_at")),
+        "expires_at": raw.get("expires_at"),
+        # The upsell shows on a trial, and on anything that has lapsed. A
+        # customer with live paid access is not asked to buy again.
+        "show_keep_access": (plan == "trial") or not active,
+    }
     context["entitlement"] = {
-        "plan": raw.get("plan"),
+        "plan": plan,
         "seats": raw.get("seats"),
         "features": raw.get("features", []),
         "expires_at": raw.get("expires_at"),
-        "active": bool(raw.get("is_valid")),
+        "active": active,
     }
     context["members"] = members
     context["member_count"] = len(members)
@@ -898,6 +1332,7 @@ def invite_member_web(
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
 
     import secrets
 
@@ -934,6 +1369,7 @@ def change_member_role_web(
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
     try:
         OrgService().change_member_role(actor=user, member_id=member_id, role=role)
     except OrgError as exc:
@@ -946,6 +1382,7 @@ def remove_member_web(request: Request, member_id: str, csrf_token: str = Form("
     verify_csrf(request, csrf_token)
     user = _require_user(request)
     _require_manage(user)
+    reject_shared_demo_account(user)
     try:
         OrgService().remove_member(actor=user, member_id=member_id)
     except OrgError as exc:
@@ -965,6 +1402,7 @@ def change_password_web(
 ) -> Response:
     verify_csrf(request, csrf_token)
     user = _require_user(request)
+    reject_shared_demo_account(user)
     if len(new_password) < 8:
         return _render_settings(
             request, user, error="Choose a new password of at least 8 characters.", status_code=400
@@ -978,6 +1416,7 @@ def change_password_web(
         org_id=user["org_id"],
         actor_user_id=user["id"],
         detail={"surface": "web"},
+        ip=_client_ip(request),
     )
     return RedirectResponse(url="/app/settings?notice=password_changed", status_code=303)
 
@@ -990,6 +1429,7 @@ def activate_license_web(
     user = _require_user(request)
     if user["role"] != ROLE_OWNER:
         raise HTTPException(status_code=403, detail="Only the owner can activate a license")
+    reject_shared_demo_account(user)
     try:
         _billing.activate_license(
             org_id=user["org_id"], license_key=license_key.strip(), actor_user_id=user["id"]
@@ -1005,12 +1445,18 @@ def export_org_web(request: Request) -> Response:
     user = _require_user(request)
     if user["role"] != ROLE_OWNER:
         raise HTTPException(status_code=403, detail="Only the owner can export the workspace")
+    reject_shared_demo_account(user)
     from app.saas.data_lifecycle import DataLifecycleService
 
     bundle = DataLifecycleService().export_org(user["org_id"])
     if bundle is None:
         raise HTTPException(status_code=404, detail="Organization not found")
-    _audit.record(action="org.export", org_id=user["org_id"], actor_user_id=user["id"])
+    _audit.record(
+        action="org.export",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        ip=_client_ip(request),
+    )
     org = _orgs.get(user["org_id"]) or {}
     filename = f"{org.get('slug', 'workspace')}-export.json"
     return Response(
@@ -1029,6 +1475,7 @@ def delete_org_web(
     user = _require_user(request)
     if user["role"] != ROLE_OWNER:
         raise HTTPException(status_code=403, detail="Only the owner can delete the workspace")
+    reject_shared_demo_account(user)
     org = _orgs.get(user["org_id"])
     if not org or confirm.strip() != org["slug"]:
         return _render_settings(
@@ -1066,7 +1513,10 @@ _WEB_PATH_PREFIXES = (
     "/forgot-password",
     "/reset-password",
     "/pricing",
+    "/contact-sales",
     "/welcome",
+    "/privacy",
+    "/terms",
 )
 
 

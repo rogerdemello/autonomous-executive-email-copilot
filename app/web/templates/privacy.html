@@ -1,0 +1,277 @@
+{% extends "_public.html" %}
+
+{% block title %}Privacy policy · Executive Email Copilot{% endblock %}
+{% block description %}What mailbox data Executive Email Copilot accesses, why, where it is stored, how long it is kept, who it is shared with, and how to get it out or erase it.{% endblock %}
+
+{% block main %}
+{# This page is two things at once: a contract with the user, and a submission
+   to Google. The scope table below MUST stay in sync with the scopes actually
+   requested in app/saas/oauth.py — requesting a scope the policy does not
+   justify is a documented rejection reason for OAuth verification, and so is
+   justifying one you no longer request. #}
+<article class="wrap legal">
+  <p class="eyebrow">Legal</p>
+  <h1>Privacy policy</h1>
+  <p class="legal__updated">Last updated 31 August 2026</p>
+
+  <p>
+    Executive Email Copilot reads a mailbox you connect, decides what deserves
+    your attention, drafts replies, and holds every outbound action until you
+    approve it. Doing that requires access to your mail. This page says exactly
+    what we access, why, where it goes, who else sees it, and how to get it
+    back or destroy it.
+  </p>
+
+  <p>
+    <strong>The short version.</strong> We read your mailbox to run the
+    copilot for you and nothing else. Your mail is never used to train or
+    improve any machine-learning model, ours or a vendor's. Nothing is sent to
+    a recipient without you pressing approve. You can export everything or
+    erase the whole workspace yourself, at any time, without asking us.
+  </p>
+
+  <h2>Who we are</h2>
+  <p>
+    Executive Email Copilot ("we", "the service") operates this application and
+    is the controller of the personal data described here. Questions, requests,
+    and complaints: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>.
+  </p>
+
+  <h2>What we access, and why</h2>
+  <p>
+    When you connect a mailbox we ask your provider for a specific, listed set
+    of permissions. We request the narrowest set that lets the product work.
+    Every scope below is used; none is requested speculatively.
+  </p>
+
+  <h3>Google (Gmail)</h3>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Scope</th><th>What it permits</th><th>Why the product needs it</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">gmail.modify</td>
+          <td>Read messages, and apply or remove labels</td>
+          <td>
+            Reading the message is the product: triage, thread summary, risk
+            and deadline signals, and the draft itself are all derived from it.
+            Labels are how a decision is recorded back in your mailbox
+            (spam filed, deferred, escalated).
+          </td>
+        </tr>
+        <tr>
+          <td class="mono">gmail.compose</td>
+          <td>Create and send drafts</td>
+          <td>
+            A reply you approved is created and sent; an escalation is written
+            as a draft for a colleague. Only ever after you approve it.
+          </td>
+        </tr>
+        <tr>
+          <td class="mono">openid, email</td>
+          <td>Your account's email address</td>
+          <td>To label the connection so you can tell two mailboxes apart.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Microsoft 365</h3>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Scope</th><th>What it permits</th><th>Why the product needs it</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">Mail.Read</td>
+          <td>Read messages in your mailbox</td>
+          <td>The same triage, summarization, and drafting as above.</td>
+        </tr>
+        <tr>
+          <td class="mono">Mail.ReadWrite</td>
+          <td>Categorize and file messages, create drafts</td>
+          <td>Recording a decision back in the mailbox, and holding a draft.</td>
+        </tr>
+        <tr>
+          <td class="mono">Mail.Send</td>
+          <td>Send a message</td>
+          <td>Sending the reply you approved. Never without that approval.</td>
+        </tr>
+        <tr>
+          <td class="mono">offline_access</td>
+          <td>Keep working when you are not signed in</td>
+          <td>
+            The copilot triages your inbox in the background so the queue is
+            already full when you open it. Without this it could only work
+            while you watched.
+          </td>
+        </tr>
+        <tr>
+          <td class="mono">openid, email</td>
+          <td>Your account's email address</td>
+          <td>To label the connection.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What we store, and for how long</h2>
+  <p>
+    We do not keep a copy of your mailbox. For each message the copilot
+    processes we store a working record: the sender, the subject, the first 500
+    characters of the body, the timestamp, the provider's message and thread
+    identifiers, and the signals the copilot inferred (priority, risk tag,
+    deadline, an estimate of business value). Alongside it we store the action
+    the copilot proposed, the draft text if it wrote one, the verification
+    result for that draft, and your decision.
+  </p>
+  <p>
+    We also store an append-only audit record of security-relevant events in
+    your workspace: sign-ins, mailbox connections and disconnections, syncs,
+    and every approval or rejection. That log exists so you can answer the
+    question "what did this thing do on my behalf?" without taking our word
+    for it.
+  </p>
+  <p>
+    All of it lives for as long as the workspace does. Disconnecting a mailbox
+    immediately deletes every stored message and action derived from it.
+    Deleting the workspace deletes everything, permanently — see
+    <a href="#your-controls">Your controls</a>.
+  </p>
+
+  <h3>Credentials</h3>
+  <p>
+    The OAuth access and refresh tokens for your mailbox are the one genuinely
+    dangerous thing we hold, and they are stored <strong>encrypted at
+    rest</strong> with an authenticated cipher, keyed from a server secret that
+    is never written to the database. They are never returned by any API
+    response and never included in a data export. Passwords are stored only as
+    a salted hash.
+  </p>
+
+  <h2>Who else sees it</h2>
+  <p>
+    Writing a draft means sending the message it answers to a large language
+    model. That is a real disclosure and we would rather name it than bury it:
+  </p>
+  <ul>
+    <li>
+      <strong>Our LLM provider.</strong> By default this is
+      <strong>OpenAI</strong>, via its API. The subject and body of a message
+      being drafted for, plus the draft being verified, are sent to it. It is a
+      processor acting on our instructions.
+    </li>
+    <li>
+      <strong>Our hosting and database provider</strong>, which stores the data
+      described above.
+    </li>
+    <li>
+      <strong>Our email provider</strong>, for transactional mail only
+      (password resets, invitations). Your mailbox contents are never sent
+      through it.
+    </li>
+  </ul>
+  <p>
+    We do not sell personal data, we do not share it with advertisers, and we
+    do not disclose it to anyone else except where the law requires it.
+  </p>
+
+  <h2 id="limited-use">Google API Services Limited Use disclosure</h2>
+  <div class="legal__callout">
+    <p>
+      Executive Email Copilot's use and transfer of information received from
+      Google APIs to any other app will adhere to the
+      <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>,
+      including the Limited Use requirements.
+    </p>
+    <p>
+      Specifically: we do not use Gmail data to develop, improve, or train
+      generalized or non-personalized artificial-intelligence or machine-learning
+      models. We do not transfer or sell Gmail data for serving advertisements,
+      for credit assessment, or for lending purposes. No human reads your Gmail
+      data except with your explicit consent for a specific support request,
+      where it is necessary for security purposes, or where the law requires
+      it.
+    </p>
+  </div>
+  <p>
+    The copilot does learn from your workspace: drafts you approve and edits
+    you make are fed back as examples so its wording sounds more like yours.
+    That learning is <strong>scoped to your workspace alone</strong>. It never
+    crosses into another customer's workspace, and it never becomes training
+    data for a general model.
+  </p>
+
+  <h2 id="your-controls">Your controls</h2>
+  <ul>
+    <li>
+      <strong>Nothing sends itself.</strong> Every reply and every escalation
+      waits for you in the approval queue. You can edit the wording before you
+      approve it, and what you approve is what gets sent.
+    </li>
+    <li>
+      <strong>Disconnect a mailbox</strong> at any time from Mailboxes. This
+      revokes our stored tokens and deletes every message and action derived
+      from that mailbox.
+    </li>
+    <li>
+      <strong>Export everything</strong> as JSON from Settings, at any time,
+      without contacting us. Secrets are excluded; everything else is there.
+    </li>
+    <li>
+      <strong>Delete the workspace</strong> from Settings. This is a hard
+      purge, not a flag: messages, actions, members, audit entries, and the
+      workspace record are removed. There is no undo.
+    </li>
+    <li>
+      <strong>Revoke access at the provider.</strong> You can also cut us off
+      from your side, at
+      <a href="https://myaccount.google.com/permissions" rel="noopener">Google account permissions</a>
+      or
+      <a href="https://myapps.microsoft.com" rel="noopener">Microsoft My Apps</a>.
+    </li>
+  </ul>
+  <p>
+    If you are in the UK, EEA, or another jurisdiction with equivalent rights,
+    you have the right to access, correct, export, restrict, or erase your
+    personal data, and to object to its processing. The controls above deliver
+    most of that immediately; for anything they do not cover, write to
+    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>.
+  </p>
+
+  <h2>Security</h2>
+  <ul>
+    <li>Mailbox tokens encrypted at rest with an authenticated cipher.</li>
+    <li>Every customer-owned row carries its workspace id, and all access goes through workspace-scoped queries.</li>
+    <li>Sessions are signed, HTTP-only cookies; every state-changing form carries a CSRF token bound to the session.</li>
+    <li>Incoming mail is treated as untrusted input, including for prompt injection.</li>
+    <li>Passwords are stored as salted hashes and are never recoverable.</li>
+  </ul>
+  <p>
+    No service can promise perfect security, and we will not pretend
+    otherwise. If you find a vulnerability, please report it to
+    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    The service is for professional use and is not directed at anyone under 16.
+    We do not knowingly collect their data.
+  </p>
+
+  <h2>Changes</h2>
+  <p>
+    If we change this policy in a way that materially affects how your mailbox
+    data is handled, we will tell you before it takes effect. The date at the
+    top always reflects the current version.
+  </p>
+
+  <p class="legal__updated">
+    Questions: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a> ·
+    <a href="/terms">Terms of service</a>
+  </p>
+</article>
+{% endblock %}

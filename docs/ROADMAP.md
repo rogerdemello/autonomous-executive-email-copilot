@@ -301,3 +301,55 @@ and since fixed. Kept as a ledger; `tests/test_provider_layer.py` pins each fix.
 - [x] **Capability-flag honesty** (found during the fix) — Anthropic and Gemini
   no longer advertise `STREAMING` they don't implement, and Gemini reports real
   token usage from `usage_metadata` instead of `$0.0000`.
+
+---
+
+## Launch pass — 2026-08-31 ✅ COMPLETE
+
+Turning the repo into something a stranger could be shown. This section
+replaces `docs/PLAN.md`, which was deleted: two roadmaps disagreeing with each
+other is worse than one that is merely incomplete, and PLAN was a point-in-time
+audit whose findings are all either done or listed below.
+
+- [x] **Phase 0 — a clean checkout deploys.** Font and screenshot assets
+  committed and the package-data glob made recursive; `render.yaml` turned on
+  the three flags that make it a product rather than a demo; the release
+  workflow pointed at directories that still exist; test runs isolated from the
+  developer's database; `migrate_db()` moved into the lifespan; OTEL actually
+  in the runtime image; the metrics parser fixed so alert rules can fire.
+- [x] **Phase 1 — self-serve motion, no pricing anywhere.** Every trace of the
+  deleted pricing page removed, from dead CSS to `price_display` to a demo
+  script that walked a presenter into a 301. Settings' "Plan" became "Access".
+  Four decorative entitlement chips that gated nothing are gone.
+- [x] **Phase 1.5 — `/privacy` and `/terms`.** On the Gmail CASA critical path;
+  see [OAUTH_SETUP.md](OAUTH_SETUP.md).
+- [x] **Phase 2 — the landing page's claims are measured.** The benchmark table,
+  the stat tiles and the "working day" counts all render from
+  `data/landing_metrics.json`, re-verified in CI. A missing artifact raises
+  rather than falling back to invented numbers.
+- [x] **Phase 3 — the signed-in app.** Full message bodies, thread grouping,
+  search, filters, paging, keyboard navigation, a `<main>` landmark and a skip
+  link, the audit log's IP column, ~220 lines of dead CSS.
+- [x] **Phase 4 — verification as the product.** Claim-level evidence with the
+  source line it failed against, rendered where the decision is made.
+- [x] **Phase 5 — commitment tracking.** The capability the market rewards and
+  no competitor ships.
+- [x] **Phase 6 — hardening.** The IMAP connector package, `db_async`,
+  `DecisionRecord`, two dead extras and two re-implemented `Entitlement`
+  helpers deleted. `mypy` is a real gate (no `continue-on-error`, four modules
+  off the silence list). The Helm chart refuses to render the unsafe
+  configurations that used to be its defaults.
+
+### Still owed (needs a human, not a commit)
+
+- [ ] `docker build` from a clean clone and a `v0.1.1` tag through the release
+      workflow. Docker is not installed on the development machine; CI covers
+      the build, not the tag.
+- [ ] The end-to-end test on a real mailbox: deploy, sign up cold, connect a
+      real Gmail *and* a real Microsoft 365 account, wait for the background
+      worker rather than clicking Sync, approve a drafted reply, confirm it
+      arrives and that `/app/activity` logged it, and trigger a password reset
+      that actually lands.
+- [ ] Gmail verification + the CASA Tier 2 assessment (6-12 weeks, and the only
+      item here with a lead time nobody controls). Microsoft 365 needs no
+      review — register that app first.

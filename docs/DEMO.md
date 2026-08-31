@@ -33,7 +33,7 @@ model output produced with no network at the venue.
 The seeder tells you where the prose came from:
 
 ```
-Triaged 50 messages: 81 applied automatically, 11 held for approval
+Triaged 51 messages: 82 applied automatically, 12 held for approval
   Drafts: 11 model-written
 ```
 
@@ -62,11 +62,14 @@ unflattering cell.
 > heuristic. We publish that rather than hide it, because it's an
 > agent-design finding: its guardrails trade coverage for caution."
 
-### 2. Pricing — `/pricing`
+### 2. The funnel — `/signup` and `/contact-sales`
 
-> "Sales-led. No card capture. The plans here are generated from the same
-> licensing registry that grants entitlements at runtime, so what a customer
-> is shown and what they actually get cannot drift apart."
+There is no pricing page. `/pricing` 301s to the homepage, so do not open it.
+
+> "Self-serve. Sign up, connect a mailbox, and you have fourteen days with
+> every feature switched on — no card, nothing to cancel. When the trial ends,
+> syncing and approvals pause and nothing is deleted. What it costs after that
+> is a conversation, which is why there is no price on the site."
 
 ### 3. Sign in — `/login`
 
@@ -90,13 +93,18 @@ differs.
 
 ### 5. The inbox — `/app/inbox`
 
-Fifty messages in a plausible COO's morning. Start with the summary bar at the
-top, because it is the whole argument in one line:
+Fifty-one messages in a plausible COO's morning. Start with the summary bar at
+the top, because it is the whole argument in one line:
 
-> **50 triaged · 81 applied automatically · 11 need you**
+> **51 triaged · 82 applied automatically · 12 need you**
 >
-> "Fifty messages arrived. Eleven need the COO. That ratio is the product —
+> "Fifty-one messages arrived. Twelve need the COO. That ratio is the product —
 > everything else is how it earns the right to claim it."
+
+Those four numbers describe the workspace, not the current view: put `spam` in
+the classification filter and the list drops to eight while the summary stays
+put. That is deliberate — a filter that rewrites your headline metrics is a
+filter you cannot trust.
 
 The list below is ranked the way the copilot ranked it, with priority and risk
 chips. Click through four, in this order:
@@ -107,10 +115,16 @@ chips. Click through four, in this order:
 > routed it rather than answering. The copilot is explicitly not deciding a
 > liability cap on the COO's behalf."
 
-**The outage (Priya Nair, 07:22)** — risk `ops`, a drafted reply held for approval.
+**The datacentre incident (Marcus Reid, 09:15)** — risk `ops`, two messages in one
+thread, a drafted reply held for approval.
 
 > "This is the interesting one. It decided a reply is warranted, drafted it, and
 > then stopped. Anything that reaches the outside world waits for a human."
+
+Note the **2 in thread** chip in the list and the Thread panel under the message:
+this is the second message in a live incident, and the copilot's reasoning names
+the earlier decision it depends on. Click the first message in the thread panel
+to walk backwards through it.
 
 If the draft carries a **model-drafted** chip, that is the point to make the
 distinction that matters:
@@ -132,8 +146,9 @@ distinction that matters:
 > details, a normal payment window — filed, not flagged. A detector that flags
 > every invoice hasn't detected anything."
 
-Then scroll the list: six promotional messages classified as spam and filed with
-no human involvement, and roughly thirty routine items deferred with a label.
+Then set the classification filter to `spam`: eight promotional messages
+classified and filed with no human involvement. Clear it, and roughly thirty
+routine items sit deferred with a label.
 
 > "Note what *didn't* happen: nothing was sent, and none of the noise reached the
 > approval queue."
@@ -146,7 +161,7 @@ is *not* a contract, and routes to security rather than legal.
 
 ### 6. Approvals — `/app/approvals`
 
-Eleven actions waiting, each showing the reasoning behind it before the buttons.
+Twelve actions waiting, each showing the reasoning behind it before the buttons.
 The draft is a textarea — change a sentence, then approve.
 
 > "That's the whole control model. Replies and escalations queue here.
@@ -154,7 +169,7 @@ The draft is a textarea — change a sentence, then approve.
 > is add a label."
 
 > "Every held draft also carries a verification verdict — a second pass checked
-> the prose against the source message before it queued. Ten of these say
+> the prose against the source message before it queued. Most say
 > 'verified'. One says 'check flagged': the model wrote 'by 25 September' for a
 > message whose deadline is 30 September, and the verifier caught it. That's
 > the system catching its own model inventing a fact, in front of you."
@@ -166,23 +181,45 @@ The draft is a textarea — change a sentence, then approve.
 > action. Once there are decisions to learn from, this page grows a 'what the
 > copilot has learned' panel that names them."
 
-### 7. Activity — `/app/activity`
+### 7. Waiting on — `/app/waiting`
+
+> "This is the thing none of the alternatives do. Every review of every AI email
+> tool names the same gap: nothing tracks follow-ups. The copilot reads the
+> promises out of your mail as they are made, in both directions — what someone
+> owes you, and what you committed to in a reply you approved — and shows you the
+> sentence it came from so you can check it in one glance instead of re-reading
+> the thread."
+
+Point at a row with a resolved date and hover the date chip: it names the words
+the sender actually used. Then point at one with **no date**.
+
+> "It didn't guess. Nobody stated a deadline there, so it isn't going to invent
+> one and then nag you about it — that's the same failure the draft verifier
+> exists to catch, one surface over."
+
+If asked how it avoids becoming noise: spam is excluded using the copilot's own
+classification, and every row can be dismissed as **Not a commitment** — kept
+separate from **Mark done** on purpose, because "this was never real" is
+different feedback from "this is finished".
+
+### 8. Activity — `/app/activity`
 
 > "Every security-relevant action is appended to a per-organization audit log —
 > sign-ins, mailbox connections, syncs, and every approval decision, with who did
 > it and when. This is usually the first thing procurement asks for."
 
-### 8. Settings — `/app/settings`
+### 9. Settings — `/app/settings`
 
-Plan and seat usage, member management (invite with a one-time temporary
-password, change role, remove — seat limits and the last-owner guard enforced),
-license-key activation, change password, connected mailboxes, and the owner's
-data section: a one-click JSON export of everything the tenant owns, and
-permanent deletion gated on retyping the workspace slug.
+Access ("Trial · N days remaining", and the way to keep it), member management
+(invite with a one-time temporary password, change role, remove — seat limits
+and the last-owner guard enforced), access-key activation, change password,
+connected mailboxes, and the owner's data section: a one-click JSON export of
+everything the tenant owns, and permanent deletion gated on retyping the
+workspace slug.
 
-> "The plan is enforced, not decorative: an expired trial blocks syncing and
-> approvals with a clear 402 — sign-in and settings stay open, because an admin
-> needs those exactly when the plan has lapsed."
+> "Access is enforced, not decorative: an expired trial blocks syncing and
+> approvals with a clear 402 — sign-in, settings, export and delete stay open,
+> because those are exactly what you need when access has lapsed."
 
 ---
 
@@ -191,6 +228,9 @@ permanent deletion gated on retyping the workspace slug.
 Be direct about this. It lands better than hedging.
 
 **Real:**
+
+- Search, the classification and priority filters, paging, and thread grouping.
+  `thread_id` has been stored since the table existed; the inbox now reads it.
 
 - The triage decisions. Priority, risk, deadline, business value, and the choice
   between reply / escalate / defer / file are computed at request time by
@@ -210,7 +250,7 @@ Be direct about this. It lands better than hedging.
 
 **Simulated:**
 
-- The mailbox contents. Fifty fixture messages, not a live inbox.
+- The mailbox contents. Fifty-one fixture messages, not a live inbox.
 - Approving a reply in the demo records the send rather than transmitting it.
 - Without a generated cache, the drafted wording falls back to authored fixture
   prose (and to one generic policy sentence beyond that). The seeder prints which
@@ -265,7 +305,7 @@ Yes. One container, SQLite by default, `DATABASE_URL` for Postgres. There is a
 Helm chart under `helm/` and a Render blueprint.
 
 **"How is this tested?"**
-794 tests. The demo path you just walked is covered end to end in
+Over nine hundred tests. The demo path you just walked is covered end to end in
 `tests/test_web_pages.py`, including the session gate, CSRF, and that approving
 actually transitions the action and records an audit entry.
 

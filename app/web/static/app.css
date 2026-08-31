@@ -1,12 +1,41 @@
 /* Executive Email Copilot — one stylesheet for marketing and product.
  *
  * Identity: "quiet office" — deep ink-teal ground, warm brass highlight, a
- * serif display over a system sans. No framework blues, no gradients.
+ * serif display over a system sans. No framework blues, no colour-wash
+ * gradients (gradient functions appear only as dot-grid textures and masks).
  *
  * Every colour is a custom property declared once in :root. Raw hex must not
  * appear below the token block — that is what keeps light/dark honest, since
  * the theme toggle only ever reassigns these variables.
  */
+
+/* ========================================================================== */
+/* Fonts — self-hosted variable fonts (the CSP allows same-origin only).      */
+/* Fraunces carries the editorial display voice; Inter carries UI and body.   */
+/* ========================================================================== */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/static/fonts/fraunces-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/static/fonts/fraunces-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ========================================================================== */
 /* Tokens                                                                     */
@@ -24,10 +53,11 @@
   --good: #2e8f66;
   --warn: #b5842a;
   --crit: #bd5138;
+  --grid-dot: color-mix(in srgb, var(--ink) 16%, transparent);
   --shadow: 20px 40px 80px -50px rgba(16, 40, 40, 0.5);
   --shadow-sm: 0 8px 20px -14px rgba(16, 40, 40, 0.55);
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
 }
 
@@ -45,6 +75,7 @@
     --good: #4bbd88;
     --warn: #d3a44a;
     --crit: #db6f55;
+    --grid-dot: color-mix(in srgb, var(--ink) 9%, transparent);
     --shadow: 24px 46px 90px -50px rgba(0, 0, 0, 0.75);
     --shadow-sm: 0 8px 20px -14px rgba(0, 0, 0, 0.8);
   }
@@ -65,6 +96,7 @@
   --good: #2e8f66;
   --warn: #b5842a;
   --crit: #bd5138;
+  --grid-dot: color-mix(in srgb, var(--ink) 16%, transparent);
   --shadow: 20px 40px 80px -50px rgba(16, 40, 40, 0.5);
   --shadow-sm: 0 8px 20px -14px rgba(16, 40, 40, 0.55);
 }
@@ -82,6 +114,7 @@
   --good: #4bbd88;
   --warn: #d3a44a;
   --crit: #db6f55;
+  --grid-dot: color-mix(in srgb, var(--ink) 9%, transparent);
   --shadow: 24px 46px 90px -50px rgba(0, 0, 0, 0.75);
   --shadow-sm: 0 8px 20px -14px rgba(0, 0, 0, 0.8);
 }
@@ -154,6 +187,39 @@ h3 {
   border-radius: 4px;
 }
 
+/* The skip link `.visually-hidden` was written for and which was never built.
+ * Off-screen until focused, then it lands in the top-left as the first tab
+ * stop — otherwise every keyboard user walks the whole sidebar on every page
+ * load before reaching anything they came for. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 11px 18px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 10px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* A keyboard key, for the shortcut hints. */
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
 /* ========================================================================== */
 /* Header / nav                                                               */
 /* ========================================================================== */
@@ -205,9 +271,69 @@ h3 {
   color: var(--ink);
 }
 
+/* The mobile disclosure menu. Hidden above the breakpoint, where the real nav
+ * links are visible; below it, it is the only route to Sign in. */
+.mobile-nav {
+  display: none;
+  position: relative;
+}
+
+.mobile-nav > summary {
+  list-style: none;
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.mobile-nav > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mobile-nav[open] > summary {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.mobile-nav__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 190px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  z-index: 50;
+}
+
+.mobile-nav__panel a {
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.mobile-nav__panel a:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
 @media (max-width: 760px) {
   .top nav .hide {
     display: none;
+  }
+  .mobile-nav {
+    display: block;
   }
 }
 
@@ -390,6 +516,32 @@ h3 {
   border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
+/* `chip--{{ action.status }}` is interpolated from the action's status, and
+ * three of the five values had no rule — a rejected or failed action rendered
+ * as unstyled transparent text, which reads as a broken page rather than as a
+ * decision. `executed` is covered by the good group above. */
+.chip--approved {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+  border-color: color-mix(in srgb, var(--good) 25%, transparent);
+}
+
+.chip--rejected,
+.chip--failed {
+  color: var(--crit);
+  background: color-mix(in srgb, var(--crit) 10%, transparent);
+  border-color: color-mix(in srgb, var(--crit) 25%, transparent);
+}
+
+/* A chip that is also a link (the Activity log's action filter). */
+a.chip {
+  text-decoration: none;
+}
+
+a.chip:hover {
+  border-color: currentColor;
+}
+
 .chip--brass {
   color: var(--brass);
   background: color-mix(in srgb, var(--brass) 14%, transparent);
@@ -397,27 +549,8 @@ h3 {
 }
 
 /* ========================================================================== */
-/* Marketing: hero, pillars, proof, plans                                     */
+/* Marketing: hero, pillars, proof                                            */
 /* ========================================================================== */
-.hero {
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 56px;
-  align-items: center;
-  padding: 40px 0 72px;
-}
-
-.hero h1 {
-  font-size: clamp(2.4rem, 5.4vw, 4rem);
-  line-height: 1.02;
-  margin: 18px 0 20px;
-}
-
-.hero h1 .soft {
-  color: var(--accent);
-  font-style: italic;
-}
-
 .lede {
   font-size: 1.16rem;
   color: var(--muted);
@@ -445,22 +578,7 @@ h3 {
   font-weight: 600;
 }
 
-.triage {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-}
-
-.triage__bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px 14px;
-  border-bottom: 1px solid var(--line);
-}
-
+/* The window-chrome dots on a product screenshot frame. */
 .dot {
   width: 10px;
   height: 10px;
@@ -468,85 +586,13 @@ h3 {
   background: var(--line);
 }
 
-.triage__title {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.mail {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 12px;
-  align-items: center;
-  padding: 13px 8px;
-  border-bottom: 1px solid var(--line);
-  opacity: 0;
-  transform: translateY(6px);
-  animation: rise 0.6s ease forwards;
-}
-
-.mail:last-child {
-  border-bottom: 0;
-}
-
-.mail:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.mail:nth-child(3) {
-  animation-delay: 0.5s;
-}
-
-.mail:nth-child(4) {
-  animation-delay: 0.85s;
-}
-
-.mail__from {
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-
-.mail__subj {
-  grid-column: 1;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-
-.mail .chip {
-  /* Pin to the second column: without an explicit column the chip is
-     auto-placed into column 1 and pushes the sender to the right. */
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  justify-self: end;
-}
-
-.triage__foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 8px 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
+/* The "the copilot is working" indicator in the inbox's Copilot panel. */
 .pulse {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
   animation: pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @keyframes pulse {
@@ -562,11 +608,6 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mail {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
   .pulse {
     animation: none;
   }
@@ -600,6 +641,8 @@ section {
 .pillar {
   background: var(--paper);
   padding: 26px 24px;
+  position: relative;
+  transition: background 0.35s ease;
 }
 
 .pillar h3 {
@@ -657,10 +700,27 @@ table.bench thead th {
   font-weight: 500;
 }
 
-table.bench td.num {
+table.bench td.num,
+table.bench th.num-head {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.scores__note {
+  --d: 0.12s;
+}
+
+.scores__lede {
+  margin-top: 0;
+}
+
+/* Where the numbers came from, and which column CI can and cannot re-run.
+ * Small, but it is the difference between "measured" and "asserted". */
+.scores__provenance {
+  margin: 24px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
 }
 
 table.bench td.task {
@@ -692,82 +752,6 @@ table.bench td.task {
   margin-top: 6px;
 }
 
-.plans {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.plan {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  padding: 24px 22px;
-  display: flex;
-  flex-direction: column;
-}
-
-.plan--feature {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 1px var(--accent),
-    var(--shadow);
-  position: relative;
-}
-
-.plan__tag {
-  position: absolute;
-  top: -11px;
-  left: 22px;
-  font-family: var(--mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: var(--accent);
-  color: var(--accent-ink);
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-.plan__name {
-  font-family: var(--serif);
-  font-size: 1.25rem;
-}
-
-.plan__price {
-  font-family: var(--mono);
-  font-size: 0.9rem;
-  color: var(--muted);
-  margin: 6px 0 4px;
-}
-
-.plan__seats {
-  font-size: 0.82rem;
-  color: var(--brass);
-  font-family: var(--mono);
-  letter-spacing: 0.04em;
-}
-
-.plan ul {
-  list-style: none;
-  padding: 0;
-  margin: 16px 0 22px;
-  flex: 1;
-  display: grid;
-  gap: 9px;
-}
-
-.plan li {
-  font-size: 0.88rem;
-  display: flex;
-  gap: 9px;
-}
-
-.plan li::before {
-  content: "→";
-  color: var(--accent);
-}
-
 .close {
   text-align: center;
 }
@@ -782,15 +766,57 @@ table.bench td.task {
   margin: 12px auto 28px;
 }
 
-footer {
+.site-foot {
   border-top: 1px solid var(--line);
-  padding: 28px 0 44px;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  background: var(--panel);
+}
+
+.foot {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 32px;
+  align-items: start;
+  padding: 44px 0 40px;
+}
+
+.foot__brand p {
   color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 34ch;
+  margin: 14px 0 0;
+}
+
+.foot__links {
+  display: grid;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.foot__links a {
+  color: var(--muted);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.foot__links a:hover {
+  color: var(--ink);
+}
+
+.foot__meta {
+  display: grid;
+  gap: 10px;
   font-size: 0.85rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .foot {
+    grid-template-columns: 1fr;
+  }
+  .foot__meta {
+    text-align: left;
+  }
 }
 
 /* ========================================================================== */
@@ -810,6 +836,7 @@ footer {
   border-radius: 18px;
   padding: 34px 32px;
   box-shadow: var(--shadow);
+  animation: enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .auth__card h1 {
@@ -883,6 +910,213 @@ footer {
 }
 
 /* ========================================================================== */
+/* Public: the lead page and the legal pages                                  */
+/* ========================================================================== */
+/* Bots fill fields people cannot see. Kept off-screen rather than
+   display:none, because some bots skip hidden inputs. */
+.honeypot {
+  position: absolute;
+  left: -9999px;
+}
+
+/* "Talk to us" is a considered enquiry, not a password prompt, so it gets its
+   own two-column layout instead of the 430px `.auth__card`. */
+.lead-page {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 56px;
+  align-items: start;
+  padding: 48px 0 80px;
+}
+
+.lead-page h1 {
+  font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+  margin: 14px 0 18px;
+}
+
+.lead-page .lede {
+  max-width: 52ch;
+}
+
+.steps {
+  list-style: none;
+  margin: 34px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 22px;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.steps__n {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--accent);
+}
+
+.steps h3 {
+  margin: 4px 0 4px;
+  font-size: 1.05rem;
+}
+
+.steps p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.lead-page__trust {
+  margin-top: 38px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+.lead-page__trust h3 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+}
+
+.lead-page__legal {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.lead-page__form {
+  position: sticky;
+  top: 96px;
+}
+
+@media (max-width: 900px) {
+  .lead-page {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding: 28px 0 56px;
+  }
+  .lead-page__form {
+    position: static;
+  }
+}
+
+/* Long-form prose. No page needed this until /privacy and /terms existed, so
+   the measure and rhythm are set here rather than inherited from a card. */
+.legal {
+  padding: 40px 0 80px;
+  max-width: 68ch;
+}
+
+.legal h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  margin: 14px 0 8px;
+}
+
+.legal h2 {
+  font-size: 1.3rem;
+  margin: 44px 0 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.legal h3 {
+  font-size: 1.02rem;
+  margin: 26px 0 8px;
+}
+
+.legal p,
+.legal li {
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+.legal p {
+  margin: 0 0 16px;
+}
+
+.legal strong {
+  color: var(--ink);
+}
+
+.legal ul,
+.legal ol {
+  margin: 0 0 18px;
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
+}
+
+.legal a {
+  color: var(--accent);
+}
+
+.legal__updated {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 34px;
+}
+
+/* The Limited Use disclosure is a quotation from Google's policy and is
+   reviewed as one. Setting it apart makes that obvious to a reviewer skimming
+   for it, and makes it hard to edit by accident. */
+.legal__callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  background: var(--panel);
+  padding: 18px 22px;
+  margin: 0 0 24px;
+}
+
+.legal__callout p:last-child {
+  margin-bottom: 0;
+}
+
+.legal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 0 0 22px;
+}
+
+.legal th,
+.legal td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  color: var(--muted);
+}
+
+.legal th {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.foot__legal a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.foot__legal a:hover {
+  color: var(--ink);
+}
+
+/* ========================================================================== */
 /* App shell                                                                  */
 /* ========================================================================== */
 .shell {
@@ -941,6 +1175,69 @@ footer {
   color: var(--warn);
 }
 
+/* Past its date is a different fact from outstanding, and the sidebar is the
+ * only place either one gets noticed without opening the page. */
+.side nav .count--overdue {
+  background: color-mix(in srgb, var(--crit) 20%, transparent);
+  color: var(--crit);
+}
+
+.side nav .count--quiet {
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  color: var(--muted);
+}
+
+/* ========================================================================== */
+/* Waiting on: commitments in both directions                                 */
+/* ========================================================================== */
+.commitments {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.commitment {
+  padding: 18px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.commitment:first-child {
+  border-top: 0;
+}
+
+.commitment--overdue {
+  background: color-mix(in srgb, var(--crit) 4%, transparent);
+  box-shadow: inset 3px 0 0 var(--crit);
+}
+
+.commitment__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.commitment__who {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+/* Verbatim, because the whole value is that you can check it at a glance
+ * rather than re-reading the thread. */
+.commitment__text {
+  margin: 0 0 8px;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.commitment__subject {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+}
+
 .side__foot {
   margin-top: auto;
   border-top: 1px solid var(--line);
@@ -953,6 +1250,17 @@ footer {
   color: var(--ink);
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.side__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.side__actions form {
+  margin: 0;
 }
 
 .main {
@@ -1152,6 +1460,178 @@ footer {
   white-space: pre-wrap;
   font-size: 0.96rem;
   line-height: 1.7;
+  /* A real message can be long. Cap the reader rather than letting one email
+     stretch the three-pane layout to ten screens. */
+  max-height: 62vh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+/* ========================================================================== */
+/* Inbox: search, filters, threads, paging, shortcuts                         */
+/* ========================================================================== */
+/* A GET form, so a filtered inbox is a URL you can bookmark or send to
+ * support — which is also why the filters are on the page rather than in
+ * client-side state. */
+.inbox-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.inbox-filter input,
+.inbox-filter select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.inbox-filter__q {
+  flex: 1;
+  min-width: 220px;
+}
+
+.msglist__when {
+  font-size: 0.72rem;
+}
+
+.msglist__tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.pager__count {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+/* An `aria-disabled` pager arrow is a span, not a button: there is nowhere to
+ * go, so there should be nothing to activate. */
+.pager span.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* thread_id was stored from the beginning and read by nothing, while the
+ * landing page sold "summarizes long threads". */
+.thread > summary {
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.thread__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.thread__item a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  text-decoration: none;
+}
+
+.thread__item a:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.thread__item--current a {
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.thread__who {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.thread__when {
+  font-size: 0.74rem;
+  justify-self: end;
+}
+
+.thread__peek {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shortcut-hint {
+  margin: 18px 0 0;
+  font-size: 0.82rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Shared small-copy utilities, replacing inline styles that could not
+ * reference a theme token. */
+.head-note {
+  font-size: 0.85rem;
+}
+
+.card__head-note {
+  font-size: 0.82rem;
+}
+
+.card--stacked-below {
+  margin-bottom: 16px;
+}
+
+.note-tight {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.note-stamp {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.approval__subject {
+  margin: 0 0 4px;
+}
+
+.approval__meta {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+}
+
+.approval__editnote {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+}
+
+.audit-ip,
+.audit-detail {
+  font-size: 0.8rem;
+}
+
+.audit-ip {
+  white-space: nowrap;
 }
 
 /* ========================================================================== */
@@ -1232,7 +1712,113 @@ textarea.draft {
 }
 
 .rationale--flagged li {
-  color: var(--warn, #b45309);
+  color: var(--warn);
+}
+
+/* ========================================================================== */
+/* Verification findings: the claim, and what the source actually said         */
+/* ========================================================================== */
+/* This is the product. Every competitor ships triage and voice-matched
+ * drafting; none of them can tell you whether the draft they wrote is true.
+ * So the evidence gets real estate, not a tooltip. */
+.findings {
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warn) 6%, transparent);
+  padding: 14px 16px;
+  margin: 0 0 16px;
+}
+
+.findings__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.finding + .finding {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
+}
+
+.finding__claim {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.finding__detail {
+  margin: 0 0 6px;
+  font-size: 0.86rem;
+  color: var(--warn);
+}
+
+.finding__source {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.finding__label {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+}
+
+.finding__source--absent {
+  font-style: italic;
+}
+
+/* An enhancement, so it must not exist without scripting: a button that does
+ * nothing is worse than no button. `data-js` is stamped by theme-init.js. */
+.finding__strip {
+  display: none;
+  margin-top: 10px;
+}
+
+[data-js] .finding__strip {
+  display: inline-flex;
+}
+
+/* ========================================================================== */
+/* The verification badge in the app sidebar                                  */
+/* ========================================================================== */
+.verify-badge {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.verify-badge__n {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.verify-badge__l {
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+.verify-badge__caught {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  line-height: 1.45;
 }
 
 .learned {
@@ -1402,4 +1988,686 @@ table.data td.when {
   margin: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+/* ========================================================================== */
+/* Settings: access, disclosures, stacked cards                               */
+/* ========================================================================== */
+/* These exist because settings.html used to carry twelve inline `style=`
+   attributes. Inline styles are invisible to the theme system: they cannot
+   reference a token that changes between light and dark, and they cannot be
+   overridden by a media query. */
+.card--stacked {
+  margin-top: 16px;
+}
+
+.card__body--divided {
+  border-top: 1px solid var(--line);
+}
+
+.lead-note {
+  margin-top: 0;
+}
+
+.note-under {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
+
+.disclosure {
+  margin-top: 18px;
+}
+
+.disclosure__body {
+  margin-top: 12px;
+}
+
+.danger-summary {
+  color: var(--crit);
+}
+
+/* The access panel replaced a plan/seat/tier readout. What a customer needs
+   here is the clock and the way to stop it, not a tier name they cannot look
+   up anywhere on the site. */
+.access__state {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 18px;
+}
+
+.access__headline {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* ========================================================================== */
+/* Motion & marketing v2                                                      */
+/*                                                                            */
+/* Everything below is craft, not chrome: scroll reveals, a sticky header, a  */
+/* living triage demo, and micro-interactions. All of it is gated behind      */
+/* html[data-js] or degrades to a static page, and the reduced-motion block   */
+/* at the very end switches the whole layer off.                              */
+/* ========================================================================== */
+
+/* --- Shared easing & entrance ------------------------------------------- */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Scroll reveals ------------------------------------------------------ */
+/* Hidden state exists only when theme-init.js stamped data-js, so a blocked
+ * script can never strand a section invisible. app.js adds .is-in on entry. */
+[data-js] [data-reveal] {
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--d, 0s);
+}
+
+[data-js] [data-reveal]:not(.is-in) {
+  opacity: 0;
+  transform: translateY(22px);
+}
+
+/* --- Sticky header ------------------------------------------------------- */
+.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.site-head.is-scrolled {
+  border-bottom-color: var(--line);
+}
+
+/* Nav links get a drawn underline instead of a colour swap alone. */
+.top nav a.hide {
+  position: relative;
+}
+
+.top nav a.hide::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.top nav a.hide:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* --- Hero v3: centered copy over a framed product screenshot ------------- */
+.hero-v3 {
+  position: relative;
+  text-align: center;
+  padding: 44px 0 84px;
+}
+
+/* Same drafting texture as the old hero, fading out before the screenshot. */
+.hero-v3::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -60px -6vw auto;
+  height: 520px;
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 95%);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent 95%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.hero-v3__copy > * {
+  animation: enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.hero-v3__copy > .badge {
+  animation-delay: 0.05s;
+}
+
+.hero-v3__copy > h1 {
+  animation-delay: 0.12s;
+}
+
+.hero-v3__copy > .lede {
+  animation-delay: 0.2s;
+}
+
+.hero-v3__copy > .cta {
+  animation-delay: 0.28s;
+}
+
+.hero-v3__copy > .note {
+  animation-delay: 0.36s;
+}
+
+.hero-v3 h1 {
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+  line-height: 1.03;
+  margin: 22px auto 20px;
+  max-width: 18ch;
+}
+
+.hero-v3 h1 .soft {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.hero-v3 .lede {
+  margin: 0 auto 30px;
+  max-width: 52ch;
+}
+
+.cta--center {
+  justify-content: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 16px 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.badge:hover {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.badge__new {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Browser-style frame around real product screenshots. */
+.shot {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.shot__bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.shot__url {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* <picture> is inline by default, which would leave a baseline gap under the
+ * frame. Every screenshot is wrapped in one for the WebP source. */
+.shot picture,
+.day-photo picture {
+  display: block;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hero-shot {
+  position: relative;
+  margin-top: 56px;
+  animation: enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+}
+
+/* Floating status chips on the hero screenshot: the product's three promises,
+ * bobbing gently. Decorative only (aria-hidden). They straddle the frame's
+ * top and bottom edges so they never cover the screenshot's actual content,
+ * only the browser-chrome bar and the cut-off bottom row. */
+.float-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: bob 6s ease-in-out infinite;
+}
+
+.float-chip--1 {
+  top: -17px;
+  left: 4%;
+}
+
+.float-chip--2 {
+  top: -17px;
+  right: 4%;
+  animation-delay: 1.6s;
+}
+
+/* The bottom chip bobs downward, away from the screenshot. */
+.float-chip--3 {
+  bottom: -17px;
+  left: 8%;
+  animation-delay: 3.2s;
+  animation-name: bob-down;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes bob-down {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(9px);
+  }
+}
+
+@media (max-width: 900px) {
+  .float-chip {
+    display: none;
+  }
+}
+
+/* --- Product tour: zig-zag rows of text + screenshot ---------------------- */
+.tour {
+  display: grid;
+  gap: 72px;
+}
+
+.tour__row {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.tour__row--flip .tour__text {
+  order: 2;
+}
+
+.tour__row--flip .shot {
+  order: 1;
+}
+
+.tour__text .mark {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--brass);
+}
+
+.tour__text h3 {
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  margin: 14px 0 10px;
+}
+
+.tour__text > p {
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.tour__text b {
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .tour__row,
+  .tour__row--flip {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .tour__row--flip .tour__text {
+    order: 0;
+  }
+  .tour__row--flip .shot {
+    order: 1;
+  }
+}
+
+/* --- Working-day photo ---------------------------------------------------- */
+.day-photo {
+  margin: 26px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.day-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: saturate(0.85);
+}
+
+.day-photo figcaption {
+  padding: 11px 16px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+/* --- Capability ticker --------------------------------------------------- */
+.ticker {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  padding: 15px 0;
+}
+
+.ticker__track {
+  display: flex;
+  gap: 44px;
+  width: max-content;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  animation: ticker 36s linear infinite;
+}
+
+.ticker:hover .ticker__track {
+  animation-play-state: paused;
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* --- Pillar micro-interactions ------------------------------------------- */
+.pillar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--brass);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pillar:hover {
+  background: color-mix(in srgb, var(--accent) 4%, var(--paper));
+}
+
+.pillar:hover::before {
+  transform: scaleX(1);
+}
+
+/* --- "Under the hood" intelligence section -------------------------------- */
+.sec-head__note {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+}
+
+.stack-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+/* Four capability cards read best as a 2×2 on desktop; the shared mobile
+ * breakpoint below collapses them to one column with the other pillars. */
+.pillars--quad {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* --- "A working day" timeline -------------------------------------------- */
+.day-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 48px 64px;
+  align-items: start;
+}
+
+.day-grid .sec-head {
+  position: sticky;
+  top: 110px;
+  margin-bottom: 0;
+}
+
+.day-grid__note {
+  margin: 14px 0 0;
+  font-size: 0.95rem;
+}
+
+.day {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.day__item {
+  display: grid;
+  grid-template-columns: 56px 20px 1fr;
+  gap: 0 16px;
+  padding-bottom: 36px;
+}
+
+.day__item:last-child {
+  padding-bottom: 0;
+}
+
+.day__time {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  color: var(--brass);
+  padding-top: 3px;
+  text-align: right;
+}
+
+.day__node {
+  position: relative;
+}
+
+.day__node::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--paper);
+  border: 2px solid var(--accent);
+  box-sizing: border-box;
+}
+
+.day__item:not(:last-child) .day__node::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  bottom: -4px;
+  left: 50%;
+  width: 1px;
+  background: var(--line);
+}
+
+.day__body h3 {
+  margin: 0 0 6px;
+  font-size: 1.08rem;
+}
+
+.day__body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.93rem;
+  max-width: 52ch;
+}
+
+.day__body em {
+  color: var(--warn);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* --- Benchmark bars ------------------------------------------------------ */
+/* Each score cell carries a thin bar sized by --v (a 0–1 fraction set inline)
+ * that draws in when the table's reveal fires. Without JS the bars are simply
+ * full-width and static. */
+table.bench td.num {
+  position: relative;
+}
+
+table.bench .bar {
+  position: absolute;
+  left: 14px;
+  bottom: 6px;
+  height: 3px;
+  width: calc((100% - 28px) * var(--v, 1));
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  transform-origin: left;
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s);
+}
+
+table.bench td.lead .bar {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-js] [data-reveal]:not(.is-in) .bar {
+  transform: scaleX(0);
+}
+
+/* --- CTA arrows & closing flourish --------------------------------------- */
+.btn .arr {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn:hover .arr {
+  transform: translateX(4px);
+}
+
+.close__mark {
+  display: inline-block;
+  font-size: 1.5rem;
+  color: var(--brass);
+  letter-spacing: 0;
+  animation: slow-spin 14s linear infinite;
+}
+
+@keyframes slow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Marketing responsive fixes ------------------------------------------ */
+@media (max-width: 900px) {
+  .scores {
+    grid-template-columns: 1fr;
+  }
+  .pillars {
+    grid-template-columns: 1fr;
+  }
+  .day-grid {
+    grid-template-columns: 1fr;
+  }
+  .day-grid .sec-head {
+    position: static;
+    margin-bottom: 8px;
+  }
+}
+
+/* --- Reduced motion: the whole layer off ---------------------------------- */
+/* Must stay last. The earlier reduced-motion block already restores the
+ * hero mails; this one silences everything added above and un-hides any
+ * reveal state so the page reads as a calm static document. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-v3__copy > *,
+  .hero-shot,
+  .float-chip,
+  .auth__card,
+  .close__mark,
+  .ticker__track {
+    animation: none;
+  }
+  [data-js] [data-reveal] {
+    transition: none;
+  }
+  [data-js] [data-reveal]:not(.is-in) {
+    opacity: 1;
+    transform: none;
+  }
+  [data-js] [data-reveal]:not(.is-in) .bar {
+    transform: none;
+  }
+  table.bench .bar,
+  .btn .arr,
+  .top nav a.hide::after,
+  .pillar,
+  .pillar::before {
+    transition: none;
+  }
 }

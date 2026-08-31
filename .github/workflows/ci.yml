@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    # security-scan-green carries the whole launch pass and is many commits
+    # ahead of main. Without it here, none of that work had ever run in CI —
+    # the triggers only fired on the default branch and on PRs.
+    branches: [main, master, security-scan-green]
   pull_request:
 
 concurrency:
@@ -53,6 +56,14 @@ jobs:
         with:
           files: coverage.xml
         continue-on-error: true  # don't fail CI when no token is configured
+      # "Measured, not guessed" is the heading over the landing page's proof
+      # section. This is what makes it enforceable: the deterministic benchmark
+      # columns and the demo-workspace counts are re-run and compared against
+      # the committed artifact the page renders, so a policy change that moves
+      # a score turns the build red instead of quietly making the page wrong.
+      - name: Landing benchmark artifact is still true
+        if: matrix.python-version == '3.12'
+        run: python scripts/build_landing_metrics.py --check
       - name: Draft-quality gate (deterministic rubric over the committed drafts)
         if: matrix.python-version == '3.12'
         run: python scripts/eval_drafts.py --json draft_quality_report.json
@@ -62,6 +73,45 @@ jobs:
         with:
           name: draft-quality-report
           path: draft_quality_report.json
+
+  # The deploy docs' recommended posture is DATABASE_URL=Postgres; this job is
+  # the proof it actually works — driver import, migrations, and the SaaS
+  # schema against a real server, not just SQLite.
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: copilot
+          POSTGRES_PASSWORD: copilot
+          POSTGRES_DB: copilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U copilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The short scheme on purpose: exercises the postgres:// normalization
+      # exactly as Render's connectionString arrives.
+      DATABASE_URL: postgres://copilot:copilot@localhost:5432/copilot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: DB-touching suites against real Postgres
+        run: >-
+          python -m pytest -q
+          tests/test_db_engine.py tests/test_db_migration.py
+          tests/test_repositories.py tests/test_saas_api.py
+          tests/test_saas_auth_core.py tests/test_saas_licensing.py
+          tests/test_saas_data_lifecycle.py tests/test_operator_api.py
+          tests/test_demo_guardrails.py
 
   invariant-harness:
     runs-on: ubuntu-latest
@@ -77,7 +127,10 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    continue-on-error: true  # informational until the codebase is fully typed
+    # No continue-on-error. It was doubly disabled — this flag *and* mypy.ini
+    # silencing ten modules — which is two independent ways for a type error to
+    # reach main unnoticed. Four modules came off the silence list (every error
+    # in them was real); the gate is now a gate.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -144,8 +197,28 @@ jobs:
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
       - name: Lint the chart
         run: helm lint helm/exec-email-copilot
-      - name: Render templates (defaults, and with persistence enabled)
+      - name: Render templates (a valid config, and with persistence enabled)
         run: |
-          helm template smoke helm/exec-email-copilot > /dev/null
-          helm template smoke helm/exec-email-copilot \
+          SECRET=--set=secret.AUTH_SECRET_KEY=ci-not-a-real-secret
+          helm template smoke helm/exec-email-copilot "$SECRET" > /dev/null
+          helm template smoke helm/exec-email-copilot "$SECRET" \
             --set persistence.enabled=true --set ingress.enabled=true > /dev/null
+      # A chart that lints but cannot be safely installed is worse than no
+      # chart. These assert the preflight guards actually stop the four
+      # configurations that used to be the *defaults*: no signing secret, and
+      # multi-replica with the un-lockable background worker or a
+      # ReadWriteOnce volume.
+      - name: Unsafe configurations must refuse to render
+        run: |
+          SECRET=--set=secret.AUTH_SECRET_KEY=ci-not-a-real-secret
+          refuses() {
+            if helm template smoke helm/exec-email-copilot "$@" > /dev/null 2>&1; then
+              echo "FAIL: rendered a configuration that should have been refused: $*"
+              exit 1
+            fi
+            echo "ok: refused $*"
+          }
+          refuses                                                   # no AUTH_SECRET_KEY
+          refuses "$SECRET" --set replicaCount=2                    # no leader election
+          refuses "$SECRET" --set replicaCount=2 --set persistence.enabled=true
+          refuses "$SECRET" --set extraEnv[3].name=CORS_ORIGINS --set extraEnv[3].value='*'

@@ -1,0 +1,130 @@
+{% extends "_app.html" %}
+
+{% block title %}Waiting on · Executive Email Copilot{% endblock %}
+{% block heading %}Waiting on{% endblock %}
+{% block lede %}Promises made in your mail, in both directions, with the sentence they came from.{% endblock %}
+
+{% block main %}
+{# A follow-up list is only worth reading if it is short and true, which is why
+   the extractor is deliberately strict and why every row shows the sentence it
+   came from — a promise you cannot verify at a glance is one you re-read the
+   whole thread to check. #}
+<form class="inbox-filter" method="get" action="/app/waiting">
+  <label class="visually-hidden" for="waiting-direction">Filter by direction</label>
+  <select id="waiting-direction" name="direction">
+    <option value="">Both directions</option>
+    <option value="theirs" {% if filters.direction == 'theirs' %}selected{% endif %}>
+      Waiting on someone else
+    </option>
+    <option value="ours" {% if filters.direction == 'ours' %}selected{% endif %}>
+      What you owe
+    </option>
+  </select>
+  <label class="visually-hidden" for="waiting-show">Show</label>
+  <select id="waiting-show" name="show">
+    <option value="open" {% if filters.show == 'open' %}selected{% endif %}>Open</option>
+    <option value="done" {% if filters.show == 'done' %}selected{% endif %}>Done</option>
+  </select>
+  <button class="btn btn--sm" type="submit">Filter</button>
+  {% if filters.direction or filters.show != 'open' %}
+    <a class="btn btn--sm" href="/app/waiting">Clear</a>
+  {% endif %}
+</form>
+
+{% if not commitments %}
+  <div class="card">
+    <div class="empty">
+      {% if filters.show == 'done' %}
+        <h3>Nothing closed yet</h3>
+        <p>Commitments you mark done keep their record here.</p>
+        <a class="btn" href="/app/waiting">Back to open</a>
+      {% elif not connections %}
+        <h3>No mailbox connected yet</h3>
+        <p>Connect one and the copilot starts noticing what was promised in it.</p>
+        <a class="btn btn--primary" href="/app/connect">Connect a mailbox</a>
+      {% else %}
+        <h3>Nothing outstanding</h3>
+        <p>
+          No promises were found in your mail that are still open. The copilot looks for
+          them on every sync, in both directions.
+        </p>
+        <a class="btn" href="/app/inbox">Back to the inbox</a>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">
+        {{ commitments | length }} {{ 'open' if filters.show == 'open' else 'closed' }}
+      </span>
+      {% if waiting and waiting.overdue and filters.show == 'open' %}
+        <span class="chip chip--crit">{{ waiting.overdue }} past their date</span>
+      {% endif %}
+    </div>
+    <ul class="commitments">
+      {% for item in commitments %}
+        <li class="commitment{% if item.overdue %} commitment--overdue{% endif %}">
+          <div class="commitment__head">
+            {% if item.direction == 'ours' %}
+              <span class="chip chip--warn" title="A promise made in a reply you approved">you owe</span>
+            {% else %}
+              <span class="chip chip--accent" title="A promise made to you, or something asked of you">waiting on</span>
+            {% endif %}
+            {% if item.due_at %}
+              <span class="chip {% if item.overdue %}chip--crit{% else %}chip--neutral{% endif %}"
+                    title="From the words “{{ item.due_phrase }}”">
+                {{ item.due_at }}{% if item.overdue %} · overdue{% endif %}
+              </span>
+            {% else %}
+              <span class="chip chip--neutral" title="Nobody stated a date, so the copilot has not invented one">no date</span>
+            {% endif %}
+            <span class="muted commitment__who">{{ item.counterparty or "unknown sender" }}</span>
+          </div>
+
+          {# The sentence, verbatim. The whole point is that you can check it. #}
+          <p class="commitment__text">“{{ item.text }}”</p>
+
+          {% if item.subject %}
+            <p class="muted commitment__subject">
+              {% if item.message_id %}
+                <a href="/app/inbox?message={{ item.message_id }}">{{ item.subject }}</a>
+              {% else %}
+                {{ item.subject }}
+              {% endif %}
+            </p>
+          {% endif %}
+
+          <div class="actions-row">
+            {% if item.status == 'open' %}
+              <form method="post" action="/app/commitments/{{ item.id }}/done">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button class="btn btn--sm" type="submit">Mark done</button>
+              </form>
+              <form method="post" action="/app/commitments/{{ item.id }}/dismiss">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button class="btn btn--sm" type="submit"
+                        title="This was never really a commitment">Not a commitment</button>
+              </form>
+            {% else %}
+              <form method="post" action="/app/commitments/{{ item.id }}/reopen">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button class="btn btn--sm" type="submit">Reopen</button>
+              </form>
+              <span class="muted note-stamp mono">
+                closed {{ item.resolved_at | short_time }}
+              </span>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <p class="muted shortcut-hint">
+    Found by reading your mail, not by asking you to log anything. A row that is
+    not really a commitment should be dismissed — that is how the list stays short
+    enough to be worth opening.
+  </p>
+{% endif %}
+{% endblock %}

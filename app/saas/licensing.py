@@ -1,14 +1,18 @@
-"""Sales-led licensing: mint, verify, and reason about entitlements.
+"""Access grants: mint, verify, and reason about entitlements.
 
-Billing is enterprise / sales-led (no self-serve card capture). An operator
-issues a signed **license key** to a customer via ``scripts/issue_license.py``.
+The motion is self-serve — sign up, get a 14-day trial, then talk to us to
+keep your access. There is no card capture and **no price anywhere in this
+codebase**: what a customer pays is a conversation, not a table. An operator
+issues a signed **access key** to a customer via ``scripts/issue_license.py``.
 The key is a self-contained signed token (same HS256 machinery as session
 tokens) encoding the plan, seat count, feature flags, and expiry, so it can be
 verified offline. A copy of its terms is also persisted (``License`` row) so a
 key can be **revoked** and its seat limit enforced server-side.
 
-Plans are defined once here so pricing, entitlement checks, and the marketing
-page stay in sync.
+Plan definitions live here so the entitlement checks have one source of truth.
+They are an *internal* vocabulary for what a key grants — nothing renders them
+to a visitor, and nothing should: naming a tier the visitor cannot look up is
+worse than naming none.
 """
 
 from __future__ import annotations
@@ -30,18 +34,23 @@ FEATURE_CUSTOM_MODELS = "custom_models"
 
 @dataclass(frozen=True)
 class Plan:
-    """A purchasable tier. ``seats`` is the default seat grant; a minted license
-    may override it. ``price_display`` is marketing copy only."""
+    """What an access grant carries. ``seats`` is the default seat grant; a
+    minted key may override it.
+
+    Deliberately has no price or marketing blurb. Both used to live here and
+    were referenced by nothing that renders — the fields survived the deletion
+    of the pricing page and were the last place in the codebase that implied a
+    published price list.
+    """
 
     key: str
     name: str
     seats: int
     features: tuple[str, ...]
-    price_display: str
-    blurb: str
 
 
-# Ordered from entry to enterprise. "enterprise" seats/price are negotiated.
+# Ordered from entry to enterprise. Seat counts on the larger grants are
+# negotiated per customer and overridden at mint time.
 PLANS: dict[str, Plan] = {
     # The trial is full-featured-minus-enterprise on purpose: an evaluation
     # that can't test SSO or read the audit trail isn't an evaluation. The
@@ -52,16 +61,12 @@ PLANS: dict[str, Plan] = {
         name="Trial",
         seats=3,
         features=(FEATURE_APPROVALS, FEATURE_ANALYTICS, FEATURE_AUDIT_LOG, FEATURE_SSO),
-        price_display="Free for 14 days",
-        blurb="Evaluate the full copilot on a single team with no commitment.",
     ),
     "team": Plan(
         key="team",
         name="Team",
         seats=10,
         features=(FEATURE_APPROVALS, FEATURE_ANALYTICS),
-        price_display="Contact sales",
-        blurb="For a single executive team that wants approvals and analytics.",
     ),
     "business": Plan(
         key="business",
@@ -73,8 +78,6 @@ PLANS: dict[str, Plan] = {
             FEATURE_AUDIT_LOG,
             FEATURE_SSO,
         ),
-        price_display="Contact sales",
-        blurb="Multi-team rollout with SSO and a full audit trail.",
     ),
     "enterprise": Plan(
         key="enterprise",
@@ -88,8 +91,6 @@ PLANS: dict[str, Plan] = {
             FEATURE_PRIORITY_SUPPORT,
             FEATURE_CUSTOM_MODELS,
         ),
-        price_display="Custom",
-        blurb="Unlimited scale, custom models, priority support, and a DPA.",
     ),
 }
 
@@ -115,12 +116,11 @@ class Entitlement:
     issued_at: int = 0
     expires_at: int = 0
 
-    def has_feature(self, feature: str) -> bool:
-        return feature in self.features
-
-    def seats_ok(self, active_users: int) -> bool:
-        """True if ``active_users`` fits within the licensed seat count."""
-        return active_users <= self.seats
+    # `has_feature` and `seats_ok` used to live here and were re-implemented,
+    # independently, by BillingService — which is the one the product actually
+    # calls, because entitlement is signed terms AND the persisted row's status,
+    # and this dataclass only knows the first half. Two answers to one question
+    # is how a revoked key keeps its features.
 
     @property
     def expires_at_iso(self) -> str:

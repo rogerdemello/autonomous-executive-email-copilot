@@ -51,7 +51,9 @@ class Organization(Base):
     id = Column(String(32), primary_key=True, default=_new_id)
     name = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False, index=True)
-    status = Column(String(32), nullable=False, default="active")  # active | suspended
+    # No `status` column. It existed, defaulted to "active", and was read by
+    # nothing — "suspended" was never set by any code path and never checked,
+    # so it described a capability the product did not have.
     created_at = Column(String(50), nullable=False, default=_now_iso)
     updated_at = Column(String(50), nullable=False, default=_now_iso, onupdate=_now_iso)
 
@@ -60,7 +62,6 @@ class Organization(Base):
             "id": self.id,
             "name": self.name,
             "slug": self.slug,
-            "status": self.status,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -77,7 +78,12 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False, default="")
     role = Column(String(32), nullable=False, default=ROLE_MEMBER)
-    status = Column(String(32), nullable=False, default="active")  # active | invited | disabled
+    # Kept, unlike Organization.status: `count_active_for_org` reads it to
+    # enforce seat limits, and AuthService refuses a sign-in for "disabled".
+    # Nothing *sets* "disabled" today — that is an operator action taken
+    # against the database — but the check is a real safety net and the
+    # seat limiter genuinely depends on the column.
+    status = Column(String(32), nullable=False, default="active")  # active | disabled
     created_at = Column(String(50), nullable=False, default=_now_iso)
     updated_at = Column(String(50), nullable=False, default=_now_iso, onupdate=_now_iso)
     last_login_at = Column(String(50), nullable=True)
@@ -239,7 +245,14 @@ class ProcessedMessage(Base):
     sender = Column(String(320), nullable=True)
     sender_name = Column(String(255), nullable=True)
     subject = Column(Text, nullable=True)
+    # The first 500 characters, for the message list. Kept separate from `body`
+    # so a list query never drags full message bodies across the wire.
     body_preview = Column(Text, nullable=True)
+    # The whole message. Without this the reader pane could only ever show the
+    # preview — you could not read an email in this inbox, which is a strange
+    # limitation for an email product. Capped at BODY_MAX_CHARS on write so one
+    # pathological message cannot bloat a tenant's table.
+    body = Column(Text, nullable=True)
     sender_role = Column(String(32), nullable=True)
     priority_hint = Column(String(16), nullable=True)
     risk_tag = Column(String(32), nullable=True)
@@ -261,6 +274,7 @@ class ProcessedMessage(Base):
             "sender_name": self.sender_name,
             "subject": self.subject,
             "body_preview": self.body_preview,
+            "body": self.body,
             "sender_role": self.sender_role,
             "priority_hint": self.priority_hint,
             "risk_tag": self.risk_tag,
@@ -314,6 +328,16 @@ class ProposedAction(Base):
     # gate.
     verification_status = Column(String(16), nullable=True)
     verification_notes = Column(Text, nullable=True)
+    # The evidence behind the verdict: a JSON list of
+    # {kind, detail, claim, source}. A reviewer told "unsupported claim: the
+    # 25th" has to go hunting; one shown the draft sentence next to the source
+    # line it failed against has a decision in front of them.
+    verification_claims = Column(Text, nullable=True)
+    # A send that failed is retried by the background worker, up to a bound.
+    # Before this, `status="failed"` was terminal and nothing looked at it
+    # again — a reviewer approved a reply and it silently never went.
+    retry_count = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, nullable=True)
 
     def to_dict(self) -> dict:
         return {
@@ -340,6 +364,83 @@ class ProposedAction(Base):
             "verification_notes": [
                 line for line in (self.verification_notes or "").split("\n") if line
             ],
+            "verification_claims": self._claims(),
+            "retry_count": int(self.retry_count or 0),
+            "last_error": self.last_error,
+        }
+
+    def _claims(self) -> list[dict]:
+        """The stored verification evidence. Malformed JSON degrades to none
+        rather than breaking the approvals page, which is the one page that
+        must always render."""
+        import json
+
+        try:
+            claims = json.loads(self.verification_claims) if self.verification_claims else []  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return []
+        return claims if isinstance(claims, list) else []
+
+
+class Commitment(Base):
+    """A promise found in a message or in a reply the workspace sent.
+
+    Its own table rather than a new ``ProposedAction`` row type, though the
+    latter is superficially close. A commitment is not something the copilot
+    proposes and a human approves — it is an observation with a deadline and a
+    direction, and it has to survive being marked done without that meaning
+    "executed". Folding it into the actions table would have put non-actions
+    into the approval queue's counts, the learning corpus, and the idempotency
+    key, in exchange for skipping one migration.
+    """
+
+    __tablename__ = "saas_commitments"
+    __table_args__ = (
+        # The same promise re-read on a later sync is the same promise. The
+        # hash is over (message, direction, text) — see the repository.
+        UniqueConstraint("org_id", "fingerprint", name="uq_commitment_fingerprint"),
+    )
+
+    id = Column(String(32), primary_key=True, default=_new_id)
+    org_id = Column(String(32), ForeignKey("saas_organizations.id"), nullable=False, index=True)
+    message_id = Column(
+        String(32), ForeignKey("saas_processed_messages.id"), nullable=True, index=True
+    )
+    thread_id = Column(String(255), nullable=True, index=True)
+    fingerprint = Column(String(64), nullable=False)
+    # ours | theirs — who owes the thing. See app/copilot/commitments.py.
+    direction = Column(String(16), nullable=False, default="theirs")
+    text = Column(Text, nullable=False)
+    # The resolved date, and the words the writer actually used. Both, because
+    # showing the phrase is what lets a reviewer catch a bad resolution rather
+    # than trust it.
+    due_at = Column(String(32), nullable=True)
+    due_phrase = Column(String(64), nullable=True)
+    # open | done | dropped. "dropped" is a human saying this was never a real
+    # commitment, which is the feedback that keeps the list worth reading.
+    status = Column(String(16), nullable=False, default="open", index=True)
+    counterparty = Column(String(320), nullable=True)
+    subject = Column(Text, nullable=True)
+    created_at = Column(String(50), nullable=False, default=_now_iso)
+    resolved_at = Column(String(50), nullable=True)
+    resolved_by = Column(String(32), nullable=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "org_id": self.org_id,
+            "message_id": self.message_id,
+            "thread_id": self.thread_id,
+            "direction": self.direction,
+            "text": self.text,
+            "due_at": self.due_at,
+            "due_phrase": self.due_phrase,
+            "status": self.status,
+            "counterparty": self.counterparty,
+            "subject": self.subject,
+            "created_at": self.created_at,
+            "resolved_at": self.resolved_at,
+            "resolved_by": self.resolved_by,
         }
 
 

@@ -1,0 +1,139 @@
+{% extends "_public.html" %}
+
+{% block title %}Terms of service · Executive Email Copilot{% endblock %}
+{% block description %}The terms on which Executive Email Copilot is provided: what you get, what you are responsible for, what we do not promise, and how either side ends it.{% endblock %}
+
+{% block main %}
+<article class="wrap legal">
+  <p class="eyebrow">Legal</p>
+  <h1>Terms of service</h1>
+  <p class="legal__updated">Last updated 31 August 2026</p>
+
+  <p>
+    These terms govern your use of Executive Email Copilot. By creating a
+    workspace or connecting a mailbox you accept them. If you are accepting on
+    behalf of a company, you confirm you are allowed to bind it.
+  </p>
+
+  <h2>What the service does</h2>
+  <p>
+    The copilot reads a mailbox you connect, classifies and ranks what arrives,
+    drafts replies, checks those drafts against the message they answer, and
+    holds every outbound action in an approval queue. It records what it did in
+    a per-workspace audit log.
+  </p>
+  <p>
+    <strong>It is an assistant, not an agent acting alone.</strong> No reply,
+    escalation, or other outbound action leaves your mailbox unless a person
+    with the admin role or higher approves it. That gate is unconditional; it
+    is not a setting you can switch off, and we will not add one.
+  </p>
+
+  <h2>Your account</h2>
+  <ul>
+    <li>You are responsible for what happens under your credentials. Keep them safe.</li>
+    <li>
+      You must have the right to connect the mailbox you connect. If it belongs
+      to an employer, get their permission first — some Microsoft 365 tenants
+      will require an administrator to consent, by design.
+    </li>
+    <li>
+      Roles are ranked: owner, admin, member. Nobody can grant a role above
+      their own. Only the owner can activate an access key, export the
+      workspace, or delete it.
+    </li>
+  </ul>
+
+  <h2>Access and trials</h2>
+  <p>
+    A new workspace starts on a 14-day trial with every feature switched on.
+    There is no card and nothing to cancel. When the trial ends, syncing and
+    approvals pause; sign-in, settings, export, and deletion stay open, because
+    those are exactly what you need when access has lapsed. Nothing is deleted
+    when a trial expires.
+  </p>
+  <p>
+    Continued access is arranged by talking to us — see
+    <a href="/contact-sales">Talk to us</a>. We issue a signed access key you
+    activate in Settings. An access key is granted to one workspace and is not
+    transferable.
+  </p>
+
+  <h2>Acceptable use</h2>
+  <p>You agree not to:</p>
+  <ul>
+    <li>use the service to send unsolicited bulk mail, or anything unlawful, deceptive, or harassing;</li>
+    <li>connect a mailbox you are not authorised to access;</li>
+    <li>attempt to reach another workspace's data, or to circumvent the approval gate, rate limits, or authentication;</li>
+    <li>resell or white-label the service without a written agreement with us;</li>
+    <li>use the service in a way that breaks the terms of your mail provider.</li>
+  </ul>
+  <p>
+    We may suspend a workspace that is doing any of the above. Where it is
+    safe and lawful to do so, we will tell you why first.
+  </p>
+
+  <h2>Your data</h2>
+  <p>
+    Your mail, your drafts, and your decisions remain yours. We process them to
+    run the service for you, as described in the
+    <a href="/privacy">privacy policy</a>, and for nothing else. We do not use
+    your mail to train generalized machine-learning models.
+  </p>
+  <p>
+    You can export the entire workspace as JSON, or erase it permanently, from
+    Settings, at any time, without asking us. Deletion is a hard purge and has
+    no undo.
+  </p>
+
+  <h2>Availability and change</h2>
+  <p>
+    We aim to keep the service running and will give notice of planned
+    downtime where we reasonably can, but the service is provided without an
+    uptime guarantee unless we have separately agreed one with you in writing.
+    Features may change; we will not remove the approval gate.
+  </p>
+
+  <h2>Model-written content</h2>
+  <p>
+    Drafts are written by a language model and checked against their source
+    message before they reach you. That verification is genuinely useful and it
+    is not infallible. <strong>You are responsible for what you approve.</strong>
+    Read the draft. That is what the queue is for.
+  </p>
+
+  <h2>Warranties and liability</h2>
+  <p>
+    The service is provided "as is" and "as available". To the fullest extent
+    permitted by law we disclaim implied warranties of merchantability, fitness
+    for a particular purpose, and non-infringement.
+  </p>
+  <p>
+    To the fullest extent permitted by law, neither party is liable for
+    indirect, incidental, special, or consequential loss, or for lost profits
+    or lost data. Nothing here limits liability that cannot be limited by law,
+    including for death or personal injury caused by negligence, or for fraud.
+  </p>
+
+  <h2>Ending it</h2>
+  <p>
+    You may stop at any time: disconnect your mailboxes and delete the
+    workspace. We may end your access if you materially breach these terms and
+    do not fix it within a reasonable period after we tell you. Export your
+    data before you delete anything — after deletion we cannot recover it.
+  </p>
+
+  <h2>Changes to these terms</h2>
+  <p>
+    If we change these terms materially we will tell you before the change
+    takes effect. Continuing to use the service after that means you accept the
+    new version. The date at the top always reflects the current one.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a> ·
+    <a href="/privacy">Privacy policy</a>
+  </p>
+</article>
+{% endblock %}

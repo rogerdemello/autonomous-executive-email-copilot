@@ -1,7 +1,7 @@
 # Commercial / SaaS Guide
 
 This document describes the **commercial foundation** that turns the copilot from
-a single-tenant product demo into a multi-tenant, sales-led SaaS: accounts,
+a single-tenant product demo into a multi-tenant SaaS: accounts,
 organizations (tenants), role-based access, and license-key entitlements.
 
 It is **additive** — the benchmark, deterministic scoring contract, and existing
@@ -65,14 +65,21 @@ routes (`/auth/me`, `/org/*`, `/billing/*`).
 
 ---
 
-## 3. Sales-led licensing (billing)
+## 3. Access keys (billing)
 
-There is **no self-serve card capture**. The motion is:
+Acquisition is self-serve; **payment** is not. There is no card capture: a
+visitor signs up, connects a mailbox, and gets 14 days with everything on.
+Keeping access after that is arranged by conversation, and granted as a signed
+key. The motion is:
 
-1. Prospect submits a lead: `POST /billing/contact-sales` (public) or the
-   pricing page. Leads are persisted and optionally posted to `SALES_WEBHOOK_URL`.
+1. A trial ends, or a prospect submits a lead: the `/contact-sales` form
+   (CSRF + honeypot +
+   per-IP throttle) or `POST /billing/contact-sales` (public JSON). Leads are
+   persisted (`GET /operator/leads` reads them back), and optionally posted to
+   `SALES_WEBHOOK_URL`.
 2. After a contract is signed, an operator mints a **signed license key** bound
-   to the customer's org id:
+   to the customer's org id — against a deployed instance, via the operator
+   API (see [PROVISIONING_RUNBOOK.md](PROVISIONING_RUNBOOK.md)); locally:
 
    ```bash
    python scripts/issue_license.py --org <org_id> --plan business --valid-days 365 --persist
@@ -90,18 +97,27 @@ There is **no self-serve card capture**. The motion is:
    ```
 4. Entitlement is now live: `GET /billing/entitlement`.
 
-### Plans
+### Grants
 
-Plans are defined once in [`app/saas/licensing.py`](../app/saas/licensing.py)
-(`PLANS`) and drive **both** entitlement checks and the pricing page, so they
-can never drift. `GET /api/pricing` returns them as JSON.
+Grants are defined once in [`app/saas/licensing.py`](../app/saas/licensing.py)
+(`PLANS`) and drive entitlement checks. They are an **internal vocabulary for
+what a key carries** — nothing renders them to a visitor or to a customer.
+There is no price anywhere in this codebase and no page that lists tiers;
+`/pricing` 301s to the landing page and Settings shows "Trial · N days
+remaining" or "Full access", never a tier name.
 
-| Plan | Seats (default) | Notable features |
+| Grant | Seats (default) | Notable features |
 |---|---|---|
-| Trial | 3 | Approvals — 14-day term |
-| Team | 10 | + Analytics |
+| Trial | 3 | Approvals, analytics, audit log, SSO — 14-day term |
+| Team | 10 | Approvals, analytics |
 | Business | 50 | + Audit log, SSO |
 | Enterprise | 1000 | + Priority support, custom models |
+
+Only `audit_log` and `sso` are actually **enforced** anywhere
+(`web/routes.py:activity` and the SSO login route). The other four flags are
+carried by keys and checked by nothing — they used to render as chips in
+Settings, which made them a decorative claim about what a customer had bought.
+Do not surface a flag until it gates something.
 
 Seats and features can be overridden per key at mint time
 (`--seats`, or the `mint_license(features=...)` argument).
@@ -134,11 +150,13 @@ Seats and features can be overridden per key at mint time
 | POST | `/mailbox/connect/{provider}` | admin+ | Begin OAuth; returns consent URL |
 | GET | `/mailbox/oauth/callback` | public | OAuth redirect target (identity in signed state) |
 | DELETE | `/mailbox/connections/{id}` | admin+ | Disconnect a mailbox |
-| GET | `/`, `/pricing` | public | Landing page + pricing |
+| GET | `/`, `/contact-sales` | public | Landing page + lead form |
+| GET | `/privacy`, `/terms` | public | Legal pages (the Gmail verification gate) |
+| * | `/operator/*` | operator token | Provision orgs, mint/revoke licenses, read leads, reseed the demo |
 
 The server-rendered UI ([`app/web`](../app/web)) exposes this as real pages
 rather than API calls: `/signup` and `/login` for onboarding, `/app/settings` for
-the workspace, members and roles, and plan/entitlement, and `/app/connect` for
+the workspace, members and roles, and access, and `/app/connect` for
 mailbox connect and disconnect.
 
 Both surfaces share one identity model. The pages carry the *same* session token

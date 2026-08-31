@@ -19,6 +19,7 @@ from app.core.db import get_session
 
 from .models_db import (
     AuditLogEntry,
+    Commitment,
     License,
     MailboxConnection,
     Organization,
@@ -38,12 +39,33 @@ def _now_iso() -> str:
 DEFAULT_PAGE_SIZE = 100
 MAX_PAGE_SIZE = 500
 
+# A stored message body is capped rather than unbounded: a mailbox will sooner
+# or later contain one message with a megabyte of quoted history, and there is
+# no reading experience that needs more than this.
+BODY_MAX_CHARS = 100_000
+
 
 def clamp_page(limit: int | None, offset: int | None) -> tuple[int, int]:
     """Clamp a requested ``(limit, offset)`` into safe bounds."""
     safe_limit = DEFAULT_PAGE_SIZE if not limit or limit < 1 else min(int(limit), MAX_PAGE_SIZE)
     safe_offset = 0 if not offset or offset < 0 else int(offset)
     return safe_limit, safe_offset
+
+
+def _clamp_body(body: str | None) -> str | None:
+    if body is None:
+        return None
+    if len(body) <= BODY_MAX_CHARS:
+        return body
+    return body[:BODY_MAX_CHARS] + "\n\n[… truncated]"
+
+
+def _escape_like(term: str) -> str:
+    """Escape LIKE wildcards so a search for "50%" is not a match-everything.
+
+    Paired with ``escape="\\"`` at the call site.
+    """
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 class OrganizationRepository:
@@ -69,6 +91,17 @@ class OrganizationRepository:
             return (
                 session.query(Organization.id).filter(Organization.slug == slug).first() is not None
             )
+
+    def list_all(self, limit: int = 200) -> list[dict[str, Any]]:
+        """Every organization, newest first. Operator surface only."""
+        with get_session() as session:
+            rows = (
+                session.query(Organization)
+                .order_by(Organization.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            return [r.to_dict() for r in rows]
 
 
 class UserRepository:
@@ -217,6 +250,22 @@ class LicenseRepository:
             lic = session.query(License).filter(License.key_id == key_id).first()
             return lic.to_dict() if lic else None
 
+    def revoke_all_for_org(self, org_id: str) -> int:
+        """Revoke every active license for the org — the full cut-off.
+
+        Revoking a single key merely falls back to the next most recent active
+        license (e.g. the original trial), which is a downgrade, not a stop.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(License)
+                .filter(License.org_id == org_id, License.status == "active")
+                .all()
+            )
+            for lic in rows:
+                lic.status = "revoked"
+            return len(rows)
+
     def revoke(self, org_id: str, key_id: str) -> bool:
         with get_session() as session:
             lic = (
@@ -263,6 +312,55 @@ class AuditRepository:
                 .all()
             )
             return [r.to_dict() for r in rows]
+
+    def page_for_org(
+        self,
+        org_id: str,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        action: str | None = None,
+        actor_user_id: str | None = None,
+    ) -> dict[str, Any]:
+        """A filtered, counted page of the audit log.
+
+        The Activity page rendered one unfiltered table of the most recent 100
+        entries with no way to page back, which makes the log unusable as
+        evidence the moment a workspace has been running for a week — and
+        "answer procurement's questions" is the whole reason it exists.
+        """
+        safe_limit, safe_offset = clamp_page(limit, offset)
+        with get_session() as session:
+            query = session.query(AuditLogEntry).filter(AuditLogEntry.org_id == org_id)
+            if action:
+                query = query.filter(AuditLogEntry.action == action)
+            if actor_user_id:
+                query = query.filter(AuditLogEntry.actor_user_id == actor_user_id)
+            total = query.count()
+            rows = (
+                query.order_by(AuditLogEntry.created_at.desc(), AuditLogEntry.id.desc())
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "entries": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
+
+    def actions_for_org(self, org_id: str) -> list[str]:
+        """The distinct action names present, for the filter dropdown."""
+        with get_session() as session:
+            rows = (
+                session.query(AuditLogEntry.action)
+                .filter(AuditLogEntry.org_id == org_id)
+                .distinct()
+                .order_by(AuditLogEntry.action.asc())
+                .all()
+            )
+            return [str(r[0]) for r in rows]
 
 
 class MailboxRepository:
@@ -472,6 +570,7 @@ class ProcessedMessageRepository:
         business_value: float | None,
         sender_name: str | None = None,
         received_at: str | None = None,
+        body: str | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             existing = (
@@ -489,6 +588,7 @@ class ProcessedMessageRepository:
                 existing.sender_name = sender_name
                 existing.subject = subject
                 existing.body_preview = body_preview
+                existing.body = _clamp_body(body)
                 existing.sender_role = sender_role
                 existing.priority_hint = priority_hint
                 existing.risk_tag = risk_tag
@@ -507,6 +607,7 @@ class ProcessedMessageRepository:
                 sender_name=sender_name,
                 subject=subject,
                 body_preview=body_preview,
+                body=_clamp_body(body),
                 sender_role=sender_role,
                 priority_hint=priority_hint,
                 risk_tag=risk_tag,
@@ -524,12 +625,43 @@ class ProcessedMessageRepository:
         connection_id: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
+        q: str | None = None,
+        label: str | None = None,
+        priority: str | None = None,
     ) -> dict[str, Any]:
+        """A page of messages, newest first, with optional search and filters.
+
+        ``q`` matches sender, sender name, and subject. ``label`` is the
+        classifier's verdict (spam / normal / urgent), which lives on the
+        message's ``classify`` action rather than on the message, so it is a
+        subquery rather than a column test. ``priority`` is the inferred
+        priority hint and *is* a column.
+        """
         safe_limit, safe_offset = clamp_page(limit, offset)
         with get_session() as session:
             query = session.query(ProcessedMessage).filter(ProcessedMessage.org_id == org_id)
             if connection_id:
                 query = query.filter(ProcessedMessage.connection_id == connection_id)
+            if q and q.strip():
+                needle = f"%{_escape_like(q.strip())}%"
+                query = query.filter(
+                    ProcessedMessage.subject.ilike(needle, escape="\\")
+                    | ProcessedMessage.sender.ilike(needle, escape="\\")
+                    | ProcessedMessage.sender_name.ilike(needle, escape="\\")
+                )
+            if label:
+                labelled = (
+                    session.query(ProposedAction.message_id)
+                    .filter(
+                        ProposedAction.org_id == org_id,
+                        ProposedAction.action_type == "classify",
+                        ProposedAction.label == label,
+                    )
+                    .subquery()
+                )
+                query = query.filter(ProcessedMessage.id.in_(labelled.select()))
+            if priority:
+                query = query.filter(ProcessedMessage.priority_hint == priority)
             total = query.count()
             rows = (
                 query.order_by(
@@ -547,6 +679,50 @@ class ProcessedMessageRepository:
                 "limit": safe_limit,
                 "offset": safe_offset,
             }
+
+    def list_thread(self, org_id: str, thread_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        """Every message in one thread, oldest first.
+
+        ``thread_id`` has been stored since the table existed and was never
+        read, while the landing page sold "summarizes long threads".
+        """
+        if not thread_id:
+            return []
+        with get_session() as session:
+            rows = (
+                session.query(ProcessedMessage)
+                .filter(
+                    ProcessedMessage.org_id == org_id,
+                    ProcessedMessage.thread_id == thread_id,
+                )
+                .order_by(
+                    ProcessedMessage.received_at.asc().nullsfirst(),
+                    ProcessedMessage.synced_at.asc(),
+                )
+                .limit(limit)
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
+    def thread_sizes(self, org_id: str, thread_ids: list[str]) -> dict[str, int]:
+        """``{thread_id: message count}`` for the threads on the current page.
+
+        One grouped query for the whole page rather than one per row.
+        """
+        wanted = [t for t in dict.fromkeys(thread_ids) if t]
+        if not wanted:
+            return {}
+        with get_session() as session:
+            rows = (
+                session.query(ProcessedMessage.thread_id, func.count(ProcessedMessage.id))
+                .filter(
+                    ProcessedMessage.org_id == org_id,
+                    ProcessedMessage.thread_id.in_(wanted),
+                )
+                .group_by(ProcessedMessage.thread_id)
+                .all()
+            )
+            return {str(thread_id): int(count) for thread_id, count in rows}
 
     def get(self, org_id: str, message_id: str) -> dict[str, Any] | None:
         with get_session() as session:
@@ -580,6 +756,7 @@ class ProposedActionRepository:
         rationale: list[str] | None = None,
         verification_status: str | None = None,
         verification_notes: list[str] | None = None,
+        verification_claims: list[dict] | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             action = ProposedAction(
@@ -599,6 +776,9 @@ class ProposedActionRepository:
                 rationale="\n".join(rationale) if rationale else None,
                 verification_status=verification_status,
                 verification_notes="\n".join(verification_notes) if verification_notes else None,
+                verification_claims=json.dumps(verification_claims)
+                if verification_claims
+                else None,
             )
             session.add(action)
             session.flush()
@@ -625,6 +805,81 @@ class ProposedActionRepository:
             )
             return {
                 "actions": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
+
+    def labels_for_messages(self, org_id: str, message_ids: list[str]) -> dict[str, str]:
+        """``{message_id: classifier label}`` for exactly the messages asked for.
+
+        The inbox used to build this by listing the org's first 500 actions and
+        filtering in Python, so on any tenant with more than 500 actions the
+        spam chips silently vanished from the older half of the page — the
+        product's most visible claim, disappearing with scale and with nothing
+        reporting it.
+        """
+        wanted = [m for m in dict.fromkeys(message_ids) if m]
+        if not wanted:
+            return {}
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.message_id, ProposedAction.label)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.action_type == "classify",
+                    ProposedAction.message_id.in_(wanted),
+                    ProposedAction.label.isnot(None),
+                )
+                .all()
+            )
+            return {str(message_id): str(label) for message_id, label in rows}
+
+    def list_for_message(self, org_id: str, message_id: str) -> list[dict[str, Any]]:
+        """Every action on one message, newest first. One query, not a scan."""
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.message_id == message_id,
+                )
+                .order_by(ProposedAction.created_at.desc())
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
+    def list_pending_with_messages(
+        self, org_id: str, limit: int | None = None, offset: int | None = None
+    ) -> dict[str, Any]:
+        """Pending actions joined to their messages, in one query.
+
+        The approvals page used to fetch the action list and then issue a
+        separate ``messages.get()`` per row — a textbook N+1 on the page that
+        is, by design, the busiest one in the product.
+        """
+        safe_limit, safe_offset = clamp_page(limit, offset)
+        with get_session() as session:
+            query = (
+                session.query(ProposedAction, ProcessedMessage)
+                .join(ProcessedMessage, ProposedAction.message_id == ProcessedMessage.id)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.status == "proposed",
+                )
+            )
+            total = query.count()
+            rows = (
+                query.order_by(ProposedAction.created_at.desc())
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "items": [
+                    {"action": action.to_dict(), "message": message.to_dict()}
+                    for action, message in rows
+                ],
                 "total": total,
                 "limit": safe_limit,
                 "offset": safe_offset,
@@ -662,6 +917,86 @@ class ProposedActionRepository:
             "decided": by_status.get("approved", 0) + by_status.get("rejected", 0),
             "llm_drafts": int(llm_drafts),
         }
+
+    def verification_summary(self, org_id: str) -> dict[str, int]:
+        """How much checking has happened, and what it caught.
+
+        This is the number that sells the product — no competitor can tell a
+        customer whether the draft it wrote is true — and it was sitting in the
+        database being rendered as a single chip on one page.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.verification_status, func.count(ProposedAction.id))
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.verification_status.isnot(None),
+                )
+                .group_by(ProposedAction.verification_status)
+                .all()
+            )
+            by_status = {str(status): int(count) for status, count in rows}
+            # Claims are counted from the note lines rather than the JSON blob:
+            # notes exist on every flagged action, including those verified
+            # before the evidence column did.
+            flagged_notes = (
+                session.query(ProposedAction.verification_notes)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.verification_status == "flagged",
+                )
+                .all()
+            )
+        claims = sum(
+            len([line for line in (n[0] or "").split("\n") if line]) for n in flagged_notes
+        )
+        verified = by_status.get("verified", 0)
+        flagged = by_status.get("flagged", 0)
+        return {
+            "checked": verified + flagged,
+            "verified": verified,
+            "flagged": flagged,
+            "claims_caught": claims,
+        }
+
+    def list_failed_sends(self, org_id: str, max_retries: int, limit: int = 50) -> list[dict]:
+        """Approved actions whose provider write failed and may be retried.
+
+        Only actions a human *decided* on: an auto-applied label that failed is
+        cosmetic, but an approved reply that never left is the product silently
+        not doing the one thing it was told to do.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.status == "failed",
+                    ProposedAction.requires_approval.is_(True),
+                    ProposedAction.decided_by.isnot(None),
+                    func.coalesce(ProposedAction.retry_count, 0) < max_retries,
+                )
+                .order_by(ProposedAction.decided_at.asc())
+                .limit(limit)
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
+    def orgs_with_failed_sends(self, max_retries: int) -> list[str]:
+        """Org ids with at least one retryable failed send. The worker's list."""
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.org_id)
+                .filter(
+                    ProposedAction.status == "failed",
+                    ProposedAction.requires_approval.is_(True),
+                    ProposedAction.decided_by.isnot(None),
+                    func.coalesce(ProposedAction.retry_count, 0) < max_retries,
+                )
+                .distinct()
+                .all()
+            )
+            return [str(r[0]) for r in rows]
 
     def get(self, org_id: str, action_id: str) -> dict[str, Any] | None:
         with get_session() as session:
@@ -736,6 +1071,162 @@ class ProposedActionRepository:
             return row.to_dict()
 
 
+class CommitmentRepository:
+    """Tenant-scoped access to tracked commitments ("Waiting on")."""
+
+    @staticmethod
+    def fingerprint(message_id: str | None, direction: str, text: str) -> str:
+        """Stable identity for one promise.
+
+        Re-reading a mailbox re-reads the same sentences, and a follow-up list
+        that grows a duplicate on every sweep is a list nobody opens twice.
+        Normalised on whitespace and case so a provider that re-wraps a body
+        does not mint a second copy.
+        """
+        import hashlib
+
+        normalised = " ".join((text or "").lower().split())
+        raw = f"{message_id or ''}|{direction}|{normalised}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:64]
+
+    def upsert(
+        self,
+        *,
+        org_id: str,
+        message_id: str | None,
+        thread_id: str | None,
+        direction: str,
+        text: str,
+        due_at: str | None = None,
+        due_phrase: str | None = None,
+        counterparty: str | None = None,
+        subject: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Record a commitment, or leave the existing one alone.
+
+        Returns the row, or None when it already existed — so a caller can
+        count what is genuinely new. A resolved commitment is *not* reopened by
+        a re-sync: a human said it was done, and the message it came from has
+        not changed.
+        """
+        key = self.fingerprint(message_id, direction, text)
+        with get_session() as session:
+            existing = (
+                session.query(Commitment)
+                .filter(Commitment.org_id == org_id, Commitment.fingerprint == key)
+                .first()
+            )
+            if existing:
+                return None
+            row = Commitment(
+                org_id=org_id,
+                message_id=message_id,
+                thread_id=thread_id,
+                fingerprint=key,
+                direction=direction,
+                text=text,
+                due_at=due_at,
+                due_phrase=due_phrase,
+                counterparty=counterparty,
+                subject=subject,
+            )
+            session.add(row)
+            session.flush()
+            return row.to_dict()
+
+    def list_for_org(
+        self,
+        org_id: str,
+        *,
+        status: str | None = "open",
+        direction: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> dict[str, Any]:
+        """Commitments, soonest deadline first, undated last.
+
+        Ordering is the feature: a follow-up list sorted by anything other than
+        urgency is a list you scroll rather than act on.
+        """
+        safe_limit, safe_offset = clamp_page(limit, offset)
+        with get_session() as session:
+            query = session.query(Commitment).filter(Commitment.org_id == org_id)
+            if status:
+                query = query.filter(Commitment.status == status)
+            if direction:
+                query = query.filter(Commitment.direction == direction)
+            total = query.count()
+            rows = (
+                query.order_by(
+                    Commitment.due_at.asc().nullslast(),
+                    Commitment.created_at.desc(),
+                )
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "commitments": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
+
+    def get(self, org_id: str, commitment_id: str) -> dict[str, Any] | None:
+        with get_session() as session:
+            row = (
+                session.query(Commitment)
+                .filter(Commitment.id == commitment_id, Commitment.org_id == org_id)
+                .first()
+            )
+            return row.to_dict() if row else None
+
+    def set_status(
+        self, org_id: str, commitment_id: str, status: str, *, actor_user_id: str | None = None
+    ) -> dict[str, Any] | None:
+        with get_session() as session:
+            row = (
+                session.query(Commitment)
+                .filter(Commitment.id == commitment_id, Commitment.org_id == org_id)
+                .first()
+            )
+            if not row:
+                return None
+            row.status = status
+            row.resolved_at = _now_iso() if status != "open" else None
+            row.resolved_by = actor_user_id if status != "open" else None
+            session.flush()
+            return row.to_dict()
+
+    def summarize_for_org(self, org_id: str, today: str) -> dict[str, int]:
+        """Open counts by direction, plus how many are past their date."""
+        with get_session() as session:
+            rows = (
+                session.query(Commitment.direction, func.count(Commitment.id))
+                .filter(Commitment.org_id == org_id, Commitment.status == "open")
+                .group_by(Commitment.direction)
+                .all()
+            )
+            by_direction = {str(direction): int(count) for direction, count in rows}
+            overdue = (
+                session.query(func.count(Commitment.id))
+                .filter(
+                    Commitment.org_id == org_id,
+                    Commitment.status == "open",
+                    Commitment.due_at.isnot(None),
+                    Commitment.due_at < today,
+                )
+                .scalar()
+                or 0
+            )
+        return {
+            "open": sum(by_direction.values()),
+            "ours": by_direction.get("ours", 0),
+            "theirs": by_direction.get("theirs", 0),
+            "overdue": int(overdue),
+        }
+
+
 class SalesLeadRepository:
     def create(
         self,
@@ -766,3 +1257,13 @@ class SalesLeadRepository:
         with get_session() as session:
             rows = session.query(SalesLead).order_by(SalesLead.created_at.desc()).limit(limit).all()
             return [r.to_dict() for r in rows]
+
+    def set_status(self, lead_id: int, status: str) -> dict[str, Any] | None:
+        """Move a lead through the funnel (new -> contacted -> closed)."""
+        with get_session() as session:
+            lead = session.get(SalesLead, lead_id)
+            if not lead:
+                return None
+            lead.status = status
+            session.flush()
+            return lead.to_dict()

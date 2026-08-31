@@ -1,31 +1,93 @@
 # Render Blueprint — deploys the Dockerfile as a single web service (FastAPI
-# serving both the JSON API and the server-rendered UI). Render injects $PORT,
-# which the container binds automatically (see Dockerfile / app.main:main).
+# serving both the JSON API and the server-rendered UI) plus a managed
+# Postgres. Render injects $PORT, which the container binds automatically
+# (see Dockerfile / app.main:main).
 #
 # Deploy: push to GitHub, then in Render → New → Blueprint and point it at this
-# repo. Set any secrets below in the Render dashboard (they are marked
-# `sync: false`, so they are never stored in git).
+# repo. Values marked `sync: false` are set in the Render dashboard (never in
+# git); `generateValue: true` secrets are minted once by Render and persist
+# across deploys.
 #
-# Note: the default SQLite store lives on the container's ephemeral filesystem
-# and resets on redeploy/restart. For durable storage set DATABASE_URL to a
-# Postgres connection string (e.g. a Render Postgres instance).
+# ⚠ BACK UP the generated AUTH_SECRET_KEY (dashboard → Environment). It signs
+# every session, license key, CSRF token, and the OAuth-token encryption key.
+# Deleting/recreating the service regenerates it, which invalidates every
+# license key you have ever issued to a customer.
+#
+# ⚠ Both services are on paid plans on purpose. Render's FREE Postgres is
+# deleted ~30 days after creation, and a free web service sleeps — a sleeping
+# instance runs no background sync, so the approval queue never fills on its
+# own. Downgrade only for a throwaway demo.
+#
+# ⚠ Values marked `sync: false` below are REQUIRED, not optional. Without SMTP,
+# password resets are logged instead of sent. Without the OAuth client IDs, no
+# real Gmail or Microsoft 365 mailbox can be connected at all.
 services:
   - type: web
     name: exec-email-copilot
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter # ⚠ do NOT use `free`: it sleeps, and a sleeping instance
+      # runs no background sync and re-seeds the demo on every cold start.
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      # --- LLM provider (optional; deterministic agents need no key) ---
+      # --- Production posture -------------------------------------------------
+      - key: ENVIRONMENT
+        value: production
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: SIGNUP_ENABLED
+        value: "true" # self-serve: signup provisions an org + a 14-day trial
+      - key: APP_PUBLIC_URL
+        value: https://exec-email-copilot.onrender.com
+      - key: ALLOWED_HOSTS
+        value: exec-email-copilot.onrender.com
+      # --- The public demo ----------------------------------------------------
+      - key: DEMO_LOGIN_ENABLED
+        value: "true" # prefilled demo login; the shared account is guarded
+      - key: DEMO_SEED_ON_STARTUP
+        value: "true" # boot straight into a presentable demo (no shell needed)
+      # --- Operator API + benchmark-surface lock ------------------------------
+      - key: OPERATOR_TOKEN
+        generateValue: true # read it in the dashboard; used for /operator/*
+      - key: API_AUTH_TOKEN
+        generateValue: true # closes the benchmark POST + sensitive-read surface
+      # --- The product's actual behaviour -------------------------------------
+      # Without these three the deployment is a demo, not a product: the
+      # approval queue only fills when someone clicks Sync, and every urgent
+      # reply is the generic sentence in app/copilot/policy.py rather than a
+      # model-written draft.
+      - key: SYNC_WORKER_ENABLED
+        value: "true" # background sync: the queue fills on its own
+      - key: SYNC_WORKER_INTERVAL_SECONDS
+        value: "900" # every 15 min per connection, with per-connection jitter
+      - key: LLM_DRAFTING_ENABLED
+        value: "true" # requires a key below; falls back safely without one
+      # --- Abuse limits -------------------------------------------------------
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "120"
+      - key: LOGIN_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      # --- Durable storage ----------------------------------------------------
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exec-email-copilot-db
+          property: connectionString
+      # --- Sales funnel (set in the dashboard) --------------------------------
+      - key: SALES_CONTACT_EMAIL
+        sync: false
+      - key: SALES_WEBHOOK_URL
+        sync: false # optional Slack incoming webhook for new leads
+      # --- CORS (pin to the public origin) ------------------------------------
+      - key: CORS_ORIGINS
+        value: https://exec-email-copilot.onrender.com
+      # --- LLM provider (optional; the demo replays cached drafts) ------------
       - key: OPENAI_API_KEY
         sync: false
       - key: API_BASE_URL
         sync: false
       - key: MODEL_NAME
         sync: false
-      # --- Native Azure OpenAI (optional alternative provider) ---
       - key: AZURE_OPENAI_ENDPOINT
         sync: false
       - key: AZURE_OPENAI_API_KEY
@@ -34,13 +96,38 @@ services:
         sync: false
       - key: AZURE_OPENAI_DEPLOYMENT_NAME
         sync: false
-      # --- Optional durable database (Postgres); SQLite if unset ---
-      - key: DATABASE_URL
-        sync: false
-      # --- Security hardening (recommended on a public URL) ---
-      - key: API_AUTH_TOKEN
-        sync: false
-      - key: CORS_ORIGINS
+      # --- Mailbox OAuth (REQUIRED — set in the dashboard) --------------------
+      # Without these, /app/connect shows both providers as unconfigured and the
+      # only mailbox anyone can attach is the read-only demo one.
+      - key: OAUTH_REDIRECT_BASE_URL
         value: https://exec-email-copilot.onrender.com
-      - key: RATE_LIMIT_PER_MINUTE
+      - key: GOOGLE_OAUTH_CLIENT_ID
         sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_OAUTH_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_OAUTH_TENANT
+        value: common # multi-tenant: any Microsoft 365 work or school account
+      # --- Transactional email (REQUIRED — set in the dashboard) --------------
+      # NOT optional. Left unset, email_provider falls back to `console`, so
+      # password-reset links and member-invite passwords are written to the log
+      # and never delivered — while the UI tells the user a mail was sent.
+      - key: EMAIL_PROVIDER
+        value: smtp
+      - key: EMAIL_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+
+databases:
+  - name: exec-email-copilot-db
+    plan: basic-256mb # ⚠ not `free`: free Postgres is deleted after ~30 days

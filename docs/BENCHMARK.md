@@ -373,7 +373,9 @@ Each cell aggregates the 3 seeds into `mean_score`, a 95% CI half-width (`ci95`)
 `mean_tokens`, and `mean_cost_usd`.
 
 **Headline (mean over personas):** `baseline` 1.00 / 1.00 / 0.67, `multiagent`
-0.80 / 1.00 / 0.09, `llm` 0.17 / 1.00 / 0.62 on easy / medium / hard. The LLM is
+0.80 / 1.00 / 0.09, `llm` 0.17 / 1.00 / 0.62 on easy / medium / hard (these are
+the numbers the landing page renders, from `data/landing_metrics.json` — see
+[Landing artifact](#landing-artifact)). The LLM is
 competitive with the heuristic baseline on the realistic full-management task and far
 ahead of the naive multi-agent there, but its task-blind safety guardrails
 (prioritize-first, auto-escalate risk, prefer replies) cost it coverage on the narrow
@@ -440,3 +442,43 @@ feed it:
 
 `research/benchmark/ab_eval.py` is the paired A/B comparison CLI over two
 result files (same seeds, two agents); `--help` documents its input shape.
+
+## Landing artifact
+
+<a id="landing-artifact"></a>
+
+The landing page's proof section is headed **"Measured, not guessed."** For a
+long time it was hardcoded `<td>` values and literal `--v:` bar widths. The
+numbers happened to be right, but nothing tied them to the benchmark, so
+nothing would have caught them drifting.
+
+`scripts/build_landing_metrics.py` writes `data/landing_metrics.json`: the
+purpose-shaped artifact the `/` route loads and the template renders rows,
+bar widths, and stat tiles from. A missing artifact **raises** rather than
+falling back to invented values — a silent fallback under that heading is the
+one failure mode that must not be possible.
+
+```bash
+python scripts/build_landing_metrics.py            # regenerate the offline columns
+python scripts/build_landing_metrics.py --check    # what CI runs; writes nothing
+python scripts/build_landing_metrics.py --agents baseline multiagent llm
+```
+
+The grid is pinned in the script (3 tasks x 3 personas x seeds 42-44) rather
+than taken from the runner's defaults, because the recorded `llm` column was
+measured on exactly that grid; widening the seed set would leave three columns
+describing a different experiment from the fourth.
+
+Two kinds of column live in the artifact, and the difference is recorded per
+agent rather than glossed over:
+
+| Column | Regenerated | Verified by CI |
+|---|---|---|
+| `baseline`, `multiagent` | yes, offline and deterministic | **yes** — a moved score fails the build |
+| `llm` | only with `--agents ... llm` and a provider key | no; carries its own `measured_at` and `provenance` |
+
+The `demo` block in the same artifact holds the counts behind the "A working
+day" timeline. They come from `data/demo/inbox.json` put through the same
+`enrich -> policy -> proposals` path a connected Gmail account takes, and
+`--check` verifies them too — edit a fixture subject line and both the demo
+and the landing page move together, or the build tells you they didn't.

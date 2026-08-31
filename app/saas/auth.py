@@ -60,29 +60,17 @@ class AuthService:
         if not settings.signup_enabled:
             raise AuthError("Self-serve signup is disabled; contact sales.", 403)
 
-        email = email.lower().strip()
-        if self.users.email_exists(email):
-            raise AuthError("An account with this email already exists.", 409)
+        # Lazy import: provisioning imports slugify/AuthError from this module.
+        from .provisioning import provision_org
 
-        org = self.orgs.create(name=org_name.strip(), slug=self._unique_slug(org_name))
-        user = self.users.create(
-            org_id=org["id"],
-            email=email,
-            password_hash=passwords.hash_password(password),
-            full_name=full_name.strip(),
-            role=ROLE_OWNER,
-        )
         # Every new org starts on a time-boxed trial entitlement.
-        _key, terms = licensing.mint_license(org["id"], "trial", settings.resolved_auth_secret)
-        self.licenses.upsert(
-            org_id=org["id"],
-            key_id=terms.key_id,
-            plan=terms.plan,
-            seats=terms.seats,
-            features=list(terms.features),
-            expires_at_iso=terms.expires_at_iso,
+        result = provision_org(
+            org_name=org_name,
+            owner_email=email,
+            owner_name=full_name,
+            password=password,
         )
-        return user, org, terms.__dict__
+        return result["owner"], result["organization"], result["entitlement"]
 
     def _unique_slug(self, name: str) -> str:
         base = slugify(name)

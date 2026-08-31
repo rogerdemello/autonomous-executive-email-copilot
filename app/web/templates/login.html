@@ -1,6 +1,6 @@
 {% extends "_public.html" %}
 
-{% block title %}Sign in — Executive Email Copilot{% endblock %}
+{% block title %}Sign in · Executive Email Copilot{% endblock %}
 
 {% block main %}
 <div class="auth">
@@ -24,7 +24,7 @@
           type="email"
           autocomplete="username"
           required
-          value="{{ email or '' }}"
+          value="{{ email or (demo_credentials.email if demo_credentials else '') }}"
         />
       </div>
 
@@ -36,6 +36,7 @@
           type="password"
           autocomplete="current-password"
           required
+          value="{{ demo_credentials.password if demo_credentials else '' }}"
         />
         <p class="field__hint"><a href="/forgot-password">Forgot password?</a></p>
       </div>
@@ -55,8 +56,9 @@
     {% if demo_credentials %}
       <div class="demo-hint">
         <b>Demo workspace</b>
-        Sign in as <code>{{ demo_credentials.email }}</code> with password
-        <code>{{ demo_credentials.password }}</code> to walk a pre-loaded executive inbox.
+        The form is pre-filled with the demo account
+        (<code>{{ demo_credentials.email }}</code>). Just press
+        <b>Sign in</b> to walk a pre-loaded executive inbox.
       </div>
     {% endif %}
   </div>

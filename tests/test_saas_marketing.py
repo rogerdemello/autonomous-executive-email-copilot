@@ -1,12 +1,14 @@
-"""Tests for the marketing surface (landing + pricing) and pricing/plan sync."""
+"""Tests for the marketing surface: landing, security.txt, and the standing
+rule that no page anywhere publishes a price or names a plan tier."""
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.saas import licensing
 
 
 @pytest.fixture
@@ -19,7 +21,79 @@ def test_landing_renders(client):
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
     assert "Executive Email Copilot" in resp.text
-    assert "Start free trial" in resp.text
+    assert "Start free" in resp.text
+
+
+def test_landing_leads_with_the_self_serve_cta(client):
+    """The motion is self-serve: connect an inbox, don't book a call."""
+    body = client.get("/").text
+    assert "Start free — connect your inbox" in body
+    assert 'href="/signup"' in body
+
+
+def test_landing_links_to_the_live_demo(client):
+    """login.html prefills the demo credentials in production and nothing on
+    the landing page used to link there — a visitor not ready to hand over a
+    mailbox had nowhere to go."""
+    body = client.get("/").text
+    assert "Try the live demo" in body
+    assert 'href="/login"' in body
+
+
+class TestBenchmarkIsMeasured:
+    """The proof section is headed "Measured, not guessed."
+
+    It used to be hardcoded <td> values and literal bar widths. These tests
+    hold the rendered page to the artifact, and the artifact to the benchmark.
+    """
+
+    def test_every_rendered_score_comes_from_the_artifact(self, client):
+        from app.web.routes import landing_metrics
+
+        body = client.get("/").text
+        artifact = landing_metrics()
+        assert artifact["columns"], "the artifact must carry at least one column"
+        for column in artifact["columns"]:
+            assert column["label"] in body
+            for cell in column["cells"].values():
+                assert f"{cell['score']:.2f}" in body
+                # The bar width is the score, not a separately-typed number.
+                assert f"--v: {cell['score']}" in body
+
+    def test_grid_tile_is_derived_not_asserted(self, client):
+        from app.web.routes import landing_metrics
+
+        grid = landing_metrics()["grid"]
+        shape = f"{len(grid['tasks'])}×{len(grid['personas'])}×{len(grid['seeds'])}"
+        assert shape in client.get("/").text
+
+    def test_working_day_counts_come_from_the_demo_mailbox(self, client):
+        """ "38 messages classified" described no run of anything. These are the
+        shipped demo mailbox through the real policy."""
+        from app.web.routes import landing_metrics
+
+        demo = landing_metrics()["demo"]
+        body = client.get("/").text
+        assert str(demo["messages"]) in body
+        assert str(demo["held_for_approval"]) in body
+        assert str(demo["auto_applied"]) in body
+
+    def test_a_missing_artifact_fails_loudly(self, monkeypatch, client):
+        """Never fall back to invented numbers under a heading that says
+        "measured" — a silent fallback is invisible in production."""
+        import app.web.routes as routes
+
+        monkeypatch.setattr(routes, "_landing_metrics_cache", None)
+        monkeypatch.setattr(routes, "_LANDING_METRICS_PATH", Path("no-such-artifact.json"))
+        with pytest.raises(RuntimeError, match="build_landing_metrics"):
+            routes.landing_metrics()
+
+    def test_the_artifact_agrees_with_a_fresh_benchmark_run(self):
+        """The gate CI runs. Slow-ish but deterministic and offline: it is the
+        only thing standing between the page and a stale number."""
+        import scripts.build_landing_metrics as build
+
+        assert build.check() == 0
 
 
 def test_security_txt_served(client):
@@ -29,27 +103,145 @@ def test_security_txt_served(client):
     assert "Expires:" in resp.text
 
 
-def test_pricing_page_lists_all_plans(client):
-    resp = client.get("/pricing")
+def test_pricing_page_redirects_home(client):
+    # There is no public pricing page; old links land home rather than on a 404.
+    resp = client.get("/pricing", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/"
+
+
+def test_pricing_json_is_gone(client):
+    assert client.get("/api/pricing").status_code == 404
+
+
+def test_landing_has_no_pricing_links(client):
+    resp = client.get("/")
     assert resp.status_code == 200
-    for plan in licensing.PLANS.values():
-        assert plan.name in resp.text
-        assert plan.price_display in resp.text
+    assert "/pricing" not in resp.text
 
 
-def test_pricing_json_matches_registry(client):
-    resp = client.get("/api/pricing")
-    assert resp.status_code == 200
-    plans = {p["key"]: p for p in resp.json()["plans"]}
-    assert set(plans) == set(licensing.PLANS)
-    for key, plan in licensing.PLANS.items():
-        assert plans[key]["seats"] == plan.seats
-        assert plans[key]["features"] == list(plan.features)
+@pytest.mark.parametrize("path", ["/", "/login", "/signup", "/contact-sales"])
+def test_no_public_page_names_a_plan_tier(client, path):
+    """A tier name the visitor cannot look up is worse than naming none.
+
+    The landing page's hero note used to read "SSO & audit log on Business+",
+    which invites exactly one question and there is no page that answers it.
+    """
+    body = client.get(path).text
+    for tier in ("Business+", "Team plan", "Enterprise plan", "per seat", "/month"):
+        assert tier not in body, f"{path} names a plan tier or a price: {tier}"
 
 
-def test_pricing_is_public_even_with_operator_token(client, monkeypatch):
+def test_marketing_is_public_even_with_operator_token(client, monkeypatch):
     # Marketing pages are GET (non-mutating) so they stay reachable regardless of
     # the operator API_AUTH_TOKEN gate.
     monkeypatch.setenv("API_AUTH_TOKEN", "operator-secret")
-    assert client.get("/pricing").status_code == 200
     assert client.get("/welcome").status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# The contact-sales funnel
+# --------------------------------------------------------------------------- #
+import re
+import uuid
+
+CSRF_RE = re.compile(r'name="csrf_token" value="([^"]+)"')
+
+
+def _csrf(html: str) -> str:
+    match = CSRF_RE.search(html)
+    assert match
+    return match.group(1)
+
+
+def _lead_emails() -> set[str]:
+    from app.saas.repository import SalesLeadRepository
+
+    return {lead["email"] for lead in SalesLeadRepository().list(limit=500)}
+
+
+class TestContactSalesForm:
+    def test_form_renders_publicly(self, client):
+        response = client.get("/contact-sales")
+        assert response.status_code == 200
+        assert "Request a walkthrough" in response.text
+
+    def test_landing_cta_points_at_the_form(self, client):
+        assert 'href="/contact-sales"' in client.get("/").text
+
+    def test_post_without_csrf_is_rejected(self, client):
+        response = client.post("/contact-sales", data={"email": "p@example.com"})
+        assert response.status_code == 403
+
+    def test_submission_persists_a_lead(self, client):
+        from app.core.security import lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        email = f"lead-{uuid.uuid4().hex[:10]}@example.com"
+        page = client.get("/contact-sales").text
+        response = client.post(
+            "/contact-sales",
+            data={
+                "csrf_token": _csrf(page),
+                "email": email,
+                "name": "Pat Prospect",
+                "company": "Prospect Co",
+                "seats": "12",
+                "message": "We drown in email.",
+            },
+        )
+        assert response.status_code == 200
+        assert "Thanks" in response.text
+        assert email in _lead_emails()
+
+    def test_honeypot_pretends_success_but_drops_the_lead(self, client):
+        from app.core.security import lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        email = f"bot-{uuid.uuid4().hex[:10]}@example.com"
+        page = client.get("/contact-sales").text
+        response = client.post(
+            "/contact-sales",
+            data={
+                "csrf_token": _csrf(page),
+                "email": email,
+                "website": "https://spam.example",
+            },
+        )
+        assert response.status_code == 200
+        assert "Thanks" in response.text
+        assert email not in _lead_emails()
+
+    def test_submissions_are_throttled(self, client):
+        from app.core.security import LEAD_SUBMISSIONS_PER_MINUTE, lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        page = client.get("/contact-sales").text
+        statuses = []
+        for i in range(LEAD_SUBMISSIONS_PER_MINUTE + 1):
+            statuses.append(
+                client.post(
+                    "/contact-sales",
+                    data={
+                        "csrf_token": _csrf(page),
+                        "email": f"burst-{i}-{uuid.uuid4().hex[:6]}@example.com",
+                    },
+                ).status_code
+            )
+        assert statuses[-1] == 429
+        assert all(code == 200 for code in statuses[:-1])
+        lead_rate_limiter.reset()
+
+    def test_json_endpoint_is_throttled_too(self, client):
+        from app.core.security import LEAD_SUBMISSIONS_PER_MINUTE, lead_rate_limiter
+
+        lead_rate_limiter.reset()
+        statuses = [
+            client.post(
+                "/billing/contact-sales",
+                json={"email": f"api-{i}-{uuid.uuid4().hex[:6]}@example.com"},
+            ).status_code
+            for i in range(LEAD_SUBMISSIONS_PER_MINUTE + 1)
+        ]
+        assert statuses[-1] == 429
+        lead_rate_limiter.reset()

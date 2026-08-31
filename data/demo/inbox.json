@@ -56,6 +56,21 @@
       ]
     },
     {
+      "provider_message_id": "m-ops-datacentre-followup",
+      "thread_id": "t-ops-datacentre",
+      "sender": "marcus.reid@northwind.example",
+      "sender_name": "Marcus Reid · Infrastructure",
+      "subject": "Re: Primary datacentre on generator power — utility outage in Rotterdam",
+      "body": "Update at 09:15. The utility has revised its estimate from four hours to seven, which puts restore at roughly 14:40.\n\nFuel is ordered and the tanker is confirmed for 11:00, so the eight-hour margin holds either way. Failover is staged and tested; it is a button press now.\n\nGiven the revised estimate I would like your call on whether the six-hour trigger still stands or whether we move it out to match the new restore window.\n\nMarcus",
+      "received_at": "2026-08-16T09:15:00+00:00",
+      "suggested_reply": "The trigger stands at six hours. The point of it was never the utility's estimate, it was our margin, and a revised estimate from the party that already missed once is not evidence to spend that margin on.\n\nIf the tanker slips past 11:30, fail over immediately rather than waiting for the trigger. Ninety seconds of write availability is cheap next to running a datacentre on a fuel delivery we are still chasing.",
+      "rationale": [
+        "Second message in an active incident thread; the earlier decision is context this reply depends on.",
+        "The sender asked a direct question about a commitment already made, so a reply is warranted.",
+        "Held for approval: revising an operational trigger is the COO's call, not the copilot's."
+      ]
+    },
+    {
       "provider_message_id": "m-security-access",
       "thread_id": "t-security-access",
       "sender": "soc@northwind.example",

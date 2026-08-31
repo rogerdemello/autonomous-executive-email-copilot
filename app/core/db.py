@@ -30,11 +30,21 @@ def resolve_database_url() -> str:
 
     Honors ``DATABASE_URL`` (via :class:`app.core.config.Settings`) when set, falling
     back to the zero-config local SQLite database otherwise.
+
+    Postgres URLs are normalized to the psycopg3 driver we actually ship:
+    managed platforms hand out ``postgres://`` (which SQLAlchemy 2 rejects
+    outright — Render's ``connectionString`` is the motivating case) and the
+    plain ``postgresql://`` scheme selects psycopg2 (not installed). Explicit
+    ``postgresql+<driver>://`` URLs are respected untouched.
     """
     configured = get_settings().database_url
-    if configured and configured.strip():
-        return configured.strip()
-    return DEFAULT_SQLITE_URL
+    if not (configured and configured.strip()):
+        return DEFAULT_SQLITE_URL
+    url = configured.strip()
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
 
 
 def build_engine_kwargs(database_url: str) -> dict:
@@ -124,25 +134,6 @@ class Episode(Base):
         }
 
 
-class DecisionRecord(Base):
-    """Individual decision record for detailed tracking."""
-
-    __tablename__ = "decisions"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    episode_id = Column(String(255), nullable=False, index=True)
-    step = Column(Integer, nullable=False)
-    action_type = Column(String(50), nullable=True)
-    email_id = Column(String(100), nullable=True)
-    label = Column(String(50), nullable=True)
-    content = Column(Text, nullable=True)
-    reward = Column(Float, nullable=True)
-    reason = Column(Text, nullable=True)
-    created_at = Column(
-        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
-    )
-
-
 class UserPreference(Base):
     """User preference settings for personalization."""
 
@@ -212,7 +203,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 5
+_SCHEMA_VERSION = 8
 
 
 class SchemaVersion(Base):
@@ -311,6 +302,28 @@ def _run_migration(version: int) -> None:
         _add_column_if_missing("saas_proposed_actions", "verification_status", "VARCHAR(16)")
         _add_column_if_missing("saas_proposed_actions", "verification_notes", "TEXT")
         return
+    if version == 6:
+        # The whole message body. Only a 500-character preview was stored, so
+        # the reader pane physically could not show a full email — you could
+        # not read your mail in this mail product.
+        _add_column_if_missing("saas_processed_messages", "body", "TEXT")
+        return
+    if version == 7:
+        # Verification evidence, not just a verdict: per flagged claim, the
+        # draft sentence and the source line it was checked against. Stored as
+        # JSON because it is read as a whole and never queried by field.
+        _add_column_if_missing("saas_proposed_actions", "verification_claims", "TEXT")
+        # A send that failed used to set status="failed" and stop there, with
+        # nothing to pick it up. These let the background worker retry, and
+        # bound how often it does.
+        _add_column_if_missing("saas_proposed_actions", "retry_count", "INTEGER")
+        _add_column_if_missing("saas_proposed_actions", "last_error", "TEXT")
+        return
+    if version == 8:
+        # Commitment tracking (saas_commitments). A whole new table, so
+        # ``create_all`` above has already built it — this step exists to move
+        # the recorded version, not to alter anything.
+        return
 
 
 def migrate_db() -> None:
@@ -329,3 +342,22 @@ def migrate_db() -> None:
         for v in range(current + 1, _SCHEMA_VERSION + 1):
             _run_migration(v)
             session.add(SchemaVersion(version=v))
+
+
+def schema_is_current() -> bool:
+    """True when the database is reachable and migrated to ``_SCHEMA_VERSION``.
+
+    Used by the readiness probe. This asks the database rather than trusting a
+    process-local flag, so it stays correct however the app was started — a
+    partially-applied migration (schema_version behind the code) reports not
+    ready instead of failing later, mid-request, on a missing column.
+    """
+    try:
+        inspector = inspect(engine)
+        if "schema_version" not in inspector.get_table_names():
+            return False
+        with get_session() as session:
+            current = session.query(func.max(SchemaVersion.version)).scalar() or 0
+        return int(current) >= _SCHEMA_VERSION
+    except Exception:  # noqa: BLE001 - unreachable DB is "not ready", not an error
+        return False

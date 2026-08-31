@@ -1,37 +1,81 @@
 {% extends "base.html" %}
 
-{# Chrome for the public, logged-out pages: landing, pricing, login, signup. #}
+{# Chrome for the public, logged-out pages: landing, login, signup, legal. #}
 
 {% block body %}
-<header class="wrap top">
-  <a class="logo" href="/"><span class="glyph">EC</span> Email Copilot</a>
-  <nav>
-    <a class="hide" href="/#how">How it works</a>
-    <a class="hide" href="/#proof">Proof</a>
-    <a class="hide" href="/pricing">Pricing</a>
-    <button
-      class="theme-toggle"
-      type="button"
-      data-theme-toggle
-      aria-label="Switch between light and dark theme"
-    >
-      ◐
-    </button>
-    {% if current_user %}
-      <a class="btn" href="/app/inbox">Open app</a>
-    {% else %}
-      <a class="hide" href="/login">Sign in</a>
-      <a class="btn btn--primary" href="/signup">Start free trial</a>
-    {% endif %}
-  </nav>
+<header class="site-head">
+  <div class="wrap top">
+    <a class="logo" href="/"><span class="glyph">EC</span> Email Copilot</a>
+    <nav>
+      <a class="hide" href="/#how">How it works</a>
+      <a class="hide" href="/#tour">See it work</a>
+      <a class="hide" href="/#proof">Proof</a>
+      <button
+        class="theme-toggle"
+        type="button"
+        data-theme-toggle
+        aria-label="Switch between light and dark theme"
+      >
+        ◐
+      </button>
+      {% if current_user %}
+        <a class="btn" href="/app/inbox">Open app</a>
+      {% else %}
+        <a class="hide" href="/login">Sign in</a>
+        <a class="btn btn--primary" href="/signup">Start free</a>
+      {% endif %}
+
+      {# Everything with `.hide` disappears at 760px — including Sign in, which
+         left an existing customer on a phone with no way into the product from
+         the front page. A <details> disclosure rather than a JS drawer: the
+         rest of this site works with scripting off and the menu should too. #}
+      <details class="mobile-nav">
+        <summary aria-label="Open the menu">
+          <span aria-hidden="true">☰</span>
+        </summary>
+        <div class="mobile-nav__panel">
+          <a href="/#how">How it works</a>
+          <a href="/#tour">See it work</a>
+          <a href="/#proof">Proof</a>
+          {% if current_user %}
+            <a href="/app/inbox">Open app</a>
+          {% else %}
+            <a href="/login">Sign in</a>
+          {% endif %}
+          <a href="/contact-sales">Talk to us</a>
+        </div>
+      </details>
+    </nav>
+  </div>
 </header>
 
 <main>{% block main %}{% endblock %}</main>
 
-<footer class="wrap">
-  <span>© Executive Email Copilot — autonomous inbox management for leaders.</span>
-  <span class="mono" style="letter-spacing: 0.04em">
-    Sales: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
-  </span>
+<footer class="site-foot">
+  <div class="wrap foot">
+    <div class="foot__brand">
+      <a class="logo" href="/"><span class="glyph">EC</span> Email Copilot</a>
+      <p>Autonomous inbox management for leaders, with your sign-off where it matters.</p>
+    </div>
+    <nav class="foot__links" aria-label="Footer">
+      <a href="/#how">How it works</a>
+      <a href="/#tour">See it work</a>
+      <a href="/#intelligence">Under the hood</a>
+      <a href="/#day">A working day</a>
+      <a href="/#proof">Proof</a>
+      <a href="/contact-sales">Talk to us</a>
+    </nav>
+    <div class="foot__meta">
+      <span class="mono">Sales: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a></span>
+      {# Legal sits on its own line, visually apart from product nav. Google
+         requires a published privacy policy on the app's own domain before
+         OAuth verification will even begin, and it must be reachable from
+         every public page. #}
+      <span class="foot__legal">
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+      </span>
+      <span>© Executive Email Copilot</span>
+    </div>
+  </div>
 </footer>
 {% endblock %}

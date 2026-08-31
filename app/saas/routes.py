@@ -13,12 +13,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
+from app.core.security import lead_submission_allowed, login_attempt_allowed
 
 from . import licensing
 from .auth import AuthError, AuthService
 from .billing import BillingError, BillingService
 from .data_lifecycle import DataLifecycleService
-from .deps import get_current_user, require_role
+from .deps import get_current_user, reject_shared_demo_account, require_role
 from .email import send_email
 from .models_db import ROLE_ADMIN, ROLE_OWNER
 from .org_service import OrgError, OrgService
@@ -77,6 +78,11 @@ SAAS_SELF_AUTH_PREFIXES = (
     "/signup",
     "/logout",
     "/static",
+    # Public lead-capture form (CSRF + honeypot + its own throttle).
+    "/contact-sales",
+    # The operator API enforces its own bearer token on EVERY method (including
+    # GET) — stricter than the gateway, which must therefore not double-gate it.
+    "/operator",
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -122,6 +128,14 @@ def signup(body: SignupRequest, request: Request) -> dict:
 
 @auth_router.post("/login")
 def login(body: LoginRequest, request: Request) -> dict:
+    if not login_attempt_allowed(
+        _client_ip(request), body.email, get_settings().login_rate_limit_per_minute
+    ):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many sign-in attempts. Wait a minute and try again.",
+            headers={"Retry-After": "60"},
+        )
     try:
         user = _auth.authenticate(email=body.email, password=body.password)
     except AuthError as exc:
@@ -166,6 +180,7 @@ def change_password(
     request: Request,
     user: dict = Depends(get_current_user),
 ) -> dict:
+    reject_shared_demo_account(user)
     try:
         _auth.change_password(user, body.current_password, body.new_password)
     except AuthError as exc:
@@ -341,6 +356,7 @@ def invite_member(
     request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
+    reject_shared_demo_account(actor)
     try:
         member = _org_service.invite_member(
             actor=actor,
@@ -362,6 +378,7 @@ def update_member_role(
     request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
+    reject_shared_demo_account(actor)
     try:
         updated = _org_service.change_member_role(
             actor=actor, member_id=member_id, role=body.role, ip=_client_ip(request)
@@ -377,6 +394,7 @@ def remove_member(
     request: Request,
     actor: dict = Depends(require_role(ROLE_ADMIN)),
 ) -> dict:
+    reject_shared_demo_account(actor)
     try:
         _org_service.remove_member(actor=actor, member_id=member_id, ip=_client_ip(request))
     except OrgError as exc:
@@ -396,6 +414,7 @@ def audit_log(actor: dict = Depends(require_role(ROLE_ADMIN))) -> dict:
 @org_router.get("/export")
 def export_org(owner: dict = Depends(require_role(ROLE_OWNER))) -> dict:
     """Download all of the organization's data (secret-free). Owner only (GDPR)."""
+    reject_shared_demo_account(owner)
     bundle = _lifecycle.export_org(owner["org_id"])
     if bundle is None:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -413,6 +432,7 @@ def delete_org(
 
     Requires ``confirm`` to equal the org slug — deliberate friction against an
     accidental, irreversible purge."""
+    reject_shared_demo_account(owner)
     org = _orgs.get(owner["org_id"])
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -447,6 +467,7 @@ def activate_license(
     request: Request,
     owner: dict = Depends(require_role(ROLE_OWNER)),
 ) -> dict:
+    reject_shared_demo_account(owner)
     try:
         ent = _billing.activate_license(
             org_id=owner["org_id"],
@@ -459,7 +480,13 @@ def activate_license(
 
 
 @billing_router.post("/contact-sales")
-def contact_sales(body: ContactSalesRequest) -> dict:
+def contact_sales(body: ContactSalesRequest, request: Request) -> dict:
+    if not lead_submission_allowed(_client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many submissions. Wait a minute and try again.",
+            headers={"Retry-After": "60"},
+        )
     lead = _billing.capture_lead(
         email=body.email,
         kind=body.kind or "contact_sales",

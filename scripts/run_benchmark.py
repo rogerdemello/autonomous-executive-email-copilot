@@ -112,17 +112,15 @@ def run(
     record_history: bool = False,
     history_path: str = "artifacts/leaderboard_history.jsonl",
 ) -> list[BenchmarkResult]:
-    """Run the selected agents and write artifacts to ``out_dir``."""
-    # The benchmark is sim-only by construction: refuse to run if a real-inbox
-    # connector is enabled, so real mail can never contaminate benchmark results.
-    from app.copilot.connectors import email_connector_enabled
+    """Run the selected agents and write artifacts to ``out_dir``.
 
-    if email_connector_enabled():
-        raise RuntimeError(
-            "EMAIL_CONNECTOR_ENABLED is set; the benchmark is sim-only and refuses to "
-            "run with a real-inbox connector enabled. Unset it to run the research.benchmark."
-        )
-
+    The benchmark is sim-only *by construction*: it drives
+    ``ExecutiveEmailEnv`` over fixture scenarios and has no path to a mailbox
+    at all. This used to open with a guard that imported the read-only IMAP
+    connector package purely to refuse to run when it was enabled — the
+    package's only caller, using it to say no. Both are gone; the isolation is
+    now structural rather than checked.
+    """
     runner = BenchmarkRunner(
         tasks=tasks,
         personas=personas,

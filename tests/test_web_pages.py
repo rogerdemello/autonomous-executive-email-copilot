@@ -73,15 +73,13 @@ class TestPublicPages:
         assert "text/html" in response.headers["content-type"]
         # The old behaviour was a redirect into an ops console.
         assert "runs itself" in response.text
-        assert "Start free trial" in response.text
+        assert "Start free" in response.text
 
-    def test_pricing_lists_every_plan(self, client):
-        from app.saas import licensing
-
-        response = client.get("/pricing")
-        assert response.status_code == 200
-        for plan in licensing.PLANS.values():
-            assert plan.name in response.text
+    def test_pricing_redirects_home(self, client):
+        """No public pricing — the product is sales-led; old links land home."""
+        response = client.get("/pricing", follow_redirects=False)
+        assert response.status_code == 301
+        assert response.headers["location"] == "/"
 
     def test_welcome_redirects_to_root(self, client):
         """The landing page moved; previously-shared links must still work."""
@@ -97,6 +95,62 @@ class TestPublicPages:
     def test_login_and_signup_render(self, client):
         assert client.get("/login").status_code == 200
         assert client.get("/signup").status_code == 200
+
+
+class TestLegalPages:
+    """/privacy and /terms gate the Gmail OAuth queue.
+
+    Google will not begin verification for the restricted ``gmail.*`` scopes
+    without a published privacy policy on the app's own domain, carrying the
+    Limited Use disclosure and justifying every scope requested. These tests
+    are the cheap guard against that quietly regressing.
+    """
+
+    @pytest.mark.parametrize("path", ["/privacy", "/terms"])
+    def test_reachable_without_a_session(self, client, path):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+
+    @pytest.mark.parametrize("page", ["/", "/login", "/signup", "/contact-sales"])
+    def test_linked_from_every_public_page(self, client, page):
+        body = client.get(page).text
+        assert 'href="/privacy"' in body
+        assert 'href="/terms"' in body
+
+    def test_privacy_carries_the_google_limited_use_disclosure(self, client):
+        body = client.get("/privacy").text
+        assert "Google API Services User Data Policy" in body
+        assert "Limited Use" in body
+        # The load-bearing sentence: this is the claim under review.
+        assert "do not use Gmail data to develop, improve, or train" in body
+
+    def test_privacy_justifies_exactly_the_scopes_we_request(self, client):
+        """A scope requested but not justified — or justified but no longer
+        requested — is a documented rejection reason."""
+        from app.saas import oauth
+
+        body = client.get("/privacy").text
+        for scope in oauth.get_provider("google").scopes:
+            leaf = scope.rsplit("/", 1)[-1]
+            assert leaf in body, f"/privacy does not justify the Google scope {leaf}"
+        for scope in oauth.get_provider("microsoft").scopes:
+            leaf = scope.rsplit("/", 1)[-1]
+            assert leaf in body, f"/privacy does not justify the Microsoft scope {leaf}"
+        assert "gmail.readonly" not in body
+
+    def test_privacy_names_the_llm_subprocessor(self, client):
+        """Message content is sent to a third party to be drafted against.
+        Naming it is the whole point of a sub-processor disclosure."""
+        assert "OpenAI" in client.get("/privacy").text
+
+    def test_legal_paths_get_an_error_page_not_raw_json(self, client):
+        """Without /privacy and /terms in _WEB_PATH_PREFIXES a 404 below them
+        returns the API's JSON error contract to a browser."""
+        from app.web.routes import is_web_path
+
+        assert is_web_path("/privacy")
+        assert is_web_path("/terms")
 
 
 # --------------------------------------------------------------------------- #
@@ -355,13 +409,47 @@ class TestSupportingPages:
         activity = client.get("/app/activity").text
         assert "auth.login_failed" in activity
 
-    def test_settings_shows_plan_and_members(self, with_demo_mailbox):
+    def test_settings_shows_access_and_members(self, with_demo_mailbox):
         client, email = with_demo_mailbox
         response = client.get("/app/settings")
         assert response.status_code == 200
         assert "Northwind Industries" in response.text
         assert email in response.text
-        assert "Trial" in response.text or "trial" in response.text
+        # Access, not a tier and a seat count: the clock, and the way to stop it.
+        assert "Trial" in response.text
+        assert "remaining" in response.text
+        assert 'href="/contact-sales"' in response.text
+
+    def test_settings_does_not_render_decorative_entitlement_chips(self, signed_in):
+        """Only `audit_log` and `sso` gate anything. The other four flags used
+        to render as chips — a claim about what the customer had bought that
+        nothing in the code honoured."""
+        client, _ = signed_in
+        body = client.get("/app/settings").text
+        for decorative in (
+            "Human-in-the-loop approvals",
+            "Analytics &amp; reporting",
+            "Priority support",
+            "Bring-your-own",
+        ):
+            assert decorative not in body
+
+    def test_settings_renders_each_notice_once(self, signed_in):
+        """settings.html used to re-render the banners _app.html had already
+        shown, so every notice appeared twice — including the one-time invite
+        password, the notice you least want duplicated."""
+        client, _ = signed_in
+        page = client.get("/app/settings").text
+        response = client.post(
+            "/app/members/invite",
+            data={
+                "csrf_token": csrf_from(page),
+                "email": f"dup_{uuid.uuid4().hex[:8]}@x.example",
+                "role": "member",
+            },
+        )
+        assert response.status_code == 200
+        assert response.text.count("Temporary password (shown once, also emailed)") == 1
 
     def test_app_root_redirects_to_the_inbox(self, signed_in):
         client, _ = signed_in
@@ -620,6 +708,199 @@ class TestMissingReferences:
 
 
 # --------------------------------------------------------------------------- #
+# The inbox as a daily driver
+# --------------------------------------------------------------------------- #
+class TestInboxIsUsable:
+    """Everything the inbox needed before anyone could work in it: the whole
+    message, the thread it belongs to, search, filters, and paging."""
+
+    @staticmethod
+    def _org_id(email: str) -> str:
+        from app.saas.repository import UserRepository
+
+        return UserRepository().get_by_email_global(email)["org_id"]
+
+    def test_the_reader_shows_the_whole_message_not_a_preview(self, with_demo_mailbox):
+        """`body_preview` is 500 characters. The reader rendered that and only
+        that, so you could not read an email in this email product."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=200)["messages"]
+
+        long_one = max(messages, key=lambda m: len(m.get("body") or ""))
+        assert long_one["body"], "the sync must persist the full body"
+        assert len(long_one["body"]) > 0
+
+        response = client.get(f"/app/inbox?message={long_one['id']}")
+        assert response.status_code == 200
+        # The tail of the body is present — the part a 500-char preview cuts.
+        tail = long_one["body"].strip().splitlines()[-1].strip()
+        if tail:
+            assert tail[:60] in response.text
+
+    def test_search_narrows_the_list(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        target = ProcessedMessageRepository().list_for_org(org_id, limit=200)["messages"][0]
+        needle = (target["sender"] or "").split("@")[0]
+
+        response = client.get(f"/app/inbox?q={needle}")
+        assert response.status_code == 200
+        assert target["subject"] in response.text
+        assert "Clear" in response.text
+
+    def test_search_wildcards_are_escaped(self, with_demo_mailbox):
+        """A bare `%` in the box must not match every message."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        total = ProcessedMessageRepository().list_for_org(org_id, limit=200)["total"]
+        assert total > 1
+
+        hits = ProcessedMessageRepository().list_for_org(org_id, limit=200, q="%")["total"]
+        assert hits < total
+
+    def test_filtering_by_classification(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        spam = ProcessedMessageRepository().list_for_org(org_id, limit=200, label="spam")
+        assert spam["total"] > 0, "the demo mailbox contains promotional mail"
+        assert spam["total"] < ProcessedMessageRepository().list_for_org(org_id)["total"]
+
+        response = client.get("/app/inbox?label=spam")
+        assert response.status_code == 200
+
+    def test_paging_reports_a_range_not_a_page_length(self, with_demo_mailbox):
+        """`messages | length` and `message_total` disagreed above one page, and
+        the header showed the former while the summary showed the latter."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        total = ProcessedMessageRepository().list_for_org(org_id, limit=500)["total"]
+
+        response = client.get("/app/inbox")
+        assert response.status_code == 200
+        assert f"of {total}" in response.text
+
+    def test_a_thread_is_grouped_and_navigable(self, with_demo_mailbox):
+        """thread_id has been stored since the table existed and read by
+        nothing, while the landing page sells "summarizes long threads"."""
+        from collections import Counter
+
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=500)["messages"]
+        counts = Counter(m["thread_id"] for m in messages if m.get("thread_id"))
+        multi = [thread for thread, n in counts.items() if n > 1]
+        if not multi:
+            pytest.skip("the demo mailbox currently has no multi-message thread")
+
+        thread_id = multi[0]
+        member = next(m for m in messages if m["thread_id"] == thread_id)
+        response = client.get(f"/app/inbox?message={member['id']}")
+        assert response.status_code == 200
+        assert "Thread ·" in response.text
+
+    def test_selecting_a_message_the_filter_excludes_still_works(self, with_demo_mailbox):
+        """A link from Approvals points at a message the current filter or page
+        may not contain; it must still open."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=500)["messages"]
+        target = messages[-1]
+
+        response = client.get(f"/app/inbox?message={target['id']}&q=zzz-no-such-sender")
+        assert response.status_code == 200
+        assert target["subject"] in response.text
+
+    def test_spam_labels_survive_a_tenant_with_many_actions(self, with_demo_mailbox):
+        """The label map was built from the org's first 500 actions and filtered
+        in Python, so spam chips silently vanished past that threshold."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        actions = ProposedActionRepository()
+
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=500)["messages"]
+        labelled = actions.labels_for_messages(org_id, [m["id"] for m in messages])
+        spam_ids = [m for m, label in labelled.items() if label == "spam"]
+        assert spam_ids, "the demo mailbox must classify some mail as spam"
+
+        # Push the org well past the old 500-action page with newer rows, which
+        # would have evicted these classifications from the window entirely.
+        filler = messages[0]["id"]
+        for _ in range(520):
+            actions.create(
+                org_id=org_id,
+                message_id=filler,
+                action_type="defer",
+                content=None,
+                escalate_to=None,
+                label="deferred",
+                status="executed",
+                requires_approval=False,
+            )
+
+        still = actions.labels_for_messages(org_id, [m["id"] for m in messages])
+        assert {m for m, label in still.items() if label == "spam"} == set(spam_ids)
+        assert "spam" in client.get("/app/inbox").text
+
+
+class TestAccessibleShell:
+    def test_the_shell_has_a_main_landmark_and_a_skip_link(self, signed_in):
+        client, _ = signed_in
+        body = client.get("/app/inbox").text
+        assert '<main class="main" id="content">' in body
+        assert 'class="skip-link" href="#content"' in body
+
+    def test_the_success_banner_is_announced(self, with_demo_mailbox):
+        """Post-approval notices were silent to a screen reader everywhere
+        except Settings, which got it by re-rendering its own duplicate."""
+        client, email = with_demo_mailbox
+        from app.saas.repository import UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        target = ProposedActionRepository().list_for_org(org_id, status="proposed")["actions"][0]
+        page = client.get("/app/approvals").text
+        client.post(f"/app/actions/{target['id']}/reject", data={"csrf_token": csrf_from(page)})
+
+        body = client.get("/app/inbox?notice=rejected").text
+        assert 'class="banner banner--ok" role="status"' in body
+
+
+class TestActivityIsAuditable:
+    def test_the_web_surface_records_the_client_ip(self, signed_in):
+        """Every audit call on the web router omitted `ip=` while the JSON API
+        passed it, so the column was NULL for the surface people actually use."""
+        client, email = signed_in
+        from app.saas.repository import AuditRepository, UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        entries = AuditRepository().list_for_org(org_id, limit=50)
+        signup = next(e for e in entries if e["action"] == "auth.signup")
+        assert signup["ip"], "a web sign-up must record where it came from"
+
+        assert signup["ip"] in client.get("/app/activity").text
+
+    def test_filtering_by_action(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        response = client.get("/app/activity?action=mailbox.connect")
+        assert response.status_code == 200
+        # Every action name appears in the filter dropdown; what must narrow is
+        # the table itself.
+        rows = response.text.split("<tbody>")[1].split("</tbody>")[0]
+        assert "mailbox.connect" in rows
+        assert "auth.signup" not in rows
+
+    def test_an_unknown_filter_value_is_ignored_not_echoed(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        response = client.get("/app/activity?action=%3Cscript%3E")
+        assert response.status_code == 200
+        assert "<script>" not in response.text
+
+    def test_the_page_reports_a_total_not_just_a_page(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        assert "events" in client.get("/app/activity").text
+
+
+# --------------------------------------------------------------------------- #
 # Plan enforcement
 # --------------------------------------------------------------------------- #
 class TestPlanEnforcement:
@@ -831,7 +1112,35 @@ class TestSettingsManagement:
             data={"csrf_token": csrf_from(page), "license_key": key},
         )
         assert response.status_code == 303
-        assert "Business" in client.get("/app/settings").text
+
+        # Settings shows *access*, never the tier name — there is no page a
+        # customer could look "Business" up on. Off the trial, the upsell goes.
+        settings = client.get("/app/settings").text
+        assert "Full access" in settings
+        assert "Business" not in settings
+        assert "Keep your access" not in settings
+
+    def test_expired_access_says_so_and_points_at_sales(self, signed_in):
+        client, email = signed_in
+        from datetime import datetime, timedelta, timezone
+
+        from app.saas.repository import LicenseRepository, UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        repo = LicenseRepository()
+        row = repo.get_active_for_org(org_id)
+        repo.upsert(
+            org_id=org_id,
+            key_id=row["key_id"],
+            plan=row["plan"],
+            seats=row["seats"],
+            features=row["features"],
+            expires_at_iso=(datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        )
+
+        body = client.get("/app/settings").text
+        assert "Your access has ended" in body
+        assert 'href="/contact-sales"' in body
 
     def test_export_downloads_the_tenant_bundle(self, with_demo_mailbox):
         client, _ = with_demo_mailbox
