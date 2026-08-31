@@ -1,0 +1,93 @@
+tests/test_db_migration.py
+  s_cfcb9569c37279::t_cea7ba6cfdfc7c 58-67,69-71
+continue.md
+  s_356911cfc584c2::t_e51c48f335a98b 1-2,7,9-11,13,16,18,79-81,83,85,116,123,127-129
+  s_cfcb9569c37279::t_0ae6d371652d2b 3-6,8,12,14-15,17,19-78,82,84,86-115,117-121,124-126,130-140
+  s_356911cfc584c2::t_9d7086d2ad04f8 122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "e3d5d6e476dc34721cb3d190e3bd48ab5ea9c926",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_356911cfc584c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4746a35-9610-4cff-aa4d-63f1f8d2446d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:2597ba054b763ebab0b6ed7c496c4986a738f9d47e621cde80a670c32bbb857c",
+      "total_additions": 133,
+      "total_deletions": 439,
+      "accepted_lines": 230,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_356911cfc584c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4746a35-9610-4cff-aa4d-63f1f8d2446d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "stats": {
+        "total_additions": 0,
+        "total_deletions": 0,
+        "accepted_lines": 20,
+        "overriden_lines": 0,
+        "files": {
+          "continue.md": {
+            "total_additions": 0,
+            "total_deletions": 0,
+            "accepted_lines": 20,
+            "overriden_lines": 0
+          }
+        }
+      }
+    },
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:2597ba054b763ebab0b6ed7c496c4986a738f9d47e621cde80a670c32bbb857c",
+      "stats": {
+        "total_additions": 133,
+        "total_deletions": 439,
+        "accepted_lines": 230,
+        "overriden_lines": 0,
+        "files": {
+          "continue.md": {
+            "total_additions": 120,
+            "total_deletions": 437,
+            "accepted_lines": 120,
+            "overriden_lines": 0
+          },
+          "tests/test_db_migration.py": {
+            "total_additions": 13,
+            "total_deletions": 2,
+            "accepted_lines": 110,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
