@@ -286,6 +286,8 @@ class InboxSyncService:
                 received_at=msg.received_at or None,
                 subject=msg.subject,
                 body_preview=(msg.body or "")[:500],
+                # The preview drives the list; the full body drives the reader.
+                body=msg.body or None,
                 sender_role=obs_email.sender_role,
                 priority_hint=obs_email.priority_hint,
                 risk_tag=obs_email.risk_tag,

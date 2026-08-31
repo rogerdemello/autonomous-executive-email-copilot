@@ -6,10 +6,10 @@
 
 {% block main %}
 {% if learning and learning.learned %}
-  <div class="card" style="margin-bottom: 16px">
+  <div class="card card--stacked-below">
     <div class="card__head">
       <span class="card__title">What the copilot has learned</span>
-      <span class="muted" style="font-size: 0.82rem">
+      <span class="muted card__head-note">
         from your last {{ learning.window }} decision{{ 's' if learning.window != 1 }}
       </span>
     </div>
@@ -32,7 +32,7 @@
 {% else %}
   <div class="card">
     <div class="card__head">
-      <span class="card__title">{{ actions | length }} awaiting approval</span>
+      <span class="card__title">{{ actions | length }} awaiting approval{% if pending_total and pending_total > actions | length %} (of {{ pending_total }}){% endif %}</span>
     </div>
     {% for item in actions %}
       <div class="action-block">
@@ -59,10 +59,10 @@
           {% endif %}
         </div>
 
-        <p style="margin: 0 0 4px">
+        <p class="approval__subject">
           <strong>{{ item.message.subject }}</strong>
         </p>
-        <p class="muted" style="margin: 0 0 12px; font-size: 0.86rem">
+        <p class="muted approval__meta">
           from {{ item.message.sender }} · {{ item.message.received_at | short_time }}
         </p>
 
@@ -85,15 +85,15 @@
                 id="approve-{{ item.action.id }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
             {% if item.action.content %}
-              <textarea class="draft" name="content" rows="6"
+              <textarea class="draft" name="content" rows="6" data-shortcut-draft
                         aria-label="Draft to send. You can edit it before approving">{{ item.action.content }}</textarea>
-              <p class="muted" style="margin: 0 0 12px; font-size: 0.8rem">
+              <p class="muted approval__editnote">
                 Edit freely. Your edits are sent, and they teach the copilot this workspace's voice.
               </p>
             {% endif %}
           </form>
           <div class="actions-row">
-            <button class="btn btn--primary btn--sm" type="submit"
+            <button class="btn btn--primary btn--sm" type="submit" data-shortcut-approve
                     form="approve-{{ item.action.id }}">
               {% if item.action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
             </button>
@@ -105,9 +105,7 @@
           </div>
         {% else %}
           {% if item.action.content %}<div class="draft">{{ item.action.content }}</div>{% endif %}
-          <p class="muted" style="margin: 0; font-size: 0.85rem">
-            Approving needs the admin role or higher.
-          </p>
+          <p class="muted note-tight">Approving needs the admin role or higher.</p>
         {% endif %}
       </div>
     {% endfor %}

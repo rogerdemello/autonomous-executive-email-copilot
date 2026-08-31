@@ -17,7 +17,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -150,6 +150,18 @@ def _audit_detail(value: Any) -> str:
 
 templates.env.filters["short_time"] = _short_time
 templates.env.filters["audit_detail"] = _audit_detail
+
+
+def _client_ip(request: Request) -> str | None:
+    """The caller's address, for the audit log.
+
+    Every audit call on this router omitted this while the JSON API passed it,
+    so ``saas_audit_log.ip`` was NULL for the surface people actually use —
+    the one column an incident review reaches for first. Behind a platform
+    proxy uvicorn is started with ``--proxy-headers``, so ``request.client``
+    is already the real client rather than the proxy.
+    """
+    return request.client.host if request.client else None
 
 
 def _current_user(request: Request) -> dict | None:
@@ -467,6 +479,7 @@ def login_submit(
             action="auth.login_failed",
             org_id=account["org_id"] if account else None,
             detail={"email": email, "surface": "web"},
+            ip=_client_ip(request),
         )
         return _render(
             request,
@@ -487,6 +500,7 @@ def login_submit(
         org_id=user["org_id"],
         actor_user_id=user["id"],
         detail={"email": user["email"], "surface": "web"},
+        ip=_client_ip(request),
     )
     response = RedirectResponse(url=_safe_next(next), status_code=303)
     set_session_cookie(response, token)
@@ -550,6 +564,7 @@ def signup_submit(
         org_id=org["id"],
         actor_user_id=user["id"],
         detail={"email": user["email"], "surface": "web"},
+        ip=_client_ip(request),
     )
     # Straight to connect: a workspace with no mailbox has nothing to show.
     response = RedirectResponse(url="/app/connect", status_code=303)
@@ -596,6 +611,7 @@ def forgot_password_submit(
             action="auth.password_reset_requested",
             org_id=account["org_id"] if account else None,
             detail={"email": email, "surface": "web"},
+            ip=_client_ip(request),
         )
     # The confirmation is identical whether or not the account exists, so this
     # form cannot be used to probe which emails are registered.
@@ -638,6 +654,7 @@ def reset_password_submit(
         org_id=user["org_id"],
         actor_user_id=user["id"],
         detail={"surface": "web"},
+        ip=_client_ip(request),
     )
     return RedirectResponse(url="/login?notice=reset", status_code=303)
 
@@ -690,6 +707,7 @@ def connect_demo(request: Request, csrf_token: str = Form("")) -> Response:
         actor_user_id=user["id"],
         target=connection["id"],
         detail={"provider": DEMO_PROVIDER_KEY, "account_email": DEMO_OWNER_EMAIL},
+        ip=_client_ip(request),
     )
     _sync_connection(user, connection)
     return RedirectResponse(url="/app/inbox", status_code=303)
@@ -788,49 +806,120 @@ def app_root() -> RedirectResponse:
     return RedirectResponse(url="/app/inbox", status_code=307)
 
 
+# One screen of messages. Small enough that the list stays scannable, large
+# enough that a normal morning fits on one page.
+INBOX_PAGE_SIZE = 50
+
+# The classifier's own vocabulary, offered as filters. Anything else in the
+# query string is ignored rather than passed to the database.
+_INBOX_LABELS = ("urgent", "normal", "spam")
+_INBOX_PRIORITIES = ("high", "medium", "low")
+
+
 @web_router.get("/app/inbox", response_class=HTMLResponse)
-def inbox(request: Request, message: str | None = None, notice: str | None = None) -> HTMLResponse:
+def inbox(
+    request: Request,
+    message: str | None = None,
+    notice: str | None = None,
+    q: str | None = None,
+    label: str | None = None,
+    priority: str | None = None,
+    page: int = 1,
+) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "inbox")
     context["notice"] = _REVIEW_NOTICES.get(notice or "")
 
-    listing = _messages.list_for_org(user["org_id"], limit=100)
+    query = (q or "").strip()[:200]
+    label = label if label in _INBOX_LABELS else None
+    priority = priority if priority in _INBOX_PRIORITIES else None
+    page = max(1, page)
+
+    listing = _messages.list_for_org(
+        user["org_id"],
+        limit=INBOX_PAGE_SIZE,
+        offset=(page - 1) * INBOX_PAGE_SIZE,
+        q=query or None,
+        label=label,
+        priority=priority,
+    )
     messages = listing.get("messages", [])
+    total = listing.get("total", len(messages))
+
     context["messages"] = messages
-    context["message_total"] = listing.get("total", len(messages))
+    # The summary tiles describe the *workspace*, so they must not move when a
+    # filter is applied: "8 triaged" while a spam filter is on is a false
+    # statement about what the copilot did, and it is the first number on the
+    # page. `message_total` is the filtered count and drives the list header.
+    context["message_total"] = total
+    context["mailbox_total"] = _messages.list_for_org(user["org_id"], limit=1)["total"]
     context["summary"] = _actions.summarize_for_org(user["org_id"])
+    context["filters"] = {"q": query, "label": label, "priority": priority}
+    context["filter_labels"] = _INBOX_LABELS
+    context["filter_priorities"] = _INBOX_PRIORITIES
+    # Paging state the template renders directly, so it never has to recompute
+    # "which page am I on" from a total and a limit.
+    context["page"] = {
+        "number": page,
+        "size": INBOX_PAGE_SIZE,
+        "total": total,
+        "first": (page - 1) * INBOX_PAGE_SIZE + 1 if messages else 0,
+        "last": (page - 1) * INBOX_PAGE_SIZE + len(messages),
+        "has_prev": page > 1,
+        "has_next": page * INBOX_PAGE_SIZE < total,
+        "query": _query_string(q=query, label=label, priority=priority),
+    }
+
+    # Labels for exactly this page. Previously this listed the org's first 500
+    # actions and filtered in Python, so spam chips vanished from older
+    # messages on any tenant past that threshold.
+    context["labels"] = _actions.labels_for_messages(user["org_id"], [m["id"] for m in messages])
+    context["thread_sizes"] = _messages.thread_sizes(
+        user["org_id"], [m.get("thread_id") for m in messages]
+    )
 
     selected = None
-    if messages:
-        selected = next((m for m in messages if m["id"] == message), messages[0])
+    if message:
+        # Look the requested message up directly rather than searching the
+        # current page: a link from Approvals, or a bookmark, points at a
+        # message that a filter or a later page may well have excluded.
+        selected = _messages.get(user["org_id"], message)
+    if selected is None and messages:
+        selected = messages[0]
     context["selected"] = selected
 
     if selected:
-        actions = _actions.list_for_org(user["org_id"], limit=500).get("actions", [])
+        actions = _actions.list_for_message(user["org_id"], selected["id"])
         # The classifier's verdict (spam / normal / urgent) is shown as a label,
         # not an action block, so classify actions are filtered out below but
         # their labels are surfaced per message.
-        context["labels"] = {
-            a["message_id"]: a["label"]
-            for a in actions
-            if a["action_type"] == "classify" and a.get("label")
-        }
-        selected_actions = [
-            a
-            for a in actions
-            if a["message_id"] == selected["id"] and a["action_type"] != "classify"
-        ]
+        selected_actions = [a for a in actions if a["action_type"] != "classify"]
         context["selected_actions"] = selected_actions
+        context["selected_label"] = next(
+            (a["label"] for a in actions if a["action_type"] == "classify" and a.get("label")),
+            None,
+        )
+        context["thread"] = (
+            _messages.list_thread(user["org_id"], selected.get("thread_id") or "")
+            if selected.get("thread_id")
+            else []
+        )
         # A stored rationale is the model's own reasoning about *this* decision;
         # prefer it over reasoning reconstructed from the signals after the fact.
         stored = next((a["rationale"] for a in selected_actions if a.get("rationale")), None)
         context["selected_rationale"] = stored or _rationale_for(user["org_id"], selected)
     else:
-        context["labels"] = {}
         context["selected_actions"] = []
+        context["selected_label"] = None
+        context["thread"] = []
         context["selected_rationale"] = []
 
     return _render(request, "inbox.html", context)
+
+
+def _query_string(**params: Any) -> str:
+    """Encode the non-empty params as a query fragment (no leading '?')."""
+    return urlencode({k: v for k, v in params.items() if v})
 
 
 def _rationale_for(org_id: str, message: dict) -> list[str]:
@@ -954,21 +1043,22 @@ def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
     context = _app_context(request, user, "approvals")
     context["notice"] = _REVIEW_NOTICES.get(notice or "")
 
-    pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100).get("actions", [])
-    items = []
-    for action in pending:
-        message = _messages.get(user["org_id"], action["message_id"])
-        if message:
-            items.append(
-                {
-                    "action": action,
-                    "message": message,
-                    # Approving is a decision; showing the reasoning next to the
-                    # button is what makes it an informed one.
-                    "rationale": action.get("rationale") or _rationale_for(user["org_id"], message),
-                }
-            )
-    context["actions"] = items
+    # One join, not one action query plus a message lookup per row. This is by
+    # design the busiest page in the product, so an N+1 here is the worst place
+    # for one.
+    pending = _actions.list_pending_with_messages(user["org_id"], limit=100)
+    context["actions"] = [
+        {
+            "action": item["action"],
+            "message": item["message"],
+            # Approving is a decision; showing the reasoning next to the button
+            # is what makes it an informed one.
+            "rationale": item["action"].get("rationale")
+            or _rationale_for(user["org_id"], item["message"]),
+        }
+        for item in pending["items"]
+    ]
+    context["pending_total"] = pending["total"]
     # What the queue's past decisions have taught the copilot — shown beside
     # the queue those decisions came from, so the learning is auditable.
     from app.saas.learning import FeedbackService
@@ -977,23 +1067,68 @@ def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
     return _render(request, "approvals.html", context)
 
 
+ACTIVITY_PAGE_SIZE = 50
+
+
 @web_router.get("/app/activity", response_class=HTMLResponse)
-def activity(request: Request) -> HTMLResponse:
+def activity(
+    request: Request,
+    action: str | None = None,
+    actor: str | None = None,
+    page: int = 1,
+) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "activity")
     can_view = role_at_least(user["role"], ROLE_ADMIN)
     if can_view:
-        # Role decides who may look; the plan decides whether the feature
-        # exists at all. Renders as an error page with the upgrade path.
+        # Role decides who may look; the entitlement decides whether the
+        # feature exists at all. Renders as an error page with the way forward.
         try:
             _billing.require_feature(user["org_id"], licensing.FEATURE_AUDIT_LOG)
         except BillingError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     context["can_view"] = can_view
-    context["entries"] = _audit.list_for_org(user["org_id"], limit=100) if can_view else []
+
+    members = _users.list_for_org(user["org_id"])
     context["actor_names"] = {
-        member["id"]: member.get("full_name") or member["email"]
-        for member in _users.list_for_org(user["org_id"])
+        member["id"]: member.get("full_name") or member["email"] for member in members
+    }
+    context["members"] = members
+
+    if not can_view:
+        context["entries"] = []
+        context["available_actions"] = []
+        context["filters"] = {"action": None, "actor": None}
+        context["page"] = {"number": 1, "total": 0, "has_prev": False, "has_next": False}
+        return _render(request, "activity.html", context)
+
+    available = _audit.actions_for_org(user["org_id"])
+    # Only ever pass through a value the log actually contains: the filter is
+    # a dropdown, and an arbitrary query-string value has no business reaching
+    # a query or being echoed back into the page.
+    action = action if action in available else None
+    actor = actor if actor in context["actor_names"] else None
+    page = max(1, page)
+
+    result = _audit.page_for_org(
+        user["org_id"],
+        limit=ACTIVITY_PAGE_SIZE,
+        offset=(page - 1) * ACTIVITY_PAGE_SIZE,
+        action=action,
+        actor_user_id=actor,
+    )
+    context["entries"] = result["entries"]
+    context["available_actions"] = available
+    context["filters"] = {"action": action, "actor": actor}
+    context["page"] = {
+        "number": page,
+        "size": ACTIVITY_PAGE_SIZE,
+        "total": result["total"],
+        "first": (page - 1) * ACTIVITY_PAGE_SIZE + 1 if result["entries"] else 0,
+        "last": (page - 1) * ACTIVITY_PAGE_SIZE + len(result["entries"]),
+        "has_prev": page > 1,
+        "has_next": page * ACTIVITY_PAGE_SIZE < result["total"],
+        "query": _query_string(action=action, actor=actor),
     }
     return _render(request, "activity.html", context)
 
@@ -1176,6 +1311,7 @@ def change_password_web(
         org_id=user["org_id"],
         actor_user_id=user["id"],
         detail={"surface": "web"},
+        ip=_client_ip(request),
     )
     return RedirectResponse(url="/app/settings?notice=password_changed", status_code=303)
 
@@ -1210,7 +1346,12 @@ def export_org_web(request: Request) -> Response:
     bundle = DataLifecycleService().export_org(user["org_id"])
     if bundle is None:
         raise HTTPException(status_code=404, detail="Organization not found")
-    _audit.record(action="org.export", org_id=user["org_id"], actor_user_id=user["id"])
+    _audit.record(
+        action="org.export",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        ip=_client_ip(request),
+    )
     org = _orgs.get(user["org_id"]) or {}
     filename = f"{org.get('slug', 'workspace')}-export.json"
     return Response(

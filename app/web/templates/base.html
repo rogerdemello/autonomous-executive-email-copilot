@@ -1,5 +1,7 @@
 <!doctype html>
-<html lang="en" data-theme="{{ theme or '' }}">
+{# data-theme is stamped by theme-init.js before first paint, from localStorage.
+   It used to interpolate a `theme` variable that no route has ever set. #}
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

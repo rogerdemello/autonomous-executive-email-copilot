@@ -38,12 +38,33 @@ def _now_iso() -> str:
 DEFAULT_PAGE_SIZE = 100
 MAX_PAGE_SIZE = 500
 
+# A stored message body is capped rather than unbounded: a mailbox will sooner
+# or later contain one message with a megabyte of quoted history, and there is
+# no reading experience that needs more than this.
+BODY_MAX_CHARS = 100_000
+
 
 def clamp_page(limit: int | None, offset: int | None) -> tuple[int, int]:
     """Clamp a requested ``(limit, offset)`` into safe bounds."""
     safe_limit = DEFAULT_PAGE_SIZE if not limit or limit < 1 else min(int(limit), MAX_PAGE_SIZE)
     safe_offset = 0 if not offset or offset < 0 else int(offset)
     return safe_limit, safe_offset
+
+
+def _clamp_body(body: str | None) -> str | None:
+    if body is None:
+        return None
+    if len(body) <= BODY_MAX_CHARS:
+        return body
+    return body[:BODY_MAX_CHARS] + "\n\n[… truncated]"
+
+
+def _escape_like(term: str) -> str:
+    """Escape LIKE wildcards so a search for "50%" is not a match-everything.
+
+    Paired with ``escape="\\"`` at the call site.
+    """
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 class OrganizationRepository:
@@ -291,6 +312,55 @@ class AuditRepository:
             )
             return [r.to_dict() for r in rows]
 
+    def page_for_org(
+        self,
+        org_id: str,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        action: str | None = None,
+        actor_user_id: str | None = None,
+    ) -> dict[str, Any]:
+        """A filtered, counted page of the audit log.
+
+        The Activity page rendered one unfiltered table of the most recent 100
+        entries with no way to page back, which makes the log unusable as
+        evidence the moment a workspace has been running for a week — and
+        "answer procurement's questions" is the whole reason it exists.
+        """
+        safe_limit, safe_offset = clamp_page(limit, offset)
+        with get_session() as session:
+            query = session.query(AuditLogEntry).filter(AuditLogEntry.org_id == org_id)
+            if action:
+                query = query.filter(AuditLogEntry.action == action)
+            if actor_user_id:
+                query = query.filter(AuditLogEntry.actor_user_id == actor_user_id)
+            total = query.count()
+            rows = (
+                query.order_by(AuditLogEntry.created_at.desc(), AuditLogEntry.id.desc())
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "entries": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
+
+    def actions_for_org(self, org_id: str) -> list[str]:
+        """The distinct action names present, for the filter dropdown."""
+        with get_session() as session:
+            rows = (
+                session.query(AuditLogEntry.action)
+                .filter(AuditLogEntry.org_id == org_id)
+                .distinct()
+                .order_by(AuditLogEntry.action.asc())
+                .all()
+            )
+            return [str(r[0]) for r in rows]
+
 
 class MailboxRepository:
     """Tenant-scoped access to connected mailboxes. Token fields are stored
@@ -499,6 +569,7 @@ class ProcessedMessageRepository:
         business_value: float | None,
         sender_name: str | None = None,
         received_at: str | None = None,
+        body: str | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             existing = (
@@ -516,6 +587,7 @@ class ProcessedMessageRepository:
                 existing.sender_name = sender_name
                 existing.subject = subject
                 existing.body_preview = body_preview
+                existing.body = _clamp_body(body)
                 existing.sender_role = sender_role
                 existing.priority_hint = priority_hint
                 existing.risk_tag = risk_tag
@@ -534,6 +606,7 @@ class ProcessedMessageRepository:
                 sender_name=sender_name,
                 subject=subject,
                 body_preview=body_preview,
+                body=_clamp_body(body),
                 sender_role=sender_role,
                 priority_hint=priority_hint,
                 risk_tag=risk_tag,
@@ -551,12 +624,43 @@ class ProcessedMessageRepository:
         connection_id: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
+        q: str | None = None,
+        label: str | None = None,
+        priority: str | None = None,
     ) -> dict[str, Any]:
+        """A page of messages, newest first, with optional search and filters.
+
+        ``q`` matches sender, sender name, and subject. ``label`` is the
+        classifier's verdict (spam / normal / urgent), which lives on the
+        message's ``classify`` action rather than on the message, so it is a
+        subquery rather than a column test. ``priority`` is the inferred
+        priority hint and *is* a column.
+        """
         safe_limit, safe_offset = clamp_page(limit, offset)
         with get_session() as session:
             query = session.query(ProcessedMessage).filter(ProcessedMessage.org_id == org_id)
             if connection_id:
                 query = query.filter(ProcessedMessage.connection_id == connection_id)
+            if q and q.strip():
+                needle = f"%{_escape_like(q.strip())}%"
+                query = query.filter(
+                    ProcessedMessage.subject.ilike(needle, escape="\\")
+                    | ProcessedMessage.sender.ilike(needle, escape="\\")
+                    | ProcessedMessage.sender_name.ilike(needle, escape="\\")
+                )
+            if label:
+                labelled = (
+                    session.query(ProposedAction.message_id)
+                    .filter(
+                        ProposedAction.org_id == org_id,
+                        ProposedAction.action_type == "classify",
+                        ProposedAction.label == label,
+                    )
+                    .subquery()
+                )
+                query = query.filter(ProcessedMessage.id.in_(labelled.select()))
+            if priority:
+                query = query.filter(ProcessedMessage.priority_hint == priority)
             total = query.count()
             rows = (
                 query.order_by(
@@ -574,6 +678,50 @@ class ProcessedMessageRepository:
                 "limit": safe_limit,
                 "offset": safe_offset,
             }
+
+    def list_thread(self, org_id: str, thread_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        """Every message in one thread, oldest first.
+
+        ``thread_id`` has been stored since the table existed and was never
+        read, while the landing page sold "summarizes long threads".
+        """
+        if not thread_id:
+            return []
+        with get_session() as session:
+            rows = (
+                session.query(ProcessedMessage)
+                .filter(
+                    ProcessedMessage.org_id == org_id,
+                    ProcessedMessage.thread_id == thread_id,
+                )
+                .order_by(
+                    ProcessedMessage.received_at.asc().nullsfirst(),
+                    ProcessedMessage.synced_at.asc(),
+                )
+                .limit(limit)
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
+    def thread_sizes(self, org_id: str, thread_ids: list[str]) -> dict[str, int]:
+        """``{thread_id: message count}`` for the threads on the current page.
+
+        One grouped query for the whole page rather than one per row.
+        """
+        wanted = [t for t in dict.fromkeys(thread_ids) if t]
+        if not wanted:
+            return {}
+        with get_session() as session:
+            rows = (
+                session.query(ProcessedMessage.thread_id, func.count(ProcessedMessage.id))
+                .filter(
+                    ProcessedMessage.org_id == org_id,
+                    ProcessedMessage.thread_id.in_(wanted),
+                )
+                .group_by(ProcessedMessage.thread_id)
+                .all()
+            )
+            return {str(thread_id): int(count) for thread_id, count in rows}
 
     def get(self, org_id: str, message_id: str) -> dict[str, Any] | None:
         with get_session() as session:
@@ -652,6 +800,81 @@ class ProposedActionRepository:
             )
             return {
                 "actions": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
+
+    def labels_for_messages(self, org_id: str, message_ids: list[str]) -> dict[str, str]:
+        """``{message_id: classifier label}`` for exactly the messages asked for.
+
+        The inbox used to build this by listing the org's first 500 actions and
+        filtering in Python, so on any tenant with more than 500 actions the
+        spam chips silently vanished from the older half of the page — the
+        product's most visible claim, disappearing with scale and with nothing
+        reporting it.
+        """
+        wanted = [m for m in dict.fromkeys(message_ids) if m]
+        if not wanted:
+            return {}
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.message_id, ProposedAction.label)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.action_type == "classify",
+                    ProposedAction.message_id.in_(wanted),
+                    ProposedAction.label.isnot(None),
+                )
+                .all()
+            )
+            return {str(message_id): str(label) for message_id, label in rows}
+
+    def list_for_message(self, org_id: str, message_id: str) -> list[dict[str, Any]]:
+        """Every action on one message, newest first. One query, not a scan."""
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.message_id == message_id,
+                )
+                .order_by(ProposedAction.created_at.desc())
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
+    def list_pending_with_messages(
+        self, org_id: str, limit: int | None = None, offset: int | None = None
+    ) -> dict[str, Any]:
+        """Pending actions joined to their messages, in one query.
+
+        The approvals page used to fetch the action list and then issue a
+        separate ``messages.get()`` per row — a textbook N+1 on the page that
+        is, by design, the busiest one in the product.
+        """
+        safe_limit, safe_offset = clamp_page(limit, offset)
+        with get_session() as session:
+            query = (
+                session.query(ProposedAction, ProcessedMessage)
+                .join(ProcessedMessage, ProposedAction.message_id == ProcessedMessage.id)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.status == "proposed",
+                )
+            )
+            total = query.count()
+            rows = (
+                query.order_by(ProposedAction.created_at.desc())
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "items": [
+                    {"action": action.to_dict(), "message": message.to_dict()}
+                    for action, message in rows
+                ],
                 "total": total,
                 "limit": safe_limit,
                 "offset": safe_offset,

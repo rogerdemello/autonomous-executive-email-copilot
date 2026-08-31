@@ -187,6 +187,39 @@ h3 {
   border-radius: 4px;
 }
 
+/* The skip link `.visually-hidden` was written for and which was never built.
+ * Off-screen until focused, then it lands in the top-left as the first tab
+ * stop — otherwise every keyboard user walks the whole sidebar on every page
+ * load before reaching anything they came for. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 11px 18px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 10px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* A keyboard key, for the shortcut hints. */
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
 /* ========================================================================== */
 /* Header / nav                                                               */
 /* ========================================================================== */
@@ -483,6 +516,32 @@ h3 {
   border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
+/* `chip--{{ action.status }}` is interpolated from the action's status, and
+ * three of the five values had no rule — a rejected or failed action rendered
+ * as unstyled transparent text, which reads as a broken page rather than as a
+ * decision. `executed` is covered by the good group above. */
+.chip--approved {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+  border-color: color-mix(in srgb, var(--good) 25%, transparent);
+}
+
+.chip--rejected,
+.chip--failed {
+  color: var(--crit);
+  background: color-mix(in srgb, var(--crit) 10%, transparent);
+  border-color: color-mix(in srgb, var(--crit) 25%, transparent);
+}
+
+/* A chip that is also a link (the Activity log's action filter). */
+a.chip {
+  text-decoration: none;
+}
+
+a.chip:hover {
+  border-color: currentColor;
+}
+
 .chip--brass {
   color: var(--brass);
   background: color-mix(in srgb, var(--brass) 14%, transparent);
@@ -492,25 +551,6 @@ h3 {
 /* ========================================================================== */
 /* Marketing: hero, pillars, proof                                            */
 /* ========================================================================== */
-.hero {
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 56px;
-  align-items: center;
-  padding: 40px 0 72px;
-}
-
-.hero h1 {
-  font-size: clamp(2.4rem, 5.4vw, 4rem);
-  line-height: 1.02;
-  margin: 18px 0 20px;
-}
-
-.hero h1 .soft {
-  color: var(--accent);
-  font-style: italic;
-}
-
 .lede {
   font-size: 1.16rem;
   color: var(--muted);
@@ -538,22 +578,7 @@ h3 {
   font-weight: 600;
 }
 
-.triage {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-}
-
-.triage__bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px 14px;
-  border-bottom: 1px solid var(--line);
-}
-
+/* The window-chrome dots on a product screenshot frame. */
 .dot {
   width: 10px;
   height: 10px;
@@ -561,85 +586,13 @@ h3 {
   background: var(--line);
 }
 
-.triage__title {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.mail {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 12px;
-  align-items: center;
-  padding: 13px 8px;
-  border-bottom: 1px solid var(--line);
-  opacity: 0;
-  transform: translateY(6px);
-  animation: rise 0.6s ease forwards;
-}
-
-.mail:last-child {
-  border-bottom: 0;
-}
-
-.mail:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.mail:nth-child(3) {
-  animation-delay: 0.5s;
-}
-
-.mail:nth-child(4) {
-  animation-delay: 0.85s;
-}
-
-.mail__from {
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-
-.mail__subj {
-  grid-column: 1;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-
-.mail .chip {
-  /* Pin to the second column: without an explicit column the chip is
-     auto-placed into column 1 and pushes the sender to the right. */
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  justify-self: end;
-}
-
-.triage__foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 8px 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
+/* The "the copilot is working" indicator in the inbox's Copilot panel. */
 .pulse {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
   animation: pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @keyframes pulse {
@@ -655,11 +608,6 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mail {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
   .pulse {
     animation: none;
   }
@@ -693,6 +641,8 @@ section {
 .pillar {
   background: var(--paper);
   padding: 26px 24px;
+  position: relative;
+  transition: background 0.35s ease;
 }
 
 .pillar h3 {
@@ -886,6 +836,7 @@ table.bench td.task {
   border-radius: 18px;
   padding: 34px 32px;
   box-shadow: var(--shadow);
+  animation: enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .auth__card h1 {
@@ -1238,6 +1189,17 @@ table.bench td.task {
   overflow-wrap: anywhere;
 }
 
+.side__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.side__actions form {
+  margin: 0;
+}
+
 .main {
   display: flex;
   flex-direction: column;
@@ -1435,6 +1397,178 @@ table.bench td.task {
   white-space: pre-wrap;
   font-size: 0.96rem;
   line-height: 1.7;
+  /* A real message can be long. Cap the reader rather than letting one email
+     stretch the three-pane layout to ten screens. */
+  max-height: 62vh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+/* ========================================================================== */
+/* Inbox: search, filters, threads, paging, shortcuts                         */
+/* ========================================================================== */
+/* A GET form, so a filtered inbox is a URL you can bookmark or send to
+ * support — which is also why the filters are on the page rather than in
+ * client-side state. */
+.inbox-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.inbox-filter input,
+.inbox-filter select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.inbox-filter__q {
+  flex: 1;
+  min-width: 220px;
+}
+
+.msglist__when {
+  font-size: 0.72rem;
+}
+
+.msglist__tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.pager__count {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+/* An `aria-disabled` pager arrow is a span, not a button: there is nowhere to
+ * go, so there should be nothing to activate. */
+.pager span.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* thread_id was stored from the beginning and read by nothing, while the
+ * landing page sold "summarizes long threads". */
+.thread > summary {
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.thread__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.thread__item a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  text-decoration: none;
+}
+
+.thread__item a:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.thread__item--current a {
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.thread__who {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.thread__when {
+  font-size: 0.74rem;
+  justify-self: end;
+}
+
+.thread__peek {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shortcut-hint {
+  margin: 18px 0 0;
+  font-size: 0.82rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Shared small-copy utilities, replacing inline styles that could not
+ * reference a theme token. */
+.head-note {
+  font-size: 0.85rem;
+}
+
+.card__head-note {
+  font-size: 0.82rem;
+}
+
+.card--stacked-below {
+  margin-bottom: 16px;
+}
+
+.note-tight {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.note-stamp {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.approval__subject {
+  margin: 0 0 4px;
+}
+
+.approval__meta {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+}
+
+.approval__editnote {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+}
+
+.audit-ip,
+.audit-detail {
+  font-size: 0.8rem;
+}
+
+.audit-ip {
+  white-space: nowrap;
 }
 
 /* ========================================================================== */
@@ -1515,7 +1649,7 @@ textarea.draft {
 }
 
 .rationale--flagged li {
-  color: var(--warn, #b45309);
+  color: var(--warn);
 }
 
 .learned {
@@ -1814,55 +1948,6 @@ table.data td.when {
   transform-origin: left;
 }
 
-/* --- Hero entrance & texture --------------------------------------------- */
-.hero {
-  position: relative;
-}
-
-/* A faint dot-grid drafting texture behind the hero: a pattern, not a colour
- * wash. The fade is a straight vertical dissolve; a radial halo reads as a
- * glow in dark mode, and this site does not glow. */
-.hero::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: -60px -6vw 0;
-  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.4px);
-  background-size: 24px 24px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 96%);
-  mask-image: linear-gradient(to bottom, #000 40%, transparent 96%);
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.hero__copy > * {
-  animation: enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-.hero__copy > .eyebrow {
-  animation-delay: 0.05s;
-}
-
-.hero__copy > h1 {
-  animation-delay: 0.12s;
-}
-
-.hero__copy > .lede {
-  animation-delay: 0.2s;
-}
-
-.hero__copy > .cta {
-  animation-delay: 0.28s;
-}
-
-.hero__copy > .note {
-  animation-delay: 0.36s;
-}
-
-.hero .triage {
-  animation: enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
-}
-
 /* --- Hero v3: centered copy over a framed product screenshot ------------- */
 .hero-v3 {
   position: relative;
@@ -2155,50 +2240,6 @@ table.data td.when {
   background: var(--panel);
 }
 
-/* --- Living triage demo -------------------------------------------------- */
-/* The fourth mail resolves on a loop: "Deciding…" crossfades into a sent
- * confirmation, then the cycle restarts — the product's whole promise in one
- * repeated beat. Both chips share the same grid cell and simply swap. */
-.mail--live .chip--wait {
-  animation: wait-cycle 9s linear 2.2s infinite;
-}
-
-.mail--live .chip--resolve {
-  opacity: 0;
-  animation: resolve-cycle 9s linear 2.2s infinite;
-}
-
-@keyframes wait-cycle {
-  0%,
-  44% {
-    opacity: 1;
-  }
-  50%,
-  94% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes resolve-cycle {
-  0%,
-  46% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  52%,
-  90% {
-    opacity: 1;
-    transform: none;
-  }
-  96%,
-  100% {
-    opacity: 0;
-  }
-}
-
 /* --- Capability ticker --------------------------------------------------- */
 .ticker {
   overflow: hidden;
@@ -2230,11 +2271,6 @@ table.data td.when {
 }
 
 /* --- Pillar micro-interactions ------------------------------------------- */
-.pillar {
-  position: relative;
-  transition: background 0.35s ease;
-}
-
 .pillar::before {
   content: "";
   position: absolute;
@@ -2418,18 +2454,8 @@ table.bench td.lead .bar {
   }
 }
 
-/* --- Auth card entrance --------------------------------------------------- */
-.auth__card {
-  animation: enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
 /* --- Marketing responsive fixes ------------------------------------------ */
 @media (max-width: 900px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    padding: 24px 0 56px;
-  }
   .scores {
     grid-template-columns: 1fr;
   }
@@ -2450,20 +2476,13 @@ table.bench td.lead .bar {
  * hero mails; this one silences everything added above and un-hides any
  * reveal state so the page reads as a calm static document. */
 @media (prefers-reduced-motion: reduce) {
-  .hero__copy > *,
-  .hero .triage,
   .hero-v3__copy > *,
   .hero-shot,
   .float-chip,
   .auth__card,
   .close__mark,
-  .mail--live .chip--wait,
   .ticker__track {
     animation: none;
-  }
-  .mail--live .chip--resolve {
-    animation: none;
-    opacity: 0;
   }
   [data-js] [data-reveal] {
     transition: none;

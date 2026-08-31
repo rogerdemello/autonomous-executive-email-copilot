@@ -12,40 +12,97 @@
       <p>The audit log is visible to admins and owners of this organization.</p>
     </div>
   </div>
-{% elif not entries %}
-  <div class="card">
-    <div class="empty">
-      <h3>No activity recorded yet</h3>
-      <p>Sign-ins, mailbox connections, syncs, and every approval decision land here.</p>
-    </div>
-  </div>
 {% else %}
-  <div class="card">
-    <div class="card__head">
-      <span class="card__title">{{ entries | length }} most recent events</span>
+  {# A GET form, so a filtered view is a URL: the shape an auditor asks for is
+     one you can paste into a ticket. #}
+  <form class="inbox-filter" method="get" action="/app/activity">
+    <label class="visually-hidden" for="activity-action">Filter by action</label>
+    <select id="activity-action" name="action">
+      <option value="">All actions</option>
+      {% for option in available_actions %}
+        <option value="{{ option }}" {% if filters.action == option %}selected{% endif %}>{{ option }}</option>
+      {% endfor %}
+    </select>
+    <label class="visually-hidden" for="activity-actor">Filter by person</label>
+    <select id="activity-actor" name="actor">
+      <option value="">Anyone</option>
+      {% for member in members %}
+        <option value="{{ member.id }}" {% if filters.actor == member.id %}selected{% endif %}>
+          {{ member.full_name or member.email }}
+        </option>
+      {% endfor %}
+    </select>
+    <button class="btn btn--sm" type="submit">Filter</button>
+    {% if filters.action or filters.actor %}
+      <a class="btn btn--sm" href="/app/activity">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if not entries %}
+    <div class="card">
+      <div class="empty">
+        {% if filters.action or filters.actor %}
+          <h3>Nothing matches that filter</h3>
+          <p>Try a different action or a different person.</p>
+          <a class="btn" href="/app/activity">Clear filters</a>
+        {% else %}
+          <h3>No activity recorded yet</h3>
+          <p>Sign-ins, mailbox connections, syncs, and every approval decision land here.</p>
+        {% endif %}
+      </div>
     </div>
-    <div class="table-scroll">
-      <table class="data">
-        <thead>
-          <tr>
-            <th>When</th>
-            <th>Action</th>
-            <th>Actor</th>
-            <th>Detail</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for entry in entries %}
+  {% else %}
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">{{ page.first }}–{{ page.last }} of {{ page.total }} events</span>
+      </div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead>
             <tr>
-              <td class="when">{{ entry.created_at | short_time }}</td>
-              <td><span class="chip chip--accent">{{ entry.action }}</span></td>
-              <td>{{ actor_names.get(entry.actor_user_id, entry.actor_user_id or "system") }}</td>
-              <td class="muted mono" style="font-size: 0.8rem">{{ entry.detail | audit_detail }}</td>
+              <th>When</th>
+              <th>Action</th>
+              <th>Actor</th>
+              <th>From</th>
+              <th>Detail</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+              <tr>
+                <td class="when">{{ entry.created_at | short_time }}</td>
+                <td>
+                  <a class="chip chip--accent"
+                     href="/app/activity?action={{ entry.action }}"
+                     title="Show only {{ entry.action }}">{{ entry.action }}</a>
+                </td>
+                <td>{{ actor_names.get(entry.actor_user_id, entry.actor_user_id or "system") }}</td>
+                {# The ip column was NULL for every web action and rendered
+                   nowhere, which made it useless in exactly the review it
+                   exists for. Both halves are fixed. #}
+                <td class="mono muted audit-ip">{{ entry.ip or "-" }}</td>
+                <td class="muted mono audit-detail">{{ entry.detail | audit_detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if page.has_prev or page.has_next %}
+        <nav class="pager" aria-label="Activity pages">
+          {% if page.has_prev %}
+            <a class="btn btn--sm" href="/app/activity?page={{ page.number - 1 }}{% if page.query %}&amp;{{ page.query }}{% endif %}">← Newer</a>
+          {% else %}
+            <span class="btn btn--sm" aria-disabled="true">← Newer</span>
+          {% endif %}
+          <span class="muted pager__count">Page {{ page.number }}</span>
+          {% if page.has_next %}
+            <a class="btn btn--sm" href="/app/activity?page={{ page.number + 1 }}{% if page.query %}&amp;{{ page.query }}{% endif %}">Older →</a>
+          {% else %}
+            <span class="btn btn--sm" aria-disabled="true">Older →</span>
+          {% endif %}
+        </nav>
+      {% endif %}
     </div>
-  </div>
+  {% endif %}
 {% endif %}
 {% endblock %}

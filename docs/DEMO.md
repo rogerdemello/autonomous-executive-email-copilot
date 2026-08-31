@@ -33,7 +33,7 @@ model output produced with no network at the venue.
 The seeder tells you where the prose came from:
 
 ```
-Triaged 50 messages: 81 applied automatically, 11 held for approval
+Triaged 51 messages: 82 applied automatically, 12 held for approval
   Drafts: 11 model-written
 ```
 
@@ -93,13 +93,18 @@ differs.
 
 ### 5. The inbox — `/app/inbox`
 
-Fifty messages in a plausible COO's morning. Start with the summary bar at the
-top, because it is the whole argument in one line:
+Fifty-one messages in a plausible COO's morning. Start with the summary bar at
+the top, because it is the whole argument in one line:
 
-> **50 triaged · 81 applied automatically · 11 need you**
+> **51 triaged · 82 applied automatically · 12 need you**
 >
-> "Fifty messages arrived. Eleven need the COO. That ratio is the product —
+> "Fifty-one messages arrived. Twelve need the COO. That ratio is the product —
 > everything else is how it earns the right to claim it."
+
+Those four numbers describe the workspace, not the current view: put `spam` in
+the classification filter and the list drops to eight while the summary stays
+put. That is deliberate — a filter that rewrites your headline metrics is a
+filter you cannot trust.
 
 The list below is ranked the way the copilot ranked it, with priority and risk
 chips. Click through four, in this order:
@@ -110,10 +115,16 @@ chips. Click through four, in this order:
 > routed it rather than answering. The copilot is explicitly not deciding a
 > liability cap on the COO's behalf."
 
-**The outage (Priya Nair, 07:22)** — risk `ops`, a drafted reply held for approval.
+**The datacentre incident (Marcus Reid, 09:15)** — risk `ops`, two messages in one
+thread, a drafted reply held for approval.
 
 > "This is the interesting one. It decided a reply is warranted, drafted it, and
 > then stopped. Anything that reaches the outside world waits for a human."
+
+Note the **2 in thread** chip in the list and the Thread panel under the message:
+this is the second message in a live incident, and the copilot's reasoning names
+the earlier decision it depends on. Click the first message in the thread panel
+to walk backwards through it.
 
 If the draft carries a **model-drafted** chip, that is the point to make the
 distinction that matters:
@@ -135,8 +146,9 @@ distinction that matters:
 > details, a normal payment window — filed, not flagged. A detector that flags
 > every invoice hasn't detected anything."
 
-Then scroll the list: six promotional messages classified as spam and filed with
-no human involvement, and roughly thirty routine items deferred with a label.
+Then set the classification filter to `spam`: eight promotional messages
+classified and filed with no human involvement. Clear it, and roughly thirty
+routine items sit deferred with a label.
 
 > "Note what *didn't* happen: nothing was sent, and none of the noise reached the
 > approval queue."
@@ -149,7 +161,7 @@ is *not* a contract, and routes to security rather than legal.
 
 ### 6. Approvals — `/app/approvals`
 
-Eleven actions waiting, each showing the reasoning behind it before the buttons.
+Twelve actions waiting, each showing the reasoning behind it before the buttons.
 The draft is a textarea — change a sentence, then approve.
 
 > "That's the whole control model. Replies and escalations queue here.
@@ -157,7 +169,7 @@ The draft is a textarea — change a sentence, then approve.
 > is add a label."
 
 > "Every held draft also carries a verification verdict — a second pass checked
-> the prose against the source message before it queued. Ten of these say
+> the prose against the source message before it queued. Most say
 > 'verified'. One says 'check flagged': the model wrote 'by 25 September' for a
 > message whose deadline is 30 September, and the verifier caught it. That's
 > the system catching its own model inventing a fact, in front of you."
@@ -196,6 +208,9 @@ Be direct about this. It lands better than hedging.
 
 **Real:**
 
+- Search, the classification and priority filters, paging, and thread grouping.
+  `thread_id` has been stored since the table existed; the inbox now reads it.
+
 - The triage decisions. Priority, risk, deadline, business value, and the choice
   between reply / escalate / defer / file are computed at request time by
   `app/copilot/policy.py` from signals inferred by `app/copilot/enrich.py`. This
@@ -214,7 +229,7 @@ Be direct about this. It lands better than hedging.
 
 **Simulated:**
 
-- The mailbox contents. Fifty fixture messages, not a live inbox.
+- The mailbox contents. Fifty-one fixture messages, not a live inbox.
 - Approving a reply in the demo records the send rather than transmitting it.
 - Without a generated cache, the drafted wording falls back to authored fixture
   prose (and to one generic policy sentence beyond that). The seeder prints which
@@ -269,7 +284,7 @@ Yes. One container, SQLite by default, `DATABASE_URL` for Postgres. There is a
 Helm chart under `helm/` and a Render blueprint.
 
 **"How is this tested?"**
-794 tests. The demo path you just walked is covered end to end in
+Over nine hundred tests. The demo path you just walked is covered end to end in
 `tests/test_web_pages.py`, including the session gate, CSRF, and that approving
 actually transitions the action and records an audit entry.
 

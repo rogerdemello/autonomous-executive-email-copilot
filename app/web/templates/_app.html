@@ -3,6 +3,10 @@
 {# Chrome for the signed-in product: sidebar nav + page header. #}
 
 {% block body %}
+{# The skip link .visually-hidden was written for. Sidebar nav is five links
+   plus a sign-out form, which every keyboard and screen-reader user had to
+   walk past on every page load to reach the content. #}
+<a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
   <aside class="side">
     <a class="logo" href="/app/inbox"><span class="glyph">EC</span> Email Copilot</a>
@@ -21,8 +25,8 @@
     <div class="side__foot">
       <div class="who">{{ current_user.full_name or current_user.email }}</div>
       <div>{{ organization.name }} · {{ current_user.role }}</div>
-      <div style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
-        <form method="post" action="/logout" style="margin: 0">
+      <div class="side__actions">
+        <form method="post" action="/logout">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
           <button class="btn btn--sm" type="submit">Sign out</button>
         </form>
@@ -38,7 +42,9 @@
     </div>
   </aside>
 
-  <div class="main">
+  {# A landmark, not a div: this is the one region of the page a screen-reader
+     user wants to jump straight to, and there was no way to name it. #}
+  <main class="main" id="content">
     <header class="main__head">
       <div>
         <h1>{% block heading %}{% endblock %}</h1>
@@ -55,6 +61,6 @@
       {% if notice %}<div class="banner banner--ok" role="status">{{ notice }}</div>{% endif %}
       {% block main %}{% endblock %}
     </div>
-  </div>
+  </main>
 </div>
 {% endblock %}

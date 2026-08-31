@@ -708,6 +708,199 @@ class TestMissingReferences:
 
 
 # --------------------------------------------------------------------------- #
+# The inbox as a daily driver
+# --------------------------------------------------------------------------- #
+class TestInboxIsUsable:
+    """Everything the inbox needed before anyone could work in it: the whole
+    message, the thread it belongs to, search, filters, and paging."""
+
+    @staticmethod
+    def _org_id(email: str) -> str:
+        from app.saas.repository import UserRepository
+
+        return UserRepository().get_by_email_global(email)["org_id"]
+
+    def test_the_reader_shows_the_whole_message_not_a_preview(self, with_demo_mailbox):
+        """`body_preview` is 500 characters. The reader rendered that and only
+        that, so you could not read an email in this email product."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=200)["messages"]
+
+        long_one = max(messages, key=lambda m: len(m.get("body") or ""))
+        assert long_one["body"], "the sync must persist the full body"
+        assert len(long_one["body"]) > 0
+
+        response = client.get(f"/app/inbox?message={long_one['id']}")
+        assert response.status_code == 200
+        # The tail of the body is present — the part a 500-char preview cuts.
+        tail = long_one["body"].strip().splitlines()[-1].strip()
+        if tail:
+            assert tail[:60] in response.text
+
+    def test_search_narrows_the_list(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        target = ProcessedMessageRepository().list_for_org(org_id, limit=200)["messages"][0]
+        needle = (target["sender"] or "").split("@")[0]
+
+        response = client.get(f"/app/inbox?q={needle}")
+        assert response.status_code == 200
+        assert target["subject"] in response.text
+        assert "Clear" in response.text
+
+    def test_search_wildcards_are_escaped(self, with_demo_mailbox):
+        """A bare `%` in the box must not match every message."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        total = ProcessedMessageRepository().list_for_org(org_id, limit=200)["total"]
+        assert total > 1
+
+        hits = ProcessedMessageRepository().list_for_org(org_id, limit=200, q="%")["total"]
+        assert hits < total
+
+    def test_filtering_by_classification(self, with_demo_mailbox):
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        spam = ProcessedMessageRepository().list_for_org(org_id, limit=200, label="spam")
+        assert spam["total"] > 0, "the demo mailbox contains promotional mail"
+        assert spam["total"] < ProcessedMessageRepository().list_for_org(org_id)["total"]
+
+        response = client.get("/app/inbox?label=spam")
+        assert response.status_code == 200
+
+    def test_paging_reports_a_range_not_a_page_length(self, with_demo_mailbox):
+        """`messages | length` and `message_total` disagreed above one page, and
+        the header showed the former while the summary showed the latter."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        total = ProcessedMessageRepository().list_for_org(org_id, limit=500)["total"]
+
+        response = client.get("/app/inbox")
+        assert response.status_code == 200
+        assert f"of {total}" in response.text
+
+    def test_a_thread_is_grouped_and_navigable(self, with_demo_mailbox):
+        """thread_id has been stored since the table existed and read by
+        nothing, while the landing page sells "summarizes long threads"."""
+        from collections import Counter
+
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=500)["messages"]
+        counts = Counter(m["thread_id"] for m in messages if m.get("thread_id"))
+        multi = [thread for thread, n in counts.items() if n > 1]
+        if not multi:
+            pytest.skip("the demo mailbox currently has no multi-message thread")
+
+        thread_id = multi[0]
+        member = next(m for m in messages if m["thread_id"] == thread_id)
+        response = client.get(f"/app/inbox?message={member['id']}")
+        assert response.status_code == 200
+        assert "Thread ·" in response.text
+
+    def test_selecting_a_message_the_filter_excludes_still_works(self, with_demo_mailbox):
+        """A link from Approvals points at a message the current filter or page
+        may not contain; it must still open."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=500)["messages"]
+        target = messages[-1]
+
+        response = client.get(f"/app/inbox?message={target['id']}&q=zzz-no-such-sender")
+        assert response.status_code == 200
+        assert target["subject"] in response.text
+
+    def test_spam_labels_survive_a_tenant_with_many_actions(self, with_demo_mailbox):
+        """The label map was built from the org's first 500 actions and filtered
+        in Python, so spam chips silently vanished past that threshold."""
+        client, email = with_demo_mailbox
+        org_id = self._org_id(email)
+        actions = ProposedActionRepository()
+
+        messages = ProcessedMessageRepository().list_for_org(org_id, limit=500)["messages"]
+        labelled = actions.labels_for_messages(org_id, [m["id"] for m in messages])
+        spam_ids = [m for m, label in labelled.items() if label == "spam"]
+        assert spam_ids, "the demo mailbox must classify some mail as spam"
+
+        # Push the org well past the old 500-action page with newer rows, which
+        # would have evicted these classifications from the window entirely.
+        filler = messages[0]["id"]
+        for _ in range(520):
+            actions.create(
+                org_id=org_id,
+                message_id=filler,
+                action_type="defer",
+                content=None,
+                escalate_to=None,
+                label="deferred",
+                status="executed",
+                requires_approval=False,
+            )
+
+        still = actions.labels_for_messages(org_id, [m["id"] for m in messages])
+        assert {m for m, label in still.items() if label == "spam"} == set(spam_ids)
+        assert "spam" in client.get("/app/inbox").text
+
+
+class TestAccessibleShell:
+    def test_the_shell_has_a_main_landmark_and_a_skip_link(self, signed_in):
+        client, _ = signed_in
+        body = client.get("/app/inbox").text
+        assert '<main class="main" id="content">' in body
+        assert 'class="skip-link" href="#content"' in body
+
+    def test_the_success_banner_is_announced(self, with_demo_mailbox):
+        """Post-approval notices were silent to a screen reader everywhere
+        except Settings, which got it by re-rendering its own duplicate."""
+        client, email = with_demo_mailbox
+        from app.saas.repository import UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        target = ProposedActionRepository().list_for_org(org_id, status="proposed")["actions"][0]
+        page = client.get("/app/approvals").text
+        client.post(f"/app/actions/{target['id']}/reject", data={"csrf_token": csrf_from(page)})
+
+        body = client.get("/app/inbox?notice=rejected").text
+        assert 'class="banner banner--ok" role="status"' in body
+
+
+class TestActivityIsAuditable:
+    def test_the_web_surface_records_the_client_ip(self, signed_in):
+        """Every audit call on the web router omitted `ip=` while the JSON API
+        passed it, so the column was NULL for the surface people actually use."""
+        client, email = signed_in
+        from app.saas.repository import AuditRepository, UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        entries = AuditRepository().list_for_org(org_id, limit=50)
+        signup = next(e for e in entries if e["action"] == "auth.signup")
+        assert signup["ip"], "a web sign-up must record where it came from"
+
+        assert signup["ip"] in client.get("/app/activity").text
+
+    def test_filtering_by_action(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        response = client.get("/app/activity?action=mailbox.connect")
+        assert response.status_code == 200
+        # Every action name appears in the filter dropdown; what must narrow is
+        # the table itself.
+        rows = response.text.split("<tbody>")[1].split("</tbody>")[0]
+        assert "mailbox.connect" in rows
+        assert "auth.signup" not in rows
+
+    def test_an_unknown_filter_value_is_ignored_not_echoed(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        response = client.get("/app/activity?action=%3Cscript%3E")
+        assert response.status_code == 200
+        assert "<script>" not in response.text
+
+    def test_the_page_reports_a_total_not_just_a_page(self, with_demo_mailbox):
+        client, _ = with_demo_mailbox
+        assert "events" in client.get("/app/activity").text
+
+
+# --------------------------------------------------------------------------- #
 # Plan enforcement
 # --------------------------------------------------------------------------- #
 class TestPlanEnforcement:

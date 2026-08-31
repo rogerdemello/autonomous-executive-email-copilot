@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_at": "2026-08-31T11:17:58+00:00",
+  "generated_at": "2026-08-31T11:53:18+00:00",
   "grid": {
     "tasks": [
       "easy_classification",
@@ -38,7 +38,7 @@
       "agent": "baseline",
       "label": "Heuristic",
       "deterministic": true,
-      "measured_at": "2026-08-31T11:17:58+00:00",
+      "measured_at": "2026-08-31T11:53:18+00:00",
       "cells": {
         "easy_classification": {
           "score": 1.0,
@@ -61,7 +61,7 @@
       "agent": "multiagent",
       "label": "Multi-agent",
       "deterministic": true,
-      "measured_at": "2026-08-31T11:17:58+00:00",
+      "measured_at": "2026-08-31T11:53:18+00:00",
       "cells": {
         "easy_classification": {
           "score": 0.8,
@@ -108,15 +108,15 @@
   ],
   "cost_usd_per_episode": 0.009,
   "demo": {
-    "messages": 50,
-    "classified": 50,
-    "urgent": 11,
+    "messages": 51,
+    "classified": 51,
+    "urgent": 12,
     "spam_filed": 8,
     "deferred": 31,
-    "replies_drafted": 5,
+    "replies_drafted": 6,
     "escalated": 6,
-    "held_for_approval": 11,
-    "auto_applied": 81
+    "held_for_approval": 12,
+    "auto_applied": 82
   },
   "reproduce": "python scripts/build_landing_metrics.py"
 }

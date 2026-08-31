@@ -239,7 +239,14 @@ class ProcessedMessage(Base):
     sender = Column(String(320), nullable=True)
     sender_name = Column(String(255), nullable=True)
     subject = Column(Text, nullable=True)
+    # The first 500 characters, for the message list. Kept separate from `body`
+    # so a list query never drags full message bodies across the wire.
     body_preview = Column(Text, nullable=True)
+    # The whole message. Without this the reader pane could only ever show the
+    # preview — you could not read an email in this inbox, which is a strange
+    # limitation for an email product. Capped at BODY_MAX_CHARS on write so one
+    # pathological message cannot bloat a tenant's table.
+    body = Column(Text, nullable=True)
     sender_role = Column(String(32), nullable=True)
     priority_hint = Column(String(16), nullable=True)
     risk_tag = Column(String(32), nullable=True)
@@ -261,6 +268,7 @@ class ProcessedMessage(Base):
             "sender_name": self.sender_name,
             "subject": self.subject,
             "body_preview": self.body_preview,
+            "body": self.body,
             "sender_role": self.sender_role,
             "priority_hint": self.priority_hint,
             "risk_tag": self.risk_tag,

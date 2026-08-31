@@ -75,6 +75,85 @@
     });
   });
 
+  // --- Keyboard navigation -------------------------------------------------
+  // The single biggest gap against Superhuman was that this app had no
+  // keyboard surface at all beyond the theme toggle. Still progressive
+  // enhancement: every one of these does something the mouse can already do,
+  // so a blocked script costs speed and nothing else.
+  //
+  // Deliberately absent: a key that *sends*. `a` moves focus to Approve rather
+  // than pressing it. Approving dispatches a real email to a real recipient,
+  // and one mistyped character is not an acceptable way to trigger that.
+  var list = document.querySelector("[data-msglist]");
+  var searchBox = document.querySelector("[data-shortcut-search]");
+
+  function isTyping(target) {
+    if (!target) return false;
+    var tag = target.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+  }
+
+  function messageLinks() {
+    return list ? Array.prototype.slice.call(list.querySelectorAll("[data-msg]")) : [];
+  }
+
+  function step(delta) {
+    var links = messageLinks();
+    if (!links.length) return;
+    var current = links.findIndex(function (link) {
+      return link.getAttribute("aria-current") === "true";
+    });
+    var next = current < 0 ? 0 : current + delta;
+    if (next < 0 || next >= links.length) return;
+    // A full navigation rather than client-side selection: the reader pane and
+    // the copilot panel are server-rendered per message, so "select" and
+    // "open" are the same act here.
+    window.location.href = links[next].href;
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTyping(event.target)) {
+      // Escape gives the keyboard back without touching the mouse.
+      if (event.key === "Escape") event.target.blur();
+      return;
+    }
+    switch (event.key) {
+      case "j":
+        step(1);
+        break;
+      case "k":
+        step(-1);
+        break;
+      case "/":
+        if (searchBox) {
+          event.preventDefault();
+          searchBox.focus();
+          searchBox.select();
+        }
+        break;
+      case "e": {
+        var draft = document.querySelector("[data-shortcut-draft]");
+        if (draft) {
+          event.preventDefault();
+          draft.focus();
+        }
+        break;
+      }
+      case "a": {
+        var approve = document.querySelector("[data-shortcut-approve]");
+        if (approve) {
+          event.preventDefault();
+          approve.focus();
+          approve.scrollIntoView({ block: "center" });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  });
+
   // --- Guard against double submits --------------------------------------
   // Approving twice would 409 on the second click; disabling the button after
   // the first submit keeps the demo clean without changing any behaviour.

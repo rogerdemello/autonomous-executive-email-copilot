@@ -222,7 +222,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 5
+_SCHEMA_VERSION = 6
 
 
 class SchemaVersion(Base):
@@ -320,6 +320,12 @@ def _run_migration(version: int) -> None:
         # message before it queues; the verdict rides on the action.
         _add_column_if_missing("saas_proposed_actions", "verification_status", "VARCHAR(16)")
         _add_column_if_missing("saas_proposed_actions", "verification_notes", "TEXT")
+        return
+    if version == 6:
+        # The whole message body. Only a 500-character preview was stored, so
+        # the reader pane physically could not show a full email — you could
+        # not read your mail in this mail product.
+        _add_column_if_missing("saas_processed_messages", "body", "TEXT")
         return
 
 

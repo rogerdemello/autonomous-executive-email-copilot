@@ -47,7 +47,7 @@
           width="1440"
           height="900"
           fetchpriority="high"
-          alt="The copilot's inbox: 50 messages triaged, 81 actions applied automatically, an urgent legal claim opened with the copilot's rationale and a model-drafted escalation held for approval."
+          alt="The copilot's inbox: {{ bench.demo.messages }} messages triaged, {{ bench.demo.auto_applied }} actions applied automatically, {{ bench.demo.held_for_approval }} waiting. An incident thread is open with the copilot's reasoning beside it and a drafted reply held for approval."
         />
       </picture>
     </div>
@@ -136,7 +136,7 @@
         <ul class="rationale">
           <li>Spam is labeled and filed automatically; it only ever adds a label.</li>
           <li>The rationale is shown, so you can see exactly why it was filed.</li>
-          <li>Urgent mail is ranked to the top with a deadline attached.</li>
+          <li>Filter the inbox by classification to audit the calls it made.</li>
         </ul>
       </div>
       <div class="shot" data-reveal style="--d: 0.12s">
@@ -155,7 +155,7 @@
             width="1000"
             height="625"
             loading="lazy"
-            alt="A promotional email classified as spam. The copilot's rationale reads: promotional vocabulary throughout, the urgency is manufactured, filed without a reply, no human attention spent."
+            alt="The inbox filtered to spam: {{ bench.demo.spam_filed }} promotional messages, each labelled and filed with no reply and no human attention spent, while the workspace totals above stay unchanged."
           />
         </picture>
       </div>
@@ -189,9 +189,9 @@
           <img
             src="/static/img/product-approve.png"
             width="1000"
-            height="393"
+            height="720"
             loading="lazy"
-            alt="An approval card: a model-drafted, verified reply sits in an editable text area above Approve &amp; send and Reject buttons, with the note: edit freely, your edits are sent."
+            alt="An approval card: a model-drafted, verified escalation sits in an editable text area above Approve, Reject and Open message, with the note: edit freely, your edits are sent and they teach the copilot this workspace's voice."
           />
         </picture>
       </div>
