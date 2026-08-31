@@ -10,11 +10,10 @@ from telemetry.metrics import (
     PrometheusMetrics,
     get_metrics_output,
     record_api_error,
-    record_cost_usd,
     record_episode_end,
     record_episode_start,
+    record_llm_usage,
     record_request,
-    record_tokens_used,
 )
 
 
@@ -58,12 +57,18 @@ class TestPrometheusMetrics:
         output = get_metrics_output()
         assert "api_errors_total" in output
 
-    def test_record_tokens_and_cost(self):
-        record_tokens_used(1000)
-        record_cost_usd(0.25)
+    def test_record_llm_usage_accumulates_cost_and_tokens(self):
+        """Cost and tokens are values, not labels.
+
+        The predecessors of this test exercised record_tokens_used/
+        record_cost_usd, which encoded the measurement as a label and so left
+        every counter pinned at 1 while minting a series per distinct value.
+        """
+        record_llm_usage(latency_ms=12.0, cost_usd=0.25, prompt_tokens=10, completion_tokens=5)
         output = get_metrics_output()
-        assert "tokens_used_total" in output
-        assert "cost_usd_total" in output
+        assert "llm_cost_usd_total" in output
+        assert "llm_tokens_total" in output
+        assert "llm_latency_ms" in output
 
 
 class TestAlertManager:
@@ -114,14 +119,28 @@ class TestAlertManager:
         assert rule.condition(metrics_data) is True
 
     def test_cost_spike_rule(self):
+        # `llm_cost_usd_total` is the metric the LLM path actually emits. The
+        # rule previously read `cost_usd_total`, which nothing ever recorded.
         rule = cost_spike_rule(100.0)
-        metrics_data = {"cost_usd_total": 150.0}
+        metrics_data = {"llm_cost_usd_total": 150.0}
         assert rule.condition(metrics_data) is True
 
     def test_cost_spike_rule_below_threshold(self):
         rule = cost_spike_rule(100.0)
-        metrics_data = {"cost_usd_total": 50.0}
+        metrics_data = {"llm_cost_usd_total": 50.0}
         assert rule.condition(metrics_data) is False
+
+    def test_cost_spike_rule_reads_the_metric_the_llm_path_emits(self):
+        """Guard against the rule and the recorder drifting apart again.
+
+        record_llm_usage is the only thing that records LLM cost; if its metric
+        name changes without this rule following, the rule silently stops firing
+        rather than failing loudly.
+        """
+        from telemetry.metrics import get_metrics_output, record_llm_usage
+
+        record_llm_usage(latency_ms=1.0, cost_usd=0.01)
+        assert "llm_cost_usd_total" in get_metrics_output()
 
     def test_alert_manager_get_alerts(self):
         manager = AlertManager()

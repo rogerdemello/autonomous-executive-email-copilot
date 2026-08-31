@@ -339,3 +339,22 @@ def migrate_db() -> None:
         for v in range(current + 1, _SCHEMA_VERSION + 1):
             _run_migration(v)
             session.add(SchemaVersion(version=v))
+
+
+def schema_is_current() -> bool:
+    """True when the database is reachable and migrated to ``_SCHEMA_VERSION``.
+
+    Used by the readiness probe. This asks the database rather than trusting a
+    process-local flag, so it stays correct however the app was started — a
+    partially-applied migration (schema_version behind the code) reports not
+    ready instead of failing later, mid-request, on a missing column.
+    """
+    try:
+        inspector = inspect(engine)
+        if "schema_version" not in inspector.get_table_names():
+            return False
+        with get_session() as session:
+            current = session.query(func.max(SchemaVersion.version)).scalar() or 0
+        return int(current) >= _SCHEMA_VERSION
+    except Exception:  # noqa: BLE001 - unreachable DB is "not ready", not an error
+        return False

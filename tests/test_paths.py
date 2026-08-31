@@ -56,8 +56,22 @@ class TestPackageAssets:
 class TestProjectData:
     """Configs and the demo mailbox live beside the package, not inside it."""
 
-    def test_data_root_is_beside_the_package(self):
-        assert paths.DATA_ROOT.parent == paths.PROJECT_ROOT
+    def test_data_root_is_beside_the_package(self, monkeypatch):
+        """With no override, project data resolves to <repo>/data.
+
+        DATA_DIR has to be cleared explicitly: the test session always sets it
+        (see tests/conftest.py) so the suite writes to a throwaway tree instead
+        of the developer's real data/ directory. This asserts the *default*,
+        which is what deployments without the override get.
+        """
+        monkeypatch.delenv("DATA_DIR", raising=False)
+        reloaded = importlib.reload(paths)
+        try:
+            assert reloaded.DATA_ROOT.parent == reloaded.PROJECT_ROOT
+            assert reloaded.DATA_ROOT.name == "data"
+        finally:
+            monkeypatch.undo()
+            importlib.reload(paths)
 
     def test_the_files_the_app_actually_loads_are_present(self):
         assert (paths.DATA_ROOT / "settings.yaml").is_file()

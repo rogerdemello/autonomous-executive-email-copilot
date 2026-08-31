@@ -19,3 +19,11 @@ fpdf2==2.8.7
 openai==2.44.0
 email-validator==2.3.0
 cryptography==50.0.0
+# OpenTelemetry is a RUNTIME dependency, not an extra. The code is instrumented
+# throughout (in_span in app/saas/sync_service.py, app/llm/drafter.py) and both
+# render.yaml and the Helm chart set OTEL_EXPORTER_OTLP_ENDPOINT — but the image
+# only installed this file, so telemetry/otel.py fell back to its no-op tracer
+# and every span silently vanished. Keep in sync with the [otel] extra.
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.44.0

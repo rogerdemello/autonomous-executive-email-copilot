@@ -109,12 +109,11 @@ def record_api_error(error_type: str | None = None) -> None:
     metrics.counter("api_errors_total", labels)
 
 
-def record_tokens_used(tokens: int) -> None:
-    metrics.counter("tokens_used_total", {"tokens": str(tokens)})
-
-
-def record_cost_usd(cost: float) -> None:
-    metrics.counter("cost_usd_total", {"cost": str(cost)})
+# NOTE: `record_tokens_used` and `record_cost_usd` used to live here. Both put
+# the measurement itself into a *label* (`{"cost": "0.25"}`), which minted a new
+# time series per distinct value and left the counter stuck at 1 — unusable, and
+# unbounded cardinality. Neither was ever called by product code. Use
+# `record_llm_usage` below, which accumulates the values properly.
 
 
 def record_llm_usage(

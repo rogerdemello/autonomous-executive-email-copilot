@@ -45,6 +45,10 @@ dev = [
   "pip-audit==2.10.1",
 ]
 
+# Kept as an extra for editable installs, but these are also pinned in
+# requirements.txt because the container ships them: the app is instrumented and
+# the deploy configs set OTEL_EXPORTER_OTLP_ENDPOINT, so leaving them out of the
+# image made every span a silent no-op.
 otel = [
   "opentelemetry-api>=1.30.0",
   "opentelemetry-sdk>=1.30.0",
@@ -83,15 +87,17 @@ server = "app.main:main"
 [tool.setuptools.packages.find]
 include = ["app*", "research*", "telemetry*", "reports*"]
 
-# The web UI is templates + CSS, not Python. Without this a wheel would ship
-# app.web as an empty package and every page would 500 on a missing template.
+# The web UI is templates, CSS, fonts and images, not Python. Without this a
+# wheel would ship app.web as an empty package and every page would 500 on a
+# missing template. The static glob is recursive on purpose: the self-hosted
+# fonts and product screenshots live in static/fonts/ and static/img/, and a
+# non-recursive "static/*" silently drops both.
 [tool.setuptools.package-data]
-"app.web" = ["templates/*.html", "static/*"]
+"app.web" = ["templates/*.html", "static/**/*"]
 
 [tool.pytest.ini_options]
 markers = [
   "golden: golden-snapshot tests; rebaseline only via scripts/regen_golden.py",
-  "network: tests that require real network access; deselected in CI",
 ]
 filterwarnings = [
   # Starlette 1.3's TestClient warns that httpx will be replaced by httpx2; the

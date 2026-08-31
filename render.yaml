@@ -13,15 +13,21 @@
 # Deleting/recreating the service regenerates it, which invalidates every
 # license key you have ever issued to a customer.
 #
-# ⚠ Render's FREE Postgres expires ~30 days after creation and is then
-# deleted. Fine for trying the demo; a customer-facing deployment must use a
-# paid plan (basic-256mb or higher) or point DATABASE_URL elsewhere.
+# ⚠ Both services are on paid plans on purpose. Render's FREE Postgres is
+# deleted ~30 days after creation, and a free web service sleeps — a sleeping
+# instance runs no background sync, so the approval queue never fills on its
+# own. Downgrade only for a throwaway demo.
+#
+# ⚠ Values marked `sync: false` below are REQUIRED, not optional. Without SMTP,
+# password resets are logged instead of sent. Without the OAuth client IDs, no
+# real Gmail or Microsoft 365 mailbox can be connected at all.
 services:
   - type: web
     name: exec-email-copilot
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter # ⚠ do NOT use `free`: it sleeps, and a sleeping instance
+      # runs no background sync and re-seeds the demo on every cold start.
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -31,7 +37,7 @@ services:
       - key: AUTH_SECRET_KEY
         generateValue: true
       - key: SIGNUP_ENABLED
-        value: "false" # sales-led: the operator provisions workspaces
+        value: "true" # self-serve: signup provisions an org + a 14-day trial
       - key: APP_PUBLIC_URL
         value: https://exec-email-copilot.onrender.com
       - key: ALLOWED_HOSTS
@@ -46,6 +52,17 @@ services:
         generateValue: true # read it in the dashboard; used for /operator/*
       - key: API_AUTH_TOKEN
         generateValue: true # closes the benchmark POST + sensitive-read surface
+      # --- The product's actual behaviour -------------------------------------
+      # Without these three the deployment is a demo, not a product: the
+      # approval queue only fills when someone clicks Sync, and every urgent
+      # reply is the generic sentence in app/copilot/policy.py rather than a
+      # model-written draft.
+      - key: SYNC_WORKER_ENABLED
+        value: "true" # background sync: the queue fills on its own
+      - key: SYNC_WORKER_INTERVAL_SECONDS
+        value: "900" # every 15 min per connection, with per-connection jitter
+      - key: LLM_DRAFTING_ENABLED
+        value: "true" # requires a key below; falls back safely without one
       # --- Abuse limits -------------------------------------------------------
       - key: RATE_LIMIT_PER_MINUTE
         value: "120"
@@ -79,9 +96,27 @@ services:
         sync: false
       - key: AZURE_OPENAI_DEPLOYMENT_NAME
         sync: false
-      # --- Transactional email (optional; console logging until configured) ---
-      - key: EMAIL_PROVIDER
+      # --- Mailbox OAuth (REQUIRED — set in the dashboard) --------------------
+      # Without these, /app/connect shows both providers as unconfigured and the
+      # only mailbox anyone can attach is the read-only demo one.
+      - key: OAUTH_REDIRECT_BASE_URL
+        value: https://exec-email-copilot.onrender.com
+      - key: GOOGLE_OAUTH_CLIENT_ID
         sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_OAUTH_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_OAUTH_TENANT
+        value: common # multi-tenant: any Microsoft 365 work or school account
+      # --- Transactional email (REQUIRED — set in the dashboard) --------------
+      # NOT optional. Left unset, email_provider falls back to `console`, so
+      # password-reset links and member-invite passwords are written to the log
+      # and never delivered — while the UI tells the user a mail was sent.
+      - key: EMAIL_PROVIDER
+        value: smtp
       - key: EMAIL_FROM
         sync: false
       - key: SMTP_HOST
@@ -95,4 +130,4 @@ services:
 
 databases:
   - name: exec-email-copilot-db
-    plan: free # ⚠ expires after ~30 days — use a paid plan for customers
+    plan: basic-256mb # ⚠ not `free`: free Postgres is deleted after ~30 days
