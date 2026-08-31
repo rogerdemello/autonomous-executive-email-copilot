@@ -1,92 +1,148 @@
 {% extends "_public.html" %}
 
-{% block title %}Talk to sales · Executive Email Copilot{% endblock %}
+{% block title %}Talk to us · Executive Email Copilot{% endblock %}
 
 {% block main %}
-<div class="auth">
-  <div class="auth__card">
-    <p class="eyebrow">Sales-led onboarding</p>
-    <h1>Talk to sales</h1>
-    <p class="auth__sub">
-      Tell us about your team and we'll set up a walkthrough on your own data,
-      then provision your workspace.
+{# Two columns: the form, and the answers to the three questions every visitor
+   has before filling one in — what happens next, how fast, and what you do
+   with my mail. It used to render inside `.auth__card`, a 430px box built for
+   a login form, which made a considered enquiry look like a password prompt. #}
+<section class="wrap lead-page">
+  <div class="lead-page__intro">
+    <p class="eyebrow">Talk to us</p>
+    <h1>Keep your access, or ask us anything first.</h1>
+    <p class="lede">
+      You do not need to talk to anyone to try this. Signing up connects a mailbox and
+      starts a 14-day trial on the spot. This form is for after that, or for the
+      questions a form is better at than a trial: security review, a rollout across a
+      leadership team, or anything your procurement team needs in writing.
     </p>
 
-    {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
-
-    {% if submitted %}
-      <div class="banner banner--ok">
-        Thanks, we've got it. Expect a reply at <b>{{ form.email }}</b> within
-        one business day.
-      </div>
-      <p class="auth__alt"><a href="/">Back to the overview</a></p>
-    {% else %}
-      <form method="post" action="/contact-sales" novalidate>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-        {# Honeypot: hidden from people, filled by naive bots. Non-empty
-           submissions are silently dropped. #}
-        <input
-          type="text"
-          name="website"
-          value=""
-          tabindex="-1"
-          autocomplete="off"
-          aria-hidden="true"
-          style="position: absolute; left: -9999px"
-        />
-
-        <div class="field">
-          <label for="email">Work email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autocomplete="email"
-            required
-            value="{{ form.email or '' }}"
-          />
+    <ol class="steps">
+      <li>
+        <span class="steps__n">1</span>
+        <div>
+          <h3>A person reads it</h3>
+          <p>Not a sequence. The reply comes from someone who can answer the question.</p>
         </div>
-
-        <div class="field">
-          <label for="name">Your name</label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            autocomplete="name"
-            value="{{ form.name or '' }}"
-          />
+      </li>
+      <li>
+        <span class="steps__n">2</span>
+        <div>
+          <h3>Within one business day</h3>
+          <p>Usually the same day. If it needs a call, we will suggest two times.</p>
         </div>
-
-        <div class="field">
-          <label for="company">Company</label>
-          <input id="company" name="company" type="text" value="{{ form.company or '' }}" />
+      </li>
+      <li>
+        <span class="steps__n">3</span>
+        <div>
+          <h3>A walkthrough on your own mail</h3>
+          <p>
+            Not a canned deck: your inbox, your senders, the drafts the copilot actually
+            writes for them, and the claims it flags.
+          </p>
         </div>
+      </li>
+    </ol>
 
-        <div class="field">
-          <label for="seats">How many executives / seats?</label>
-          <input
-            id="seats"
-            name="seats"
-            type="number"
-            min="1"
-            max="100000"
-            value="{{ form.seats or '' }}"
-          />
-        </div>
-
-        <div class="field">
-          <label for="message">Anything we should know?</label>
-          <textarea id="message" name="message" rows="4" maxlength="4000">{{ form.message or '' }}</textarea>
-        </div>
-
-        <button class="btn btn--primary btn--block" type="submit">Request a walkthrough</button>
-      </form>
-
-      <p class="auth__alt">
-        Prefer email? <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
+    <div class="lead-page__trust">
+      <h3>What we do with your mail</h3>
+      <ul class="rationale">
+        <li>Mailbox tokens are sealed with authenticated encryption at rest.</li>
+        <li>Your mail is never used to train a model, ours or anyone else's.</li>
+        <li>Every action the copilot takes is on a per-workspace audit log you can export.</li>
+        <li>Nothing is sent to a recipient without a human pressing approve.</li>
+      </ul>
+      <p class="muted lead-page__legal">
+        The details are in the <a href="/privacy">privacy policy</a> and
+        <a href="/terms">terms</a>.
       </p>
-    {% endif %}
+    </div>
   </div>
-</div>
+
+  <div class="lead-page__form card">
+    <div class="card__head"><span class="card__title">Send us a note</span></div>
+    <div class="card__body">
+      {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+
+      {% if submitted %}
+        <div class="banner banner--ok" role="status">
+          Thanks, we've got it. Expect a reply at <b>{{ form.email }}</b> within
+          one business day.
+        </div>
+        <p class="auth__alt">
+          Nothing stops you starting in the meantime:
+          <a href="/signup">connect a mailbox</a>.
+        </p>
+      {% else %}
+        <form method="post" action="/contact-sales" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          {# Honeypot: hidden from people, filled by naive bots. Non-empty
+             submissions are silently dropped. #}
+          <input
+            type="text"
+            name="website"
+            value=""
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+            class="honeypot"
+          />
+
+          <div class="field">
+            <label for="email">Work email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              value="{{ form.email or '' }}"
+            />
+          </div>
+
+          <div class="field">
+            <label for="name">Your name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              autocomplete="name"
+              value="{{ form.name or '' }}"
+            />
+          </div>
+
+          <div class="field">
+            <label for="company">Company</label>
+            <input id="company" name="company" type="text" value="{{ form.company or '' }}" />
+          </div>
+
+          <div class="field">
+            <label for="seats">How many inboxes?</label>
+            <input
+              id="seats"
+              name="seats"
+              type="number"
+              min="1"
+              max="100000"
+              value="{{ form.seats or '' }}"
+            />
+            <span class="hint">One is a perfectly good answer.</span>
+          </div>
+
+          <div class="field">
+            <label for="message">Anything we should know?</label>
+            <textarea id="message" name="message" rows="4" maxlength="4000">{{ form.message or '' }}</textarea>
+          </div>
+
+          <button class="btn btn--primary btn--block" type="submit">Request a walkthrough</button>
+        </form>
+
+        <p class="auth__alt">
+          Prefer email? <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -1,10 +1,11 @@
 """Machine-readable marketing endpoints.
 
-The human-facing landing page is a template in :mod:`app.web`. Pricing is
-deliberately not published anywhere — the product is sales-led, and plans are
-granted through the licensing/entitlement system, not a public price list.
-What stays here is ``security.txt``, which is generated rather than checked in
-so it can never drift from the deployment's real contact address.
+The human-facing pages are templates in :mod:`app.web`. Acquisition is
+self-serve — sign up, connect a mailbox, 14-day trial — and there is
+deliberately no published price anywhere: continued access is arranged through
+a conversation and granted as a signed key by the licensing/entitlement
+system. What stays here is ``security.txt``, which is generated rather than
+checked in so it can never drift from the deployment's real contact address.
 """
 
 from __future__ import annotations

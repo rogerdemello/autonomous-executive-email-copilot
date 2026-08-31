@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A product front door.** `/` is now a landing page instead of a redirect into
   the benchmark console, and there is a real sign-in page. New server-rendered UI
-  under `app/web`: landing, pricing, login, signup, connect a mailbox, triage
+  under `app/web`: landing, login, signup, connect a mailbox, triage
   inbox, approvals, activity, and settings — Jinja templates and one stylesheet,
   no bundler and no build step.
 - **A demo mailbox** (`provider="demo"`). 14 fixture messages in

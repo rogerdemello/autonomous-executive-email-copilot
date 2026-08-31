@@ -101,13 +101,14 @@ _PROVIDER_LABELS = {
     "google": "Gmail",
     "microsoft": "Microsoft 365",
 }
+# Only the two feature flags that are actually *enforced* have labels, because
+# a label is what makes one renderable. The other four (approvals, analytics,
+# priority support, custom models) used to render as chips in Settings while
+# gating nothing whatsoever — a decorative claim about what the customer had
+# bought. If a flag starts gating something, give it a label then.
 _FEATURE_LABELS = {
-    licensing.FEATURE_APPROVALS: "Human-in-the-loop approvals",
-    licensing.FEATURE_ANALYTICS: "Analytics & reporting",
-    licensing.FEATURE_AUDIT_LOG: "Audit log",
-    licensing.FEATURE_SSO: "SSO (SAML/OIDC)",
-    licensing.FEATURE_PRIORITY_SUPPORT: "Priority support & SLA",
-    licensing.FEATURE_CUSTOM_MODELS: "Bring-your-own / custom models",
+    licensing.FEATURE_AUDIT_LOG: "Audit log",  # enforced: routes.activity
+    licensing.FEATURE_SSO: "SSO (SAML/OIDC)",  # enforced: saas.routes SSO login
 }
 
 
@@ -268,8 +269,30 @@ def welcome_redirect() -> RedirectResponse:
 
 @web_router.get("/pricing", include_in_schema=False)
 def pricing_redirect() -> RedirectResponse:
-    """Sales-led product: no public pricing. Old links land on the homepage."""
+    """There is no public pricing page. Old links land on the homepage.
+
+    Kept as a redirect rather than deleted: the page existed once, links to it
+    are in the wild, and a 301 costs one route while a 404 costs a visitor.
+    """
     return RedirectResponse(url="/", status_code=301)
+
+
+@web_router.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request) -> HTMLResponse:
+    """The privacy policy.
+
+    On the critical path for Gmail: Google will not begin OAuth verification
+    for the restricted ``gmail.*`` scopes without a published privacy policy on
+    the app's own domain, and the policy must carry the Limited Use
+    disclosure. The scope table it renders is kept in sync with
+    :mod:`app.saas.oauth` by hand — a mismatch there is a rejection reason.
+    """
+    return _render(request, "privacy.html")
+
+
+@web_router.get("/terms", response_class=HTMLResponse)
+def terms(request: Request) -> HTMLResponse:
+    return _render(request, "terms.html")
 
 
 @web_router.get("/contact-sales", response_class=HTMLResponse)
@@ -956,16 +979,44 @@ _SETTINGS_NOTICES = {
 }
 
 
+def _days_remaining(expires_at: Any) -> int | None:
+    """Whole days left on an entitlement, floored at 0. None if undated."""
+    if not expires_at:
+        return None
+    try:
+        moment = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return max(0, (moment - datetime.now(timezone.utc)).days)
+
+
 def _settings_context(request: Request, user: dict) -> dict[str, Any]:
     context = _app_context(request, user, "settings")
     raw = _billing.current_entitlement(user["org_id"])
     members = _users.list_for_org(user["org_id"])
+    plan = raw.get("plan")
+    active = bool(raw.get("is_valid"))
+    # What Settings renders is *access*, not a price tier: a trial with a clock
+    # on it, or full access. The plan key stays server-side — naming a tier the
+    # customer cannot look up invites the question "what are the others?", and
+    # there is no page that answers it.
+    context["access"] = {
+        "active": active,
+        "is_trial": plan == "trial",
+        "days_remaining": _days_remaining(raw.get("expires_at")),
+        "expires_at": raw.get("expires_at"),
+        # The upsell shows on a trial, and on anything that has lapsed. A
+        # customer with live paid access is not asked to buy again.
+        "show_keep_access": (plan == "trial") or not active,
+    }
     context["entitlement"] = {
-        "plan": raw.get("plan"),
+        "plan": plan,
         "seats": raw.get("seats"),
         "features": raw.get("features", []),
         "expires_at": raw.get("expires_at"),
-        "active": bool(raw.get("is_valid")),
+        "active": active,
     }
     context["members"] = members
     context["member_count"] = len(members)
@@ -1189,6 +1240,8 @@ _WEB_PATH_PREFIXES = (
     "/pricing",
     "/contact-sales",
     "/welcome",
+    "/privacy",
+    "/terms",
 )
 
 

@@ -2,11 +2,13 @@
 
 {% block title %}Settings · Executive Email Copilot{% endblock %}
 {% block heading %}Settings{% endblock %}
-{% block lede %}Your workspace, plan, and the people in it.{% endblock %}
+{% block lede %}Your workspace, your access, and the people in it.{% endblock %}
 
 {% block main %}
-{% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
-{% if notice %}<div class="banner banner--ok" role="status">{{ notice }}</div>{% endif %}
+{# No banners here: _app.html already renders `error` and `notice` above this
+   block. Repeating them printed every settings notice twice — including the
+   one-time invite password, which is exactly the notice you least want
+   duplicated down the page. #}
 
 <div class="grid-2">
   <div class="card">
@@ -23,9 +25,9 @@
         <dd><span class="chip chip--accent">{{ current_user.role }}</span></dd>
       </dl>
 
-      <details style="margin-top: 18px">
+      <details class="disclosure">
         <summary class="muted">Change password</summary>
-        <form method="post" action="/app/settings/password" style="margin-top: 12px">
+        <form method="post" action="/app/settings/password" class="disclosure__body">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
           <div class="field">
             <label for="current_password">Current password</label>
@@ -44,49 +46,43 @@
   </div>
 
   <div class="card">
-    <div class="card__head"><span class="card__title">Plan</span></div>
+    <div class="card__head"><span class="card__title">Access</span></div>
     <div class="card__body">
-      {% if entitlement %}
-        {% if not entitlement.active %}
-          <div class="banner banner--error" role="alert">
-            This plan is inactive. Syncing and approvals are paused until a
-            license is activated.
-          </div>
+      {% if not access.active %}
+        <div class="banner banner--error" role="alert">
+          Your access has ended. Syncing and approvals are paused; nothing has
+          been deleted. <a href="/contact-sales">Talk to us</a> to switch it
+          back on.
+        </div>
+      {% endif %}
+
+      <p class="access__state">
+        {% if access.is_trial %}
+          <span class="access__headline">
+            Trial
+            {%- if access.days_remaining is not none %}
+              · {{ access.days_remaining }} day{{ 's' if access.days_remaining != 1 }} remaining
+            {%- endif %}
+          </span>
+        {% else %}
+          <span class="access__headline">Full access</span>
         {% endif %}
-        <dl class="kv">
-          <dt>Plan</dt>
-          <dd>{{ entitlement.plan | title }}</dd>
-          <dt>Status</dt>
-          <dd>
-            <span class="chip {% if entitlement.active %}chip--good{% else %}chip--crit{% endif %}">
-              {{ "active" if entitlement.active else "inactive" }}
-            </span>
-          </dd>
-          <dt>Seats</dt>
-          <dd>{{ member_count }} of {{ entitlement.seats }}</dd>
-          {% if entitlement.expires_at %}
-            <dt>Renews</dt>
-            <dd>{{ entitlement.expires_at | short_time }}</dd>
-          {% endif %}
-        </dl>
-        {% if entitlement.features %}
-          <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px">
-            {% for feature in entitlement.features %}
-              <span class="chip chip--neutral">{{ feature_labels.get(feature, feature) }}</span>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% else %}
-        <p class="muted" style="margin: 0">No active license on this organization.</p>
+        <span class="muted">Every feature is switched on. Nothing is held back.</span>
+      </p>
+
+      {% if access.show_keep_access %}
+        <a class="btn btn--primary btn--sm" href="/contact-sales">
+          Keep your access <span class="arr">→</span>
+        </a>
       {% endif %}
 
       {% if is_owner %}
-        <details style="margin-top: 18px">
-          <summary class="muted">Activate a license key</summary>
-          <form method="post" action="/app/settings/license" style="margin-top: 12px">
+        <details class="disclosure">
+          <summary class="muted">Have an access key?</summary>
+          <form method="post" action="/app/settings/license" class="disclosure__body">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
             <div class="field">
-              <label for="license_key">License key (from sales)</label>
+              <label for="license_key">Access key</label>
               <input id="license_key" name="license_key" type="text" class="mono"
                      autocomplete="off" required />
             </div>
@@ -94,12 +90,11 @@
           </form>
         </details>
       {% endif %}
-      <a class="btn btn--sm" href="/contact-sales" style="margin-top: 18px">Talk to sales</a>
     </div>
   </div>
 </div>
 
-<div class="card" style="margin-top: 16px">
+<div class="card card--stacked">
   <div class="card__head">
     <span class="card__title">Members</span>
     <span class="chip chip--neutral">{{ members | length }}</span>
@@ -154,7 +149,7 @@
   </div>
 
   {% if can_manage %}
-    <div class="card__body" style="border-top: 1px solid var(--line)">
+    <div class="card__body card__body--divided">
       <form method="post" action="/app/members/invite">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
         <div class="grid-2">
@@ -175,7 +170,7 @@
           </select>
           <button class="btn btn--primary btn--sm" type="submit">Invite member</button>
         </div>
-        <p class="muted" style="margin: 8px 0 0; font-size: 0.85rem">
+        <p class="muted note-under">
           A temporary password is generated, shown to you once, and emailed to them.
         </p>
       </form>
@@ -183,7 +178,7 @@
   {% endif %}
 </div>
 
-<div class="card" style="margin-top: 16px">
+<div class="card card--stacked">
   <div class="card__head">
     <span class="card__title">Mailboxes</span>
     <a class="btn btn--sm" href="/app/connect">Connect another</a>
@@ -219,19 +214,19 @@
 </div>
 
 {% if is_owner %}
-  <div class="card" style="margin-top: 16px">
+  <div class="card card--stacked">
     <div class="card__head"><span class="card__title">Data &amp; danger zone</span></div>
     <div class="card__body">
-      <p class="muted" style="margin-top: 0">
+      <p class="muted lead-note">
         Export everything this workspace owns as JSON (tokens excluded), or
         erase the workspace permanently. Owner only.
       </p>
       <div class="actions-row">
         <a class="btn btn--sm" href="/app/settings/export">Download data export</a>
       </div>
-      <details style="margin-top: 16px">
-        <summary style="color: var(--crit)">Delete this workspace permanently</summary>
-        <form method="post" action="/app/settings/delete-org" style="margin-top: 12px"
+      <details class="disclosure">
+        <summary class="danger-summary">Delete this workspace permanently</summary>
+        <form method="post" action="/app/settings/delete-org" class="disclosure__body"
               data-confirm="This permanently erases {{ organization.name }} and every message, action, member, and audit entry it owns. There is no undo.">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
           <div class="field">

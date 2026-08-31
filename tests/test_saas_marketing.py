@@ -1,4 +1,5 @@
-"""Tests for the marketing surface (landing, security.txt, no public pricing)."""
+"""Tests for the marketing surface: landing, security.txt, and the standing
+rule that no page anywhere publishes a price or names a plan tier."""
 
 from __future__ import annotations
 
@@ -18,7 +19,23 @@ def test_landing_renders(client):
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
     assert "Executive Email Copilot" in resp.text
-    assert "Start free trial" in resp.text
+    assert "Start free" in resp.text
+
+
+def test_landing_leads_with_the_self_serve_cta(client):
+    """The motion is self-serve: connect an inbox, don't book a call."""
+    body = client.get("/").text
+    assert "Start free — connect your inbox" in body
+    assert 'href="/signup"' in body
+
+
+def test_landing_links_to_the_live_demo(client):
+    """login.html prefills the demo credentials in production and nothing on
+    the landing page used to link there — a visitor not ready to hand over a
+    mailbox had nowhere to go."""
+    body = client.get("/").text
+    assert "Try the live demo" in body
+    assert 'href="/login"' in body
 
 
 def test_security_txt_served(client):
@@ -29,7 +46,7 @@ def test_security_txt_served(client):
 
 
 def test_pricing_page_redirects_home(client):
-    # Sales-led product: there is no public pricing page; old links land home.
+    # There is no public pricing page; old links land home rather than on a 404.
     resp = client.get("/pricing", follow_redirects=False)
     assert resp.status_code == 301
     assert resp.headers["location"] == "/"
@@ -43,6 +60,18 @@ def test_landing_has_no_pricing_links(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "/pricing" not in resp.text
+
+
+@pytest.mark.parametrize("path", ["/", "/login", "/signup", "/contact-sales"])
+def test_no_public_page_names_a_plan_tier(client, path):
+    """A tier name the visitor cannot look up is worse than naming none.
+
+    The landing page's hero note used to read "SSO & audit log on Business+",
+    which invites exactly one question and there is no page that answers it.
+    """
+    body = client.get(path).text
+    for tier in ("Business+", "Team plan", "Enterprise plan", "per seat", "/month"):
+        assert tier not in body, f"{path} names a plan tier or a price: {tier}"
 
 
 def test_marketing_is_public_even_with_operator_token(client, monkeypatch):

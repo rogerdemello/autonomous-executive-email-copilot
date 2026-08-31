@@ -49,7 +49,10 @@
 
     <div class="main__body">
       {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
-      {% if notice %}<div class="banner banner--ok">{{ notice }}</div>{% endif %}
+      {# role="status" so a post-approval notice is announced rather than
+         silently appearing. settings.html used to be the only page that got
+         this, by re-rendering its own copy of the banner. #}
+      {% if notice %}<div class="banner banner--ok" role="status">{{ notice }}</div>{% endif %}
       {% block main %}{% endblock %}
     </div>
   </div>

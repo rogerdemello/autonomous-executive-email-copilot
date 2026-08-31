@@ -348,7 +348,10 @@ destructive actions, and double-submit protection.
 | Route | Auth | Purpose |
 |---|---|---|
 | `GET /` | public | Landing page (`HEAD` too, for uptime probes) |
-| `GET /pricing` | public | Plans, rendered from `licensing.PLANS` |
+| `GET /pricing` | public | 301 to `/` — there is no pricing page; kept so old links land somewhere |
+| `GET /privacy` | public | Privacy policy, incl. the Google Limited Use disclosure |
+| `GET /terms` | public | Terms of service |
+| `GET,POST /contact-sales` | public | The lead form (honeypot + per-IP throttle) |
 | `GET,POST /login` | public | Sign in; offers SSO when OIDC is configured |
 | `GET,POST /signup` | public | Provisions org + owner + trial license |
 | `POST /logout` | session | Clears the session cookie |
@@ -568,7 +571,7 @@ Supports webhook POST dispatch for triggered alerts.
 - `routes.py`: page and form handlers; no business logic of their own
 - `session.py`: the session cookie and CSRF tokens
 - `templates/base.html`, `_public.html`, `_app.html`: shared chrome
-- `templates/landing.html`, `pricing.html`, `login.html`, `signup.html`: public pages
+- `templates/landing.html`, `login.html`, `signup.html`, `contact_sales.html`, `privacy.html`, `terms.html`: public pages
 - `templates/connect.html`, `inbox.html`, `approvals.html`, `activity.html`, `settings.html`: the product
 - `static/app.css`: the whole design system, light and dark
 - `static/app.js`: progressive enhancement only

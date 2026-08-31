@@ -36,7 +36,7 @@ Open **http://localhost:8000** and walk:
 | Step | What you see |
 |---|---|
 | `/` | The landing page — what the product is |
-| `/contact-sales` | The lead-capture form (no public pricing — sales-led) |
+| `/contact-sales` | The lead form. Self-serve is the default path; there is no pricing page |
 | `/login` | Pre-filled with the demo account — just press **Sign in** |
 | `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
 | `/app/inbox` | 50 triaged messages, with the copilot's reasoning and its drafts |
@@ -550,9 +550,10 @@ WebSocket pong frame:
 ## UI
 
 Server-rendered from [app/web](app/web): Jinja templates plus one stylesheet, with
-no bundler and no build step. Pages: landing, pricing, login, signup, connect a
-mailbox, inbox, approvals, activity, settings. Every action works as a plain form
-POST, so the app functions with JavaScript disabled.
+no bundler and no build step. Pages: landing, login, signup, contact sales,
+privacy, terms, connect a mailbox, inbox, approvals, activity, settings. Every
+action works as a plain form POST, so the app functions with JavaScript
+disabled.
 
 ## Deployment Notes
 

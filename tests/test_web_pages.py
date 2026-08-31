@@ -73,7 +73,7 @@ class TestPublicPages:
         assert "text/html" in response.headers["content-type"]
         # The old behaviour was a redirect into an ops console.
         assert "runs itself" in response.text
-        assert "Start free trial" in response.text
+        assert "Start free" in response.text
 
     def test_pricing_redirects_home(self, client):
         """No public pricing — the product is sales-led; old links land home."""
@@ -95,6 +95,62 @@ class TestPublicPages:
     def test_login_and_signup_render(self, client):
         assert client.get("/login").status_code == 200
         assert client.get("/signup").status_code == 200
+
+
+class TestLegalPages:
+    """/privacy and /terms gate the Gmail OAuth queue.
+
+    Google will not begin verification for the restricted ``gmail.*`` scopes
+    without a published privacy policy on the app's own domain, carrying the
+    Limited Use disclosure and justifying every scope requested. These tests
+    are the cheap guard against that quietly regressing.
+    """
+
+    @pytest.mark.parametrize("path", ["/privacy", "/terms"])
+    def test_reachable_without_a_session(self, client, path):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+
+    @pytest.mark.parametrize("page", ["/", "/login", "/signup", "/contact-sales"])
+    def test_linked_from_every_public_page(self, client, page):
+        body = client.get(page).text
+        assert 'href="/privacy"' in body
+        assert 'href="/terms"' in body
+
+    def test_privacy_carries_the_google_limited_use_disclosure(self, client):
+        body = client.get("/privacy").text
+        assert "Google API Services User Data Policy" in body
+        assert "Limited Use" in body
+        # The load-bearing sentence: this is the claim under review.
+        assert "do not use Gmail data to develop, improve, or train" in body
+
+    def test_privacy_justifies_exactly_the_scopes_we_request(self, client):
+        """A scope requested but not justified — or justified but no longer
+        requested — is a documented rejection reason."""
+        from app.saas import oauth
+
+        body = client.get("/privacy").text
+        for scope in oauth.get_provider("google").scopes:
+            leaf = scope.rsplit("/", 1)[-1]
+            assert leaf in body, f"/privacy does not justify the Google scope {leaf}"
+        for scope in oauth.get_provider("microsoft").scopes:
+            leaf = scope.rsplit("/", 1)[-1]
+            assert leaf in body, f"/privacy does not justify the Microsoft scope {leaf}"
+        assert "gmail.readonly" not in body
+
+    def test_privacy_names_the_llm_subprocessor(self, client):
+        """Message content is sent to a third party to be drafted against.
+        Naming it is the whole point of a sub-processor disclosure."""
+        assert "OpenAI" in client.get("/privacy").text
+
+    def test_legal_paths_get_an_error_page_not_raw_json(self, client):
+        """Without /privacy and /terms in _WEB_PATH_PREFIXES a 404 below them
+        returns the API's JSON error contract to a browser."""
+        from app.web.routes import is_web_path
+
+        assert is_web_path("/privacy")
+        assert is_web_path("/terms")
 
 
 # --------------------------------------------------------------------------- #
@@ -353,13 +409,47 @@ class TestSupportingPages:
         activity = client.get("/app/activity").text
         assert "auth.login_failed" in activity
 
-    def test_settings_shows_plan_and_members(self, with_demo_mailbox):
+    def test_settings_shows_access_and_members(self, with_demo_mailbox):
         client, email = with_demo_mailbox
         response = client.get("/app/settings")
         assert response.status_code == 200
         assert "Northwind Industries" in response.text
         assert email in response.text
-        assert "Trial" in response.text or "trial" in response.text
+        # Access, not a tier and a seat count: the clock, and the way to stop it.
+        assert "Trial" in response.text
+        assert "remaining" in response.text
+        assert 'href="/contact-sales"' in response.text
+
+    def test_settings_does_not_render_decorative_entitlement_chips(self, signed_in):
+        """Only `audit_log` and `sso` gate anything. The other four flags used
+        to render as chips — a claim about what the customer had bought that
+        nothing in the code honoured."""
+        client, _ = signed_in
+        body = client.get("/app/settings").text
+        for decorative in (
+            "Human-in-the-loop approvals",
+            "Analytics &amp; reporting",
+            "Priority support",
+            "Bring-your-own",
+        ):
+            assert decorative not in body
+
+    def test_settings_renders_each_notice_once(self, signed_in):
+        """settings.html used to re-render the banners _app.html had already
+        shown, so every notice appeared twice — including the one-time invite
+        password, the notice you least want duplicated."""
+        client, _ = signed_in
+        page = client.get("/app/settings").text
+        response = client.post(
+            "/app/members/invite",
+            data={
+                "csrf_token": csrf_from(page),
+                "email": f"dup_{uuid.uuid4().hex[:8]}@x.example",
+                "role": "member",
+            },
+        )
+        assert response.status_code == 200
+        assert response.text.count("Temporary password (shown once, also emailed)") == 1
 
     def test_app_root_redirects_to_the_inbox(self, signed_in):
         client, _ = signed_in
@@ -829,7 +919,35 @@ class TestSettingsManagement:
             data={"csrf_token": csrf_from(page), "license_key": key},
         )
         assert response.status_code == 303
-        assert "Business" in client.get("/app/settings").text
+
+        # Settings shows *access*, never the tier name — there is no page a
+        # customer could look "Business" up on. Off the trial, the upsell goes.
+        settings = client.get("/app/settings").text
+        assert "Full access" in settings
+        assert "Business" not in settings
+        assert "Keep your access" not in settings
+
+    def test_expired_access_says_so_and_points_at_sales(self, signed_in):
+        client, email = signed_in
+        from datetime import datetime, timedelta, timezone
+
+        from app.saas.repository import LicenseRepository, UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        repo = LicenseRepository()
+        row = repo.get_active_for_org(org_id)
+        repo.upsert(
+            org_id=org_id,
+            key_id=row["key_id"],
+            plan=row["plan"],
+            seats=row["seats"],
+            features=row["features"],
+            expires_at_iso=(datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        )
+
+        body = client.get("/app/settings").text
+        assert "Your access has ended" in body
+        assert 'href="/contact-sales"' in body
 
     def test_export_downloads_the_tenant_bundle(self, with_demo_mailbox):
         client, _ = with_demo_mailbox

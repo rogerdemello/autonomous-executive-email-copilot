@@ -55,19 +55,35 @@ ahead of the rollout call.
    GOOGLE_OAUTH_CLIENT_SECRET=...
    ```
 
-**The scope problem**: the app requests `gmail.readonly`, `gmail.modify`, and
-`gmail.compose` — Google classifies these as **restricted scopes**. Until the
-app passes Google's verification (including a **CASA Tier 2 security
-assessment**, re-done annually), Gmail connects are limited to **100 test
-users** listed on the consent screen, each seeing an "unverified app"
-warning. Plan for:
+**The scope problem**: the app requests `gmail.modify` and `gmail.compose`.
+Google classifies **both** as *restricted* scopes — several third-party blogs
+claim `gmail.modify` is merely "sensitive"; they are wrong, and the
+[official scope table](https://developers.google.com/gmail/api/auth/scopes) is
+the authority. `gmail.readonly` was requested too and has been dropped:
+`gmail.modify` already grants read, so it added no capability, and requesting
+a scope you do not use is a documented rejection reason.
 
-- a public privacy policy + limited-use disclosure page on your domain,
+Until the app passes Google's verification (including a **CASA Tier 2 security
+assessment**, re-done every 12 months, roughly $540–$1,000 on the self-serve
+lab path and more from some assessors), Gmail connects are limited to
+**100 test users** listed on the consent screen, each seeing an
+"unverified app" warning. There is no scope arrangement that avoids this — the
+only escape is not reading the mailbox, which is the product.
+
+Plan for:
+
+- the published privacy policy and Limited Use disclosure — **already built**,
+  at `/privacy` (`app/web/templates/privacy.html`). Its scope tables are kept
+  in sync with `app/saas/oauth.py` by hand and by
+  `tests/test_web_pages.py::TestLegalPages`; a mismatch is a rejection reason,
 - the verification questionnaire in the Cloud Console,
 - the CASA assessment through one of Google's authorized labs (weeks–months).
 
-That timeline is why the launch posture is demo-first with Microsoft 365 as
-the first real provider.
+100 test users is likely months of runway for a solo-executive ICP onboarded
+by hand. **Microsoft 365 needs no review at all** — register that app first,
+ship both, and run CASA in parallel expecting the cap to stop mattering before
+you reach it. Note `Mail.ReadWrite`/`Mail.Send` trip admin consent in most
+managed tenants; have the admin-consent URL ready for rollout calls.
 
 ## Security notes (already handled by the app)
 

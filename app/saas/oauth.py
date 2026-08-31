@@ -50,9 +50,13 @@ def _providers() -> dict[str, OAuthProvider]:
             authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
             token_url="https://oauth2.googleapis.com/token",
             scopes=(
-                # readonly kept for backward-compatible scope assertions; modify +
-                # compose grant the write surface (label/archive, drafts, send).
-                "https://www.googleapis.com/auth/gmail.readonly",
+                # gmail.readonly used to be requested alongside these and was
+                # dropped: gmail.modify already grants read, so it added no
+                # capability. All three are *restricted* scopes, so this does
+                # not escape Google verification or the CASA assessment — but
+                # requesting more than the product uses is a documented
+                # rejection reason, and every scope here has to be justified
+                # one by one in the review and on /privacy.
                 "https://www.googleapis.com/auth/gmail.modify",
                 "https://www.googleapis.com/auth/gmail.compose",
                 "openid",

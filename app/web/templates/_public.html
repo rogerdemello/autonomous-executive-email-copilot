@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{# Chrome for the public, logged-out pages: landing, pricing, login, signup. #}
+{# Chrome for the public, logged-out pages: landing, login, signup, legal. #}
 
 {% block body %}
 <header class="site-head">
@@ -22,7 +22,7 @@
         <a class="btn" href="/app/inbox">Open app</a>
       {% else %}
         <a class="hide" href="/login">Sign in</a>
-        <a class="btn btn--primary" href="/signup">Start free trial</a>
+        <a class="btn btn--primary" href="/signup">Start free</a>
       {% endif %}
     </nav>
   </div>
@@ -42,10 +42,17 @@
       <a href="/#intelligence">Under the hood</a>
       <a href="/#day">A working day</a>
       <a href="/#proof">Proof</a>
-      <a href="/contact-sales">Talk to sales</a>
+      <a href="/contact-sales">Talk to us</a>
     </nav>
     <div class="foot__meta">
       <span class="mono">Sales: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a></span>
+      {# Legal sits on its own line, visually apart from product nav. Google
+         requires a published privacy policy on the app's own domain before
+         OAuth verification will even begin, and it must be reachable from
+         every public page. #}
+      <span class="foot__legal">
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+      </span>
       <span>© Executive Email Copilot</span>
     </div>
   </div>

@@ -62,11 +62,14 @@ unflattering cell.
 > heuristic. We publish that rather than hide it, because it's an
 > agent-design finding: its guardrails trade coverage for caution."
 
-### 2. Pricing — `/pricing`
+### 2. The funnel — `/signup` and `/contact-sales`
 
-> "Sales-led. No card capture. The plans here are generated from the same
-> licensing registry that grants entitlements at runtime, so what a customer
-> is shown and what they actually get cannot drift apart."
+There is no pricing page. `/pricing` 301s to the homepage, so do not open it.
+
+> "Self-serve. Sign up, connect a mailbox, and you have fourteen days with
+> every feature switched on — no card, nothing to cancel. When the trial ends,
+> syncing and approvals pause and nothing is deleted. What it costs after that
+> is a conversation, which is why there is no price on the site."
 
 ### 3. Sign in — `/login`
 
@@ -174,15 +177,16 @@ The draft is a textarea — change a sentence, then approve.
 
 ### 8. Settings — `/app/settings`
 
-Plan and seat usage, member management (invite with a one-time temporary
-password, change role, remove — seat limits and the last-owner guard enforced),
-license-key activation, change password, connected mailboxes, and the owner's
-data section: a one-click JSON export of everything the tenant owns, and
-permanent deletion gated on retyping the workspace slug.
+Access ("Trial · N days remaining", and the way to keep it), member management
+(invite with a one-time temporary password, change role, remove — seat limits
+and the last-owner guard enforced), access-key activation, change password,
+connected mailboxes, and the owner's data section: a one-click JSON export of
+everything the tenant owns, and permanent deletion gated on retyping the
+workspace slug.
 
-> "The plan is enforced, not decorative: an expired trial blocks syncing and
-> approvals with a clear 402 — sign-in and settings stay open, because an admin
-> needs those exactly when the plan has lapsed."
+> "Access is enforced, not decorative: an expired trial blocks syncing and
+> approvals with a clear 402 — sign-in, settings, export and delete stay open,
+> because those are exactly what you need when access has lapsed."
 
 ---
 
