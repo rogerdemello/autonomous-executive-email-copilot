@@ -18,6 +18,44 @@
     </ul>
   </div>
 {% endif %}
+{# An action a human approved whose provider write then failed used to be
+   invisible: it sat at status="failed" on no page at all, so the reviewer
+   believed they had sent something they had not. #}
+{% if failed_sends %}
+  <div class="card card--stacked-below">
+    <div class="card__head">
+      <span class="card__title">Did not send</span>
+      <span class="chip chip--failed">{{ failed_sends | length }}</span>
+    </div>
+    {% for item in failed_sends %}
+      <div class="action-block">
+        <div class="action-block__head">
+          <span class="action-block__what">
+            {{ action_labels.get(item.action.action_type, item.action.action_type) }}
+          </span>
+          <span class="chip chip--failed">failed</span>
+          {% if item.action.retry_count %}
+            <span class="chip chip--neutral">{{ item.action.retry_count }} attempt{{ 's' if item.action.retry_count != 1 }}</span>
+          {% endif %}
+        </div>
+        <p class="approval__subject"><strong>{{ item.message.subject }}</strong></p>
+        <p class="muted approval__meta">
+          to {{ item.message.sender }} · approved {{ item.action.decided_at | short_time }}
+        </p>
+        {% if item.action.last_error %}
+          <p class="muted note-tight">{{ item.action.last_error }}</p>
+        {% endif %}
+        <p class="muted note-tight">
+          {% if item.retryable %}
+            The copilot retries this automatically on its next sweep.
+          {% else %}
+            Retried {{ item.action.retry_count }} times without success; this one needs a human.
+          {% endif %}
+        </p>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 {% if not actions %}
   <div class="card">
     <div class="empty">
@@ -73,11 +111,60 @@
           </ul>
         {% endif %}
 
-        {# What verification flagged: the reviewer's "look here first". #}
-        {% if item.action.verification_status == 'flagged' and item.action.verification_notes %}
-          <ul class="rationale rationale--flagged">
-            {% for note in item.action.verification_notes %}<li>⚠ {{ note }}</li>{% endfor %}
-          </ul>
+        {# What verification flagged, with the evidence for flagging it.
+           A reviewer told "unsupported claim: the 25th" has to go hunting; one
+           shown the draft sentence, the source line it failed against, and a
+           button that removes the sentence has a decision in front of them.
+           This is the demo moment — the model inventing "25 September" for a
+           message whose deadline is the 30th — turned into a daily workflow. #}
+        {% if item.action.verification_status == 'flagged' %}
+          {% if item.action.verification_claims %}
+            <div class="findings">
+              <p class="findings__head">
+                <span class="chip chip--warn">check flagged</span>
+                {{ item.action.verification_claims | length }}
+                thing{{ 's' if item.action.verification_claims | length != 1 }}
+                to look at before you send this
+              </p>
+              {% for finding in item.action.verification_claims %}
+                <div class="finding">
+                  {% if finding.claim %}
+                    <p class="finding__claim">“{{ finding.claim }}”</p>
+                  {% endif %}
+                  <p class="finding__detail">{{ finding.detail }}</p>
+                  {% if finding.source %}
+                    <p class="finding__source">
+                      <span class="finding__label">the source says</span>
+                      {{ finding.source }}
+                    </p>
+                  {% else %}
+                    <p class="finding__source finding__source--absent">
+                      <span class="finding__label">the source says</span>
+                      nothing on this
+                    </p>
+                  {% endif %}
+                  {% if finding.claim and can_manage %}
+                    {# Enhancement, not a route: it edits the textarea above,
+                       and you still press Approve yourself. Hidden without
+                       scripting rather than rendered dead. #}
+                    <button
+                      class="btn btn--sm finding__strip"
+                      type="button"
+                      data-strip-claim="{{ finding.claim }}"
+                      data-strip-target="draft-{{ item.action.id }}"
+                    >
+                      Remove this sentence
+                    </button>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% elif item.action.verification_notes %}
+            {# Actions verified before the evidence column existed. #}
+            <ul class="rationale rationale--flagged">
+              {% for note in item.action.verification_notes %}<li>⚠ {{ note }}</li>{% endfor %}
+            </ul>
+          {% endif %}
         {% endif %}
 
         {% if can_manage %}
@@ -86,6 +173,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
             {% if item.action.content %}
               <textarea class="draft" name="content" rows="6" data-shortcut-draft
+                        id="draft-{{ item.action.id }}"
                         aria-label="Draft to send. You can edit it before approving">{{ item.action.content }}</textarea>
               <p class="muted approval__editnote">
                 Edit freely. Your edits are sent, and they teach the copilot this workspace's voice.

@@ -54,7 +54,7 @@ def _dev_connection(org: dict) -> dict:
 
 
 def _empty_summary_keys():
-    return {"checked", "synced", "messages", "proposed", "errors"}
+    return {"checked", "synced", "messages", "proposed", "errors", "retried", "recovered"}
 
 
 def test_worker_is_opt_in():
@@ -247,3 +247,180 @@ class TestBatchedLabelWrites:
         listing = ProposedActionRepository().list_for_org(conn["org_id"])
         actions = [a for a in listing["actions"] if not a["requires_approval"]]
         assert actions and all(a["status"] == "executed" for a in actions)
+
+
+class TestFailedSendRetry:
+    """A reply a human approved that the provider then refused used to sit at
+    status="failed" with nothing on any code path picking it up. That is the
+    product silently not doing the one thing it was told to do."""
+
+    class FlakyProvider(FakeProvider):
+        """Refuses the first `fail_times` sends, then succeeds."""
+
+        def __init__(self, fail_times: int = 1):
+            super().__init__()
+            self.remaining_failures = fail_times
+            self.send_attempts = 0
+
+        def send_reply(self, provider_message_id, body):
+            self.send_attempts += 1
+            if self.remaining_failures > 0:
+                self.remaining_failures -= 1
+                return WriteResult(ok=False, detail="mailbox quota exceeded")
+            return super().send_reply(provider_message_id, body)
+
+    def _approved_but_failed(self, client, provider):
+        """Sync, approve one reply against a provider that refuses it."""
+        org = _signup_org(client)
+        conn = _dev_connection(org)
+        service = InboxSyncService()
+        service.sync(
+            org_id=conn["org_id"],
+            user_id=org["user"]["id"],
+            connection_id=conn["id"],
+            provider=FakeProvider(),
+        )
+        actions = ProposedActionRepository()
+        reply = next(
+            a
+            for a in actions.list_for_org(conn["org_id"], status="proposed")["actions"]
+            if a["action_type"] == "reply"
+        )
+        service.approve(
+            org_id=conn["org_id"],
+            user_id=org["user"]["id"],
+            action_id=reply["id"],
+            provider=provider,
+        )
+        stored = actions.get(conn["org_id"], reply["id"])
+        assert stored["status"] == "failed"
+        return conn["org_id"], reply["id"]
+
+    def test_a_failed_send_records_why(self):
+        client = TestClient(app)
+        org_id, action_id = self._approved_but_failed(client, self.FlakyProvider(fail_times=99))
+        stored = ProposedActionRepository().get(org_id, action_id)
+        assert "quota" in (stored["last_error"] or "")
+
+    def test_a_transient_failure_is_retried_and_recovers(self, monkeypatch):
+        client = TestClient(app)
+        provider = self.FlakyProvider(fail_times=1)
+        org_id, action_id = self._approved_but_failed(client, provider)
+
+        # The retry builds its own provider from the connection; hand it ours.
+        monkeypatch.setattr(
+            "app.saas.provider_factory.build_provider", lambda conn: provider, raising=True
+        )
+        result = InboxSyncService().retry_failed_sends(org_id=org_id)
+        assert result == {"attempted": 1, "recovered": 1, "still_failing": 0}
+
+        stored = ProposedActionRepository().get(org_id, action_id)
+        assert stored["status"] == "executed"
+        assert stored["execution_ref"]
+        assert stored["retry_count"] == 1
+        assert stored["last_error"] is None
+
+    def test_retries_are_bounded(self, monkeypatch):
+        """A permanently-bad recipient must not be retried forever."""
+        from app.saas.sync_service import MAX_SEND_RETRIES
+
+        client = TestClient(app)
+        provider = self.FlakyProvider(fail_times=999)
+        org_id, action_id = self._approved_but_failed(client, provider)
+        monkeypatch.setattr(
+            "app.saas.provider_factory.build_provider", lambda conn: provider, raising=True
+        )
+
+        service = InboxSyncService()
+        for _ in range(MAX_SEND_RETRIES + 3):
+            service.retry_failed_sends(org_id=org_id)
+
+        stored = ProposedActionRepository().get(org_id, action_id)
+        assert stored["status"] == "failed"
+        assert stored["retry_count"] == MAX_SEND_RETRIES
+
+    def test_auto_applied_labels_are_never_retried(self, monkeypatch):
+        """Re-firing writes nobody approved is exactly what the approval gate
+        exists to prevent."""
+        client = TestClient(app)
+        org = _signup_org(client)
+        conn = _dev_connection(org)
+
+        class LabelRefuser(FakeProvider):
+            def add_label(self, provider_message_id, label):
+                return WriteResult(ok=False, detail="label service down")
+
+        InboxSyncService().sync(
+            org_id=conn["org_id"],
+            user_id=org["user"]["id"],
+            connection_id=conn["id"],
+            provider=LabelRefuser(),
+        )
+        actions = ProposedActionRepository()
+        failed_labels = [
+            a
+            for a in actions.list_for_org(conn["org_id"], limit=200)["actions"]
+            if a["status"] == "failed" and not a["requires_approval"]
+        ]
+        assert failed_labels, "the refusing provider must have failed some label writes"
+        assert actions.list_failed_sends(conn["org_id"], max_retries=3) == []
+
+    def test_the_sweep_retries_and_reports(self, monkeypatch):
+        client = TestClient(app)
+        provider = self.FlakyProvider(fail_times=1)
+        org_id, _action_id = self._approved_but_failed(client, provider)
+        monkeypatch.setattr(
+            "app.saas.provider_factory.build_provider", lambda conn: provider, raising=True
+        )
+
+        summary = BackgroundSyncWorker().sync_due_connections()
+        assert summary["retried"] >= 1
+        assert summary["recovered"] >= 1
+
+    def test_the_approvals_page_shows_what_did_not_send(self):
+        """It used to be on no page at all, so a reviewer believed they had
+        sent something they had not."""
+        import re as _re
+
+        web = TestClient(app, follow_redirects=False)
+        page = web.get("/signup").text
+        csrf = _re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+        email = f"fs_{uuid.uuid4().hex[:10]}@failed.example"
+        assert (
+            web.post(
+                "/signup",
+                data={
+                    "csrf_token": csrf,
+                    "org_name": "Failed Sends",
+                    "full_name": "F",
+                    "email": email,
+                    "password": "a-strong-password",
+                },
+            ).status_code
+            == 303
+        )
+        page = web.get("/app/connect").text
+        csrf = _re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+        assert web.post("/app/connect/demo", data={"csrf_token": csrf}).status_code == 303
+
+        from app.saas.repository import UserRepository
+
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        actions = ProposedActionRepository()
+        target = next(
+            a
+            for a in actions.list_for_org(org_id, status="proposed")["actions"]
+            if a["action_type"] == "reply"
+        )
+        actions.set_status(
+            org_id,
+            target["id"],
+            "failed",
+            decided_by="someone",
+            decided_at=datetime.now(timezone.utc).isoformat(),
+            last_error="recipient rejected the message",
+        )
+
+        html = web.get("/app/approvals").text
+        assert "Did not send" in html
+        assert "recipient rejected the message" in html

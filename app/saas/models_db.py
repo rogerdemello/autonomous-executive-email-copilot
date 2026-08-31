@@ -322,6 +322,16 @@ class ProposedAction(Base):
     # gate.
     verification_status = Column(String(16), nullable=True)
     verification_notes = Column(Text, nullable=True)
+    # The evidence behind the verdict: a JSON list of
+    # {kind, detail, claim, source}. A reviewer told "unsupported claim: the
+    # 25th" has to go hunting; one shown the draft sentence next to the source
+    # line it failed against has a decision in front of them.
+    verification_claims = Column(Text, nullable=True)
+    # A send that failed is retried by the background worker, up to a bound.
+    # Before this, `status="failed"` was terminal and nothing looked at it
+    # again — a reviewer approved a reply and it silently never went.
+    retry_count = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, nullable=True)
 
     def to_dict(self) -> dict:
         return {
@@ -348,7 +358,22 @@ class ProposedAction(Base):
             "verification_notes": [
                 line for line in (self.verification_notes or "").split("\n") if line
             ],
+            "verification_claims": self._claims(),
+            "retry_count": int(self.retry_count or 0),
+            "last_error": self.last_error,
         }
+
+    def _claims(self) -> list[dict]:
+        """The stored verification evidence. Malformed JSON degrades to none
+        rather than breaking the approvals page, which is the one page that
+        must always render."""
+        import json
+
+        try:
+            claims = json.loads(self.verification_claims) if self.verification_claims else []  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return []
+        return claims if isinstance(claims, list) else []
 
 
 class SalesLead(Base):

@@ -222,7 +222,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 6
+_SCHEMA_VERSION = 7
 
 
 class SchemaVersion(Base):
@@ -326,6 +326,17 @@ def _run_migration(version: int) -> None:
         # the reader pane physically could not show a full email — you could
         # not read your mail in this mail product.
         _add_column_if_missing("saas_processed_messages", "body", "TEXT")
+        return
+    if version == 7:
+        # Verification evidence, not just a verdict: per flagged claim, the
+        # draft sentence and the source line it was checked against. Stored as
+        # JSON because it is read as a whole and never queried by field.
+        _add_column_if_missing("saas_proposed_actions", "verification_claims", "TEXT")
+        # A send that failed used to set status="failed" and stop there, with
+        # nothing to pick it up. These let the background worker retry, and
+        # bound how often it does.
+        _add_column_if_missing("saas_proposed_actions", "retry_count", "INTEGER")
+        _add_column_if_missing("saas_proposed_actions", "last_error", "TEXT")
         return
 
 

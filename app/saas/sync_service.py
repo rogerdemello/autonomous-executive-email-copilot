@@ -45,6 +45,12 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# How many times a failed send is re-attempted before it needs a human. Three
+# covers the transient cases (a token refresh mid-write, a provider 503) without
+# hammering a recipient address that is simply wrong.
+MAX_SEND_RETRIES = 3
+
+
 class ProcessingError(Exception):
     def __init__(self, message: str, status_code: int = 400) -> None:
         super().__init__(message)
@@ -362,15 +368,19 @@ class InboxSyncService:
                 # gate — but the reviewer sees what to look at first.
                 verification_status = None
                 verification_notes: list[str] = []
+                verification_claims: list[dict] = []
                 if drafted.body and message is not None:
                     from app.llm.verifier import verify_draft
 
-                    verification_status, verification_notes = verify_draft(
+                    verdict = verify_draft(
                         drafted.body,
                         message=message,
                         action_type=prop.action_type,
                         live_llm=live_llm,
                     )
+                    verification_status = verdict.status
+                    verification_notes = verdict.notes
+                    verification_claims = [f.to_dict() for f in verdict.findings]
                 self.actions.create(
                     org_id=org_id,
                     message_id=message_row["id"],
@@ -385,6 +395,7 @@ class InboxSyncService:
                     rationale=drafted.rationale,
                     verification_status=verification_status,
                     verification_notes=verification_notes,
+                    verification_claims=verification_claims,
                 )
                 proposed_count += 1
             else:
@@ -521,8 +532,17 @@ class InboxSyncService:
                 **amended,
             )
         else:
+            # Failed, but not forgotten: the background worker retries this
+            # (see `retry_failed_sends`). Before that existed, "failed" was
+            # terminal and nothing looked at it again — a reviewer approved a
+            # reply, the provider hiccuped, and it silently never went.
             updated = self.actions.set_status(
-                org_id, action_id, "failed", decided_by=user_id, decided_at=now
+                org_id,
+                action_id,
+                "failed",
+                decided_by=user_id,
+                decided_at=now,
+                last_error=result.detail or "the provider rejected the write",
             )
         self.audit.record(
             action="inbox.action.approve",
@@ -561,6 +581,79 @@ class InboxSyncService:
             detail={"action_type": action["action_type"], "comment": comment},
         )
         return updated or {}
+
+    # -- retry --------------------------------------------------------------
+    def retry_failed_sends(self, *, org_id: str, max_retries: int = MAX_SEND_RETRIES) -> dict:
+        """Re-dispatch approved actions whose provider write failed.
+
+        A human already made the decision here — this only re-attempts the
+        mechanical step that dropped. Bounded by ``retry_count`` so a
+        permanently-broken recipient is not retried forever, and the last error
+        is kept so a reviewer can see why it is stuck rather than watching an
+        action sit in "failed" with no explanation.
+
+        Deliberately does *not* retry auto-applied labels: a label that failed
+        to apply is cosmetic, and re-firing writes nobody approved is exactly
+        the behaviour the approval gate exists to prevent.
+        """
+        from .provider_factory import BrokenConnectionError, build_provider
+
+        summary = {"attempted": 0, "recovered": 0, "still_failing": 0}
+        for action in self.actions.list_failed_sends(org_id, max_retries=max_retries):
+            message = self.messages.get(org_id, action["message_id"])
+            if not message:
+                continue
+            connection = self.mailboxes.get(org_id, message["connection_id"])
+            if not connection:
+                continue
+            try:
+                provider = build_provider(connection)
+            except BrokenConnectionError as exc:
+                # The mailbox itself needs a human to reconnect; retrying the
+                # send cannot help and would just burn the retry budget.
+                logger.info(
+                    "Not retrying action %s: its mailbox needs reconnecting (%s)",
+                    action["id"],
+                    exc,
+                )
+                continue
+
+            summary["attempted"] += 1
+            attempts = int(action.get("retry_count") or 0) + 1
+            result = self._execute(provider, action, message["provider_message_id"], message)
+            now = _now_iso()
+            if result.ok:
+                self.actions.set_status(
+                    org_id,
+                    action["id"],
+                    "executed",
+                    outcome=action.get("outcome") or "approved",
+                    executed_at=now,
+                    execution_ref=result.provider_ref,
+                    retry_count=attempts,
+                    last_error=None,
+                )
+                summary["recovered"] += 1
+            else:
+                self.actions.set_status(
+                    org_id,
+                    action["id"],
+                    "failed",
+                    retry_count=attempts,
+                    last_error=result.detail or "the provider rejected the write",
+                )
+                summary["still_failing"] += 1
+            self.audit.record(
+                action="inbox.action.retry",
+                org_id=org_id,
+                target=action["id"],
+                detail={
+                    "action_type": action["action_type"],
+                    "attempt": attempts,
+                    "ok": result.ok,
+                },
+            )
+        return summary
 
     def _execute(
         self, provider: MailProvider, action: dict, provider_message_id: str, message: dict

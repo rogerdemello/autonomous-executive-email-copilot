@@ -755,6 +755,7 @@ class ProposedActionRepository:
         rationale: list[str] | None = None,
         verification_status: str | None = None,
         verification_notes: list[str] | None = None,
+        verification_claims: list[dict] | None = None,
     ) -> dict[str, Any]:
         with get_session() as session:
             action = ProposedAction(
@@ -774,6 +775,9 @@ class ProposedActionRepository:
                 rationale="\n".join(rationale) if rationale else None,
                 verification_status=verification_status,
                 verification_notes="\n".join(verification_notes) if verification_notes else None,
+                verification_claims=json.dumps(verification_claims)
+                if verification_claims
+                else None,
             )
             session.add(action)
             session.flush()
@@ -912,6 +916,86 @@ class ProposedActionRepository:
             "decided": by_status.get("approved", 0) + by_status.get("rejected", 0),
             "llm_drafts": int(llm_drafts),
         }
+
+    def verification_summary(self, org_id: str) -> dict[str, int]:
+        """How much checking has happened, and what it caught.
+
+        This is the number that sells the product — no competitor can tell a
+        customer whether the draft it wrote is true — and it was sitting in the
+        database being rendered as a single chip on one page.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.verification_status, func.count(ProposedAction.id))
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.verification_status.isnot(None),
+                )
+                .group_by(ProposedAction.verification_status)
+                .all()
+            )
+            by_status = {str(status): int(count) for status, count in rows}
+            # Claims are counted from the note lines rather than the JSON blob:
+            # notes exist on every flagged action, including those verified
+            # before the evidence column did.
+            flagged_notes = (
+                session.query(ProposedAction.verification_notes)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.verification_status == "flagged",
+                )
+                .all()
+            )
+        claims = sum(
+            len([line for line in (n[0] or "").split("\n") if line]) for n in flagged_notes
+        )
+        verified = by_status.get("verified", 0)
+        flagged = by_status.get("flagged", 0)
+        return {
+            "checked": verified + flagged,
+            "verified": verified,
+            "flagged": flagged,
+            "claims_caught": claims,
+        }
+
+    def list_failed_sends(self, org_id: str, max_retries: int, limit: int = 50) -> list[dict]:
+        """Approved actions whose provider write failed and may be retried.
+
+        Only actions a human *decided* on: an auto-applied label that failed is
+        cosmetic, but an approved reply that never left is the product silently
+        not doing the one thing it was told to do.
+        """
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction)
+                .filter(
+                    ProposedAction.org_id == org_id,
+                    ProposedAction.status == "failed",
+                    ProposedAction.requires_approval.is_(True),
+                    ProposedAction.decided_by.isnot(None),
+                    func.coalesce(ProposedAction.retry_count, 0) < max_retries,
+                )
+                .order_by(ProposedAction.decided_at.asc())
+                .limit(limit)
+                .all()
+            )
+            return [r.to_dict() for r in rows]
+
+    def orgs_with_failed_sends(self, max_retries: int) -> list[str]:
+        """Org ids with at least one retryable failed send. The worker's list."""
+        with get_session() as session:
+            rows = (
+                session.query(ProposedAction.org_id)
+                .filter(
+                    ProposedAction.status == "failed",
+                    ProposedAction.requires_approval.is_(True),
+                    ProposedAction.decided_by.isnot(None),
+                    func.coalesce(ProposedAction.retry_count, 0) < max_retries,
+                )
+                .distinct()
+                .all()
+            )
+            return [str(r[0]) for r in rows]
 
     def get(self, org_id: str, action_id: str) -> dict[str, Any] | None:
         with get_session() as session:

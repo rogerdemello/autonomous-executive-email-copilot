@@ -1652,6 +1652,112 @@ textarea.draft {
   color: var(--warn);
 }
 
+/* ========================================================================== */
+/* Verification findings: the claim, and what the source actually said         */
+/* ========================================================================== */
+/* This is the product. Every competitor ships triage and voice-matched
+ * drafting; none of them can tell you whether the draft they wrote is true.
+ * So the evidence gets real estate, not a tooltip. */
+.findings {
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warn) 6%, transparent);
+  padding: 14px 16px;
+  margin: 0 0 16px;
+}
+
+.findings__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.finding + .finding {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
+}
+
+.finding__claim {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.finding__detail {
+  margin: 0 0 6px;
+  font-size: 0.86rem;
+  color: var(--warn);
+}
+
+.finding__source {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.finding__label {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+}
+
+.finding__source--absent {
+  font-style: italic;
+}
+
+/* An enhancement, so it must not exist without scripting: a button that does
+ * nothing is worse than no button. `data-js` is stamped by theme-init.js. */
+.finding__strip {
+  display: none;
+  margin-top: 10px;
+}
+
+[data-js] .finding__strip {
+  display: inline-flex;
+}
+
+/* ========================================================================== */
+/* The verification badge in the app sidebar                                  */
+/* ========================================================================== */
+.verify-badge {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.verify-badge__n {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.verify-badge__l {
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+.verify-badge__caught {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  line-height: 1.45;
+}
+
 .learned {
   margin: 0;
   padding-left: 18px;

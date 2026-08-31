@@ -22,6 +22,22 @@
       <a href="/app/settings" {% if active == 'settings' %}aria-current="page"{% endif %}>Settings</a>
     </nav>
 
+    {# The product's whole argument, on every page. A draft that has been read
+       back against its source is the thing none of the alternatives do, and
+       the count was sitting in the database rendering as a single chip. #}
+    {% if verification and verification.checked %}
+      <div class="verify-badge">
+        <div class="verify-badge__n">{{ verification.checked }}</div>
+        <div class="verify-badge__l">drafts verified against their source</div>
+        {% if verification.claims_caught %}
+          <div class="verify-badge__caught">
+            <span class="chip chip--warn">{{ verification.claims_caught }}</span>
+            unsupported claim{{ 's' if verification.claims_caught != 1 }} caught
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
     <div class="side__foot">
       <div class="who">{{ current_user.full_name or current_user.email }}</div>
       <div>{{ organization.name }} · {{ current_user.role }}</div>

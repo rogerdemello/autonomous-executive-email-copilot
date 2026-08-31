@@ -251,7 +251,8 @@ def _safe_next(raw: str | None) -> str:
 
 
 def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
-    """Shared context for every signed-in page: org, role, pending badge."""
+    """Shared context for every signed-in page: org, role, pending badge, and
+    the two numbers that say what the copilot is for."""
     org = _orgs.get(user["org_id"]) or {"name": "Your workspace", "slug": ""}
     pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100)
     return {
@@ -260,6 +261,10 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
         "pending_count": pending.get("total", 0),
         "can_manage": role_at_least(user["role"], ROLE_ADMIN),
         "connections": _mailboxes.list_for_org(user["org_id"]),
+        # "142 drafts verified · 9 claims caught" is the claim no competitor
+        # can make, and it lived in the database being rendered as one chip on
+        # one page. Two grouped queries, on every signed-in page.
+        "verification": _actions.verification_summary(user["org_id"]),
     }
 
 
@@ -1059,6 +1064,21 @@ def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
         for item in pending["items"]
     ]
     context["pending_total"] = pending["total"]
+
+    # Approved actions the provider then refused. These were on no page at
+    # all, so a reviewer believed they had sent something they had not.
+    from app.saas.sync_service import MAX_SEND_RETRIES
+
+    failed = _actions.list_failed_sends(user["org_id"], max_retries=MAX_SEND_RETRIES + 1, limit=20)
+    context["failed_sends"] = [
+        {
+            "action": action,
+            "message": _messages.get(user["org_id"], action["message_id"]) or {},
+            "retryable": int(action.get("retry_count") or 0) < MAX_SEND_RETRIES,
+        }
+        for action in failed
+    ]
+
     # What the queue's past decisions have taught the copilot — shown beside
     # the queue those decisions came from, so the learning is auditable.
     from app.saas.learning import FeedbackService

@@ -92,7 +92,15 @@ class BackgroundSyncWorker:
 
         now = now or datetime.now(timezone.utc)
         service = InboxSyncService()
-        summary = {"checked": 0, "synced": 0, "messages": 0, "proposed": 0, "errors": 0}
+        summary = {
+            "checked": 0,
+            "synced": 0,
+            "messages": 0,
+            "proposed": 0,
+            "errors": 0,
+            "retried": 0,
+            "recovered": 0,
+        }
         for conn in MailboxRepository().list_all_connected():
             summary["checked"] += 1
             if not self.is_due(conn, now=now):
@@ -123,7 +131,30 @@ class BackgroundSyncWorker:
                 summary["messages"] += result.get("messages", 0)
                 summary["proposed"] += result.get("proposed", 0)
                 self._retry_after.pop(conn["id"], None)
+
+        # A reply a human approved that the provider then refused used to sit
+        # at status="failed" forever, with nothing on any code path picking it
+        # up. That is the product silently not doing the one thing it was
+        # explicitly told to do, so it belongs in the sweep.
+        summary.update(self._retry_failed_sends(service))
         return summary
+
+    def _retry_failed_sends(self, service) -> dict:
+        from .repository import ProposedActionRepository
+        from .sync_service import MAX_SEND_RETRIES
+
+        retried = recovered = 0
+        for org_id in ProposedActionRepository().orgs_with_failed_sends(MAX_SEND_RETRIES):
+            try:
+                result = service.retry_failed_sends(org_id=org_id, max_retries=MAX_SEND_RETRIES)
+            except Exception:
+                logger.exception("Retrying failed sends crashed for org %s", org_id)
+                continue
+            retried += result["attempted"]
+            recovered += result["recovered"]
+        if retried:
+            logger.info("Retried %s failed send(s); %s recovered", retried, recovered)
+        return {"retried": retried, "recovered": recovered}
 
     # -- lifecycle --------------------------------------------------------------
     async def run_forever(self) -> None:

@@ -75,6 +75,40 @@
     });
   });
 
+  // --- "Remove this sentence" ---------------------------------------------
+  // Verification flags a claim the source does not support; this takes it out
+  // of the draft. Deliberately NOT a server route: it edits the textarea and
+  // you still press Approve yourself, so the human stays the gate and there is
+  // no new mutating endpoint to defend. Hidden by CSS unless html[data-js], so
+  // it is never a button that does nothing.
+  document.querySelectorAll("[data-strip-claim]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var claim = button.getAttribute("data-strip-claim");
+      var field = document.getElementById(button.getAttribute("data-strip-target"));
+      if (!claim || !field) return;
+
+      var index = field.value.indexOf(claim);
+      if (index < 0) {
+        // The reviewer has already edited this sentence by hand. Say so
+        // rather than silently doing nothing.
+        button.textContent = "Already edited";
+        button.disabled = true;
+        return;
+      }
+      var before = field.value.slice(0, index);
+      var after = field.value.slice(index + claim.length);
+      // Collapse the whitespace the removal leaves behind, so the draft does
+      // not end up with a hole in the middle of a paragraph.
+      field.value = (before.replace(/[ \t]+$/, "") + " " + after.replace(/^[ \t]+/, ""))
+        .replace(/[ \t]{2,}/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      field.focus();
+      button.textContent = "Removed";
+      button.disabled = true;
+    });
+  });
+
   // --- Keyboard navigation -------------------------------------------------
   // The single biggest gap against Superhuman was that this app had no
   // keyboard surface at all beyond the theme toggle. Still progressive
