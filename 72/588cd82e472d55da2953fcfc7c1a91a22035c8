@@ -1,0 +1,163 @@
+.github/workflows/release.yml
+  s_356911cfc584c2::t_e79bcd51e13992 35-38,40-41,43-44
+tests/conftest.py
+  s_356911cfc584c2::t_3e99bbb1e45221 3-26,31-36,39-68,83
+  s_356911cfc584c2::t_85a96b7fe27a00 69-76
+telemetry/alerts.py
+  s_356911cfc584c2::t_e184d22c4a6da6 128-132
+telemetry/metrics.py
+  s_356911cfc584c2::t_ab50a19151679b 112-116
+requirements.txt
+  s_356911cfc584c2::t_ebe7cc797d11f1 22-29
+tests/test_observability.py
+  s_356911cfc584c2::t_a881dfbe81f3db 5
+  s_356911cfc584c2::t_cde8096974c243 38,41-51,65
+  s_356911cfc584c2::t_f088ea33fc5fbd 106-123,129-133,137-140,147-148,152,156-170,174-178,180-184
+  s_356911cfc584c2::t_d9544653bc3cad 7
+  s_356911cfc584c2::t_dcaf8021db1bf1 54,57-60,62-64,66-67,77-84
+  s_356911cfc584c2::t_69e36b58b752be 69-76
+  s_356911cfc584c2::t_99a37153b282d7 146,149-151
+render.yaml
+  s_356911cfc584c2::t_5d051d7f3c511e 55-65
+  s_356911cfc584c2::t_0b23d202b520c8 29-30,40
+  s_356911cfc584c2::t_3c9be4339e892b 99-106,108-119,133
+  s_356911cfc584c2::t_22c4d5e0fb9707 16-23
+pyproject.toml
+  s_356911cfc584c2::t_2b9186c6d4f8b4 48-51
+  s_356911cfc584c2::t_fd627a6b888970 90-94,96
+tests/test_telemetry.py
+  s_356911cfc584c2::t_83913a414a3fb8 60-67,69-71
+  s_356911cfc584c2::t_7215b9a74ff373 15,144
+  s_356911cfc584c2::t_d267a5c2eb87dd 122-123,125,130,133-143
+app/core/db.py
+  s_356911cfc584c2::t_f474ec366c5e0b 342-360
+tests/test_paths.py
+  s_356911cfc584c2::t_8c3a78ac7ead43 59-74
+app/main.py
+  s_356911cfc584c2::t_a7801ae9b75df5 101-102
+  s_356911cfc584c2::t_6fba95e272502b 423,429
+  s_356911cfc584c2::t_1b69f0b973ab1a 70
+  s_356911cfc584c2::t_399df2371e531e 424-428
+  s_356911cfc584c2::t_c733716a124673 1116-1120,1132,1136-1137,1140,1145,1150,1152,1154-1156,1159-1163
+  s_356911cfc584c2::t_6b8a02b4a7b17d 97-100
+  s_356911cfc584c2::t_f7e63118b5cd2e 134-141
+  s_356911cfc584c2::t_f5d816048b8ff7 1114-1115,1121-1131,1133-1135,1138-1139,1141-1144,1146-1149,1151,1153,1157,1167-1168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "72588cd82e472d55da2953fcfc7c1a91a22035c8",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_356911cfc584c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4746a35-9610-4cff-aa4d-63f1f8d2446d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:ded5740caf2f9932956ca71760a38d429194d00a9338adb0d6c7280c388ae9f1",
+      "total_additions": 962,
+      "total_deletions": 150,
+      "accepted_lines": 1999,
+      "overriden_lines": 20
+    }
+  },
+  "sessions": {
+    "s_356911cfc584c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4746a35-9610-4cff-aa4d-63f1f8d2446d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:ded5740caf2f9932956ca71760a38d429194d00a9338adb0d6c7280c388ae9f1",
+      "stats": {
+        "total_additions": 962,
+        "total_deletions": 150,
+        "accepted_lines": 1999,
+        "overriden_lines": 20,
+        "files": {
+          ".github/workflows/release.yml": {
+            "total_additions": 8,
+            "total_deletions": 4,
+            "accepted_lines": 119,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 19,
+            "total_deletions": 0,
+            "accepted_lines": 360,
+            "overriden_lines": 0
+          },
+          "app/main.py": {
+            "total_additions": 102,
+            "total_deletions": 51,
+            "accepted_lines": 76,
+            "overriden_lines": 0
+          },
+          "continue.md": {
+            "total_additions": 468,
+            "total_deletions": 11,
+            "accepted_lines": 457,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 10,
+            "total_deletions": 4,
+            "accepted_lines": 124,
+            "overriden_lines": 0
+          },
+          "render.yaml": {
+            "total_additions": 43,
+            "total_deletions": 8,
+            "accepted_lines": 43,
+            "overriden_lines": 0
+          },
+          "requirements.txt": {
+            "total_additions": 8,
+            "total_deletions": 0,
+            "accepted_lines": 29,
+            "overriden_lines": 0
+          },
+          "telemetry/alerts.py": {
+            "total_additions": 5,
+            "total_deletions": 1,
+            "accepted_lines": 152,
+            "overriden_lines": 0
+          },
+          "telemetry/metrics.py": {
+            "total_additions": 5,
+            "total_deletions": 6,
+            "accepted_lines": 150,
+            "overriden_lines": 0
+          },
+          "tests/conftest.py": {
+            "total_additions": 69,
+            "total_deletions": 8,
+            "accepted_lines": 69,
+            "overriden_lines": 0
+          },
+          "tests/test_observability.py": {
+            "total_additions": 181,
+            "total_deletions": 46,
+            "accepted_lines": 130,
+            "overriden_lines": 20
+          },
+          "tests/test_paths.py": {
+            "total_additions": 16,
+            "total_deletions": 2,
+            "accepted_lines": 93,
+            "overriden_lines": 0
+          },
+          "tests/test_telemetry.py": {
+            "total_additions": 28,
+            "total_deletions": 9,
+            "accepted_lines": 197,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
