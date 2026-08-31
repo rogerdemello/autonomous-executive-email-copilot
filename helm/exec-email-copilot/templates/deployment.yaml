@@ -1,3 +1,4 @@
+{{- include "exec-email-copilot.preflight" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,6 +73,22 @@ spec:
                 secretKeyRef:
                   name: {{ $secretName }}
                   key: GOOGLE_API_KEY
+            # Not optional. See templates/_preflight.tpl: without it the app
+            # signs sessions and licenses, and derives the mailbox-token
+            # encryption key, from a constant published in this repository.
+            - name: AUTH_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: AUTH_SECRET_KEY
+            {{- range $key := list "GOOGLE_OAUTH_CLIENT_ID" "GOOGLE_OAUTH_CLIENT_SECRET" "MICROSOFT_OAUTH_CLIENT_ID" "MICROSOFT_OAUTH_CLIENT_SECRET" "SMTP_USER" "SMTP_PASSWORD" }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ $key }}
+                  optional: true
+            {{- end }}
             {{- if .Values.persistence.enabled }}
             - name: DATA_DIR
               value: {{ .Values.persistence.mountPath | quote }}

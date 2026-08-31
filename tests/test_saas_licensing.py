@@ -25,12 +25,19 @@ class TestLicensing:
         _key, terms = licensing.mint_license("org1", "team", self.SECRET, seats=25)
         assert terms.seats == 25
 
-    def test_feature_helpers(self):
+    def test_a_key_carries_its_features_and_seats(self):
+        """Entitlement is a snapshot of the *key*, and nothing more.
+
+        It used to grow `has_feature` and `seats_ok` helpers that BillingService
+        independently re-implemented — and BillingService is the one the
+        product calls, because a live entitlement is the signed terms AND the
+        persisted row's status. This dataclass only knows the first half, so
+        answering the question here would answer it wrong for a revoked key.
+        """
         _key, terms = licensing.mint_license("org1", "enterprise", self.SECRET)
-        assert terms.has_feature("custom_models")
-        assert not terms.has_feature("nonexistent")
-        assert terms.seats_ok(terms.seats)
-        assert not terms.seats_ok(terms.seats + 1)
+        assert "custom_models" in terms.features
+        assert "nonexistent" not in terms.features
+        assert terms.seats == licensing.PLANS["enterprise"].seats
 
     def test_wrong_secret_rejected(self):
         key, _terms = licensing.mint_license("org1", "team", self.SECRET)

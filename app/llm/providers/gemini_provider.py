@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, cast
 
 from .base import LLMProvider, LLMResponse
 
@@ -58,15 +58,20 @@ class GeminiProvider(LLMProvider):
                 system_instruction=system_instruction,
             )
 
-        generation_config = {
+        generation_config: dict[str, Any] = {
             "temperature": temperature if temperature is not None else self._temperature,
         }
         if max_tokens:
             generation_config["max_output_tokens"] = max_tokens
 
+        # The SDK accepts these dict shapes at runtime (`ContentDict` and
+        # `GenerationConfigDict` are TypedDicts it converts internally), but
+        # its published signature only names the union members, so a plain
+        # dict does not statically match. Narrowed here rather than silenced
+        # file-wide, which is what used to hide everything else in this module.
         raw = gen_model.generate_content(
-            chat_messages,
-            generation_config=generation_config,
+            cast(Any, chat_messages),
+            generation_config=cast(Any, generation_config),
         )
 
         latency_ms = int((time.time() - start_time) * 1000)

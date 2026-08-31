@@ -62,21 +62,16 @@ providers = [
   "google-generativeai>=0.8.0",
 ]
 
-redis = [
-  "redis>=5.0.0",
-]
-
-async_db = [
-  "asyncpg>=0.30.0",
-  "aiosqlite>=0.20.0",
-]
-
 loadtest = [
   "locust>=2.30.0",
 ]
 
+# `redis` and `async_db` extras used to live here. Both pointed at nothing: the
+# redis draft cache was removed and app/core/db_async.py was imported by no
+# module in the tree. An extra nobody can install anything useful with is a
+# promise the package does not keep.
 all = [
-  "autonomous-executive-email-copilot[otel,providers,redis,async_db,loadtest]",
+  "autonomous-executive-email-copilot[otel,providers,loadtest]",
 ]
 
 [project.scripts]

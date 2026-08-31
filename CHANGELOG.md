@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`/privacy` and `/terms`.** Neither existed. Google will not *begin* OAuth
+  verification for the restricted `gmail.*` scopes without a published privacy
+  policy on the app's own domain, so their absence gated a 6-12 week queue.
+  The policy carries the Google Limited Use disclosure, names the LLM
+  sub-processor, and justifies each requested scope; tests hold it to
+  `app/saas/oauth.py` in both directions.
+- **"Waiting on" (`/app/waiting`).** Commitment tracking in both directions —
+  what someone owes you, and what you promised in a reply you approved.
+  Deterministic extraction (`app/copilot/commitments.py`), dates resolved from
+  the words used and stored beside them, spam excluded via the copilot's own
+  classification. The capability every competitor is missing.
+- **Verification evidence.** `verify_draft` now returns findings, not strings:
+  per flagged claim, the sentence in the draft and the line of the source it
+  failed against, rendered in Approvals with a "Remove this sentence" button.
+  Draft counts and claims caught appear in the app shell on every page.
+- **A usable inbox.** Full message bodies (schema v6 — only a 500-character
+  preview was stored, so you could not read an email), thread grouping
+  (`thread_id` was stored and read by nothing), search, classification and
+  priority filters, paging, and keyboard navigation (`j`/`k`/`/`/`e`/`a`).
+- **Failed sends are retried** by the background worker, bounded, with the last
+  error kept — and shown on Approvals, where they were previously on no page.
+- **`scripts/build_landing_metrics.py`** emits the benchmark artifact the
+  landing page renders, and `--check` re-verifies it in CI.
+  **`scripts/capture_screenshots.py`** and **`scripts/optimize_images.py`**
+  make the product screenshots a command rather than an afternoon.
 - **A product front door.** `/` is now a landing page instead of a redirect into
   the benchmark console, and there is a real sign-in page. New server-rendered UI
   under `app/web`: landing, login, signup, connect a mailbox, triage
@@ -43,6 +68,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A clean `git clone` shipped a broken landing page.** `static/fonts/` and
+  `static/img/` were untracked while 18 tracked files referenced them, and the
+  package-data glob was non-recursive so a wheel dropped both.
+- **The shipped production config disabled the product.** `render.yaml` left
+  background sync and LLM drafting off and signup disabled, so the approval
+  queue only filled on click, every urgent reply was one canned sentence, and
+  self-serve signup was unreachable. SMTP and both OAuth pairs are now marked
+  required rather than optional.
+- **No tagged release could ever ship.** The release workflow bandit'd and
+  covered four directories deleted in the `env/` → `app/` rename.
+- **The test suite wrote to the developer's real 80 MB database.** `DATA_DIR`
+  is redirected to a temp tree at conftest import.
+- **An unreachable database killed the process before FastAPI existed**, so
+  `/health/ready` could never report the degraded state it was written for.
+  `migrate_db()` moved into the lifespan.
+- **Every `/alerts` rule was structurally unfirable.** The metrics parser swept
+  an unlabelled line's value into its key, and labelled series were never
+  accumulated under their bare name.
+- **Spam chips vanished on any tenant past 500 actions** — the label map was
+  built from a fixed page of actions and filtered in Python.
+- **The audit log recorded no IP for the web surface**, the one column an
+  incident review reaches for first, while the JSON API recorded it.
+- **Every settings notice rendered twice**, including the one-time invite
+  password.
+- **Rejected and failed actions rendered as unstyled transparent text**:
+  `chip--{{ status }}` had no rule for three of its five values.
+- **The Helm chart lints but could not be safely installed.** Its defaults
+  signed sessions with a constant published in this repository, and ran two
+  replicas of an un-lockable background worker against per-pod SQLite files.
+  It now refuses to render those configurations, and CI asserts the refusals.
 - **Risk terms were matched as substrings**, so `nda` fired inside *Monday* and
   *agenda*, and `sla` inside *translate*. Any message mentioning a Monday
   deadline was tagged legal risk — escalating it to the legal team and
@@ -54,20 +109,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   serve, and hardcoded an `Expires` date that would silently invalidate the file.
 - `pip install .[all]` could never resolve — the `all` extra self-referenced a
   package name that does not exist.
-
-- **Render deployment**: a `render.yaml` Blueprint deploys the Docker image as a
-  single web service. The container now binds `$PORT` (Render/Cloud Run/Fly.io
-  inject it), falling back to 7860 locally.
-- One-click **"Let the copilot work"** flow in the dashboard Inbox: runs the
-  agent over the whole inbox and shows a plain-language result plus a per-email
-  outcome badge.
-
-### Fixed
-
 - **Route shadowing**: `/approval/pending`, `/approval/history`, and
   `/episodes/stats` returned 404 because the parameterized `{request_id}` /
   `{episode_id}` routes were declared first. Reordered the static routes ahead of
   them; added a regression test.
+
+### Deployment
+
+- **Render**: a `render.yaml` Blueprint deploys the Docker image as a single web
+  service. The container binds `$PORT` (Render/Cloud Run/Fly.io inject it),
+  falling back to 8000 locally.
 
 ### Removed
 

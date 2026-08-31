@@ -23,10 +23,10 @@ gates the same checks on every push and pull request.
 - [ ] **Tests:** `python -m pytest -q` passes (the suite stays green).
 - [ ] **No new deprecation warnings:** `python -m pytest -q -W error::DeprecationWarning`.
 - [ ] **Coverage gate:** total coverage stays at or above the 78% threshold enforced by CI.
-- [ ] **Types (mypy):** `mypy env --ignore-missing-imports --no-strict-optional` — informational, but no new errors introduced.
+- [ ] **Landing claims:** `python scripts/build_landing_metrics.py --check` passes if the policy or the demo mailbox changed.
+- [ ] **Types (mypy):** `mypy app --config-file mypy.ini` is clean.
 - [ ] **Security (informational):** no new `bandit` findings on changed code; `pip-audit` reviewed if dependencies changed.
-- [ ] **Frontend (if `dashboard/` changed):** `npm run lint`, `npm run format:check`, `npm test`, `npx tsc --noEmit`, and `npm run build` all pass.
-- [ ] **Docker smoke (if runtime/Dockerfile changed):** `docker build .` succeeds and `/health`, `/docs`, `/dashboard/` respond.
+- [ ] **Docker smoke (if runtime/Dockerfile changed):** `docker build .` succeeds and `/health`, `/docs`, `/` respond.
 - [ ] **Tests added/updated** for the behavior changed — every documented claim is backed by a test.
 - [ ] **Docs updated** (README is owned by maintainers; update `docs/` and `CHANGELOG.md` as appropriate).
 

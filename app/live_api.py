@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import Any, cast, get_args
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
+from app.core.models import PersonaType
 from research.sim.environment import ExecutiveEmailEnv
 
 dashboard_router = APIRouter()
@@ -89,7 +90,11 @@ async def dashboard_reset(
     seed: int = 42,
     persona: str = "balanced",
 ) -> dict[str, Any]:
-    obs = runtime_env.reset(task_id=task_id, seed=seed, persona=persona)
+    # An unknown persona from a query string falls back rather than 500s: the
+    # environment's own loader already does this, and a dashboard control is
+    # not a place to surface a validation error.
+    resolved = cast(PersonaType, persona if persona in get_args(PersonaType) else "balanced")
+    obs = runtime_env.reset(task_id=task_id, seed=seed, persona=resolved)
     state = runtime_env.state().model_dump()
     asyncio.create_task(broadcast_state(state))
     return obs.model_dump()

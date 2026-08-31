@@ -51,7 +51,9 @@ class Organization(Base):
     id = Column(String(32), primary_key=True, default=_new_id)
     name = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False, index=True)
-    status = Column(String(32), nullable=False, default="active")  # active | suspended
+    # No `status` column. It existed, defaulted to "active", and was read by
+    # nothing — "suspended" was never set by any code path and never checked,
+    # so it described a capability the product did not have.
     created_at = Column(String(50), nullable=False, default=_now_iso)
     updated_at = Column(String(50), nullable=False, default=_now_iso, onupdate=_now_iso)
 
@@ -60,7 +62,6 @@ class Organization(Base):
             "id": self.id,
             "name": self.name,
             "slug": self.slug,
-            "status": self.status,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -77,7 +78,12 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False, default="")
     role = Column(String(32), nullable=False, default=ROLE_MEMBER)
-    status = Column(String(32), nullable=False, default="active")  # active | invited | disabled
+    # Kept, unlike Organization.status: `count_active_for_org` reads it to
+    # enforce seat limits, and AuthService refuses a sign-in for "disabled".
+    # Nothing *sets* "disabled" today — that is an operator action taken
+    # against the database — but the check is a real safety net and the
+    # seat limiter genuinely depends on the column.
+    status = Column(String(32), nullable=False, default="active")  # active | disabled
     created_at = Column(String(50), nullable=False, default=_now_iso)
     updated_at = Column(String(50), nullable=False, default=_now_iso, onupdate=_now_iso)
     last_login_at = Column(String(50), nullable=True)

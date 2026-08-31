@@ -78,6 +78,10 @@ SENSITIVE_READ_PREFIXES = (
     "/dashboard",
     "/alerts",
     "/state",
+    # A rendered episode report is the same episode data as /episodes, in a
+    # PDF. It was the one read on this surface that stayed anonymous with a
+    # token configured, purely because nobody listed it here.
+    "/reports",
 )
 
 

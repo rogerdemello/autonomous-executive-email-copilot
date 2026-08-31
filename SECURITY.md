@@ -50,7 +50,12 @@ request it.
 - `API_AUTH_TOKEN` — gate the operator/benchmark API.
 - `CORS_ORIGINS` — restrict browser origins (set to your domains).
 - `RATE_LIMIT_PER_MINUTE` — per-client request cap.
-- `REQUIRE_APPROVAL` — hold reply/escalate actions for human approval.
+- `REQUIRE_APPROVAL` — **simulator only.** It gates `app/llm/agent.py`'s
+  benchmark agent, not the product. In the product the approval gate is
+  *unconditional*: every `reply` and `escalate` on a real mailbox is held
+  by `app/saas/sync_service.py` regardless of configuration, and there is
+  no setting that turns it off. This entry used to read as though the gate
+  were operator-configurable, which is the opposite of the guarantee.
 - Identifier inputs are validated; pagination is bounded; unhandled errors
   return a generic JSON 500 without leaking stack traces.
 - Every action on a real mailbox is **audit-logged** per organization, and

@@ -134,25 +134,6 @@ class Episode(Base):
         }
 
 
-class DecisionRecord(Base):
-    """Individual decision record for detailed tracking."""
-
-    __tablename__ = "decisions"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    episode_id = Column(String(255), nullable=False, index=True)
-    step = Column(Integer, nullable=False)
-    action_type = Column(String(50), nullable=True)
-    email_id = Column(String(100), nullable=True)
-    label = Column(String(50), nullable=True)
-    content = Column(Text, nullable=True)
-    reward = Column(Float, nullable=True)
-    reason = Column(Text, nullable=True)
-    created_at = Column(
-        String(50), nullable=False, default=lambda: datetime.now(timezone.utc).isoformat()
-    )
-
-
 class UserPreference(Base):
     """User preference settings for personalization."""
 

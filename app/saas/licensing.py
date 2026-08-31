@@ -116,12 +116,11 @@ class Entitlement:
     issued_at: int = 0
     expires_at: int = 0
 
-    def has_feature(self, feature: str) -> bool:
-        return feature in self.features
-
-    def seats_ok(self, active_users: int) -> bool:
-        """True if ``active_users`` fits within the licensed seat count."""
-        return active_users <= self.seats
+    # `has_feature` and `seats_ok` used to live here and were re-implemented,
+    # independently, by BillingService — which is the one the product actually
+    # calls, because entitlement is signed terms AND the persisted row's status,
+    # and this dataclass only knows the first half. Two answers to one question
+    # is how a revoked key keeps its features.
 
     @property
     def expires_at_iso(self) -> str:

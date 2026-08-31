@@ -127,7 +127,10 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    continue-on-error: true  # informational until the codebase is fully typed
+    # No continue-on-error. It was doubly disabled — this flag *and* mypy.ini
+    # silencing ten modules — which is two independent ways for a type error to
+    # reach main unnoticed. Four modules came off the silence list (every error
+    # in them was real); the gate is now a gate.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -194,8 +197,28 @@ jobs:
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
       - name: Lint the chart
         run: helm lint helm/exec-email-copilot
-      - name: Render templates (defaults, and with persistence enabled)
+      - name: Render templates (a valid config, and with persistence enabled)
         run: |
-          helm template smoke helm/exec-email-copilot > /dev/null
-          helm template smoke helm/exec-email-copilot \
+          SECRET=--set=secret.AUTH_SECRET_KEY=ci-not-a-real-secret
+          helm template smoke helm/exec-email-copilot "$SECRET" > /dev/null
+          helm template smoke helm/exec-email-copilot "$SECRET" \
             --set persistence.enabled=true --set ingress.enabled=true > /dev/null
+      # A chart that lints but cannot be safely installed is worse than no
+      # chart. These assert the preflight guards actually stop the four
+      # configurations that used to be the *defaults*: no signing secret, and
+      # multi-replica with the un-lockable background worker or a
+      # ReadWriteOnce volume.
+      - name: Unsafe configurations must refuse to render
+        run: |
+          SECRET=--set=secret.AUTH_SECRET_KEY=ci-not-a-real-secret
+          refuses() {
+            if helm template smoke helm/exec-email-copilot "$@" > /dev/null 2>&1; then
+              echo "FAIL: rendered a configuration that should have been refused: $*"
+              exit 1
+            fi
+            echo "ok: refused $*"
+          }
+          refuses                                                   # no AUTH_SECRET_KEY
+          refuses "$SECRET" --set replicaCount=2                    # no leader election
+          refuses "$SECRET" --set replicaCount=2 --set persistence.enabled=true
+          refuses "$SECRET" --set extraEnv[3].name=CORS_ORIGINS --set extraEnv[3].value='*'
