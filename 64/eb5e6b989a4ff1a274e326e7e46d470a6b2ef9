@@ -1,0 +1,174 @@
+app/saas/data_lifecycle.py
+  s_cfcb9569c37279::t_e09e5da04f0815 20,54,70
+app/copilot/commitments.py
+  s_cfcb9569c37279::t_b87419440b1e30 1-298
+app/saas/sync_service.py
+  s_cfcb9569c37279::t_ece68584538a9d 182
+  s_cfcb9569c37279::t_7951f4ad76f1b6 470,480,483,490-503,505-506,509-533
+  s_cfcb9569c37279::t_388e733732ef18 307-309,321
+  s_cfcb9569c37279::t_096bbddf05cb5b 484-489
+  s_cfcb9569c37279::t_e0f40d485bbbcb 504,507-508
+  s_cfcb9569c37279::t_c56303c9f94cc9 310-320
+  s_cfcb9569c37279::t_8986fe6d3fb1be 25,534,663
+  s_cfcb9569c37279::t_e4c61e741e15b6 618-622,636-662
+app/saas/models_db.py
+  s_cfcb9569c37279::t_ac23648fe17cc8 379-440
+docs/DEMO.md
+  s_cfcb9569c37279::t_3de4d98ca56641 184-205,211
+tests/test_commitments.py
+  s_cfcb9569c37279::t_4035a528968b6d 1-188,190-233,235-310
+app/core/db.py
+  s_cfcb9569c37279::t_86e0c6d13691c1 341-345
+  s_cfcb9569c37279::t_5aed8bdb470bce 225
+app/web/routes.py
+  s_cfcb9569c37279::t_21447382e2f12f 270-274
+  s_cfcb9569c37279::t_348e985ad8d5df 42
+  s_cfcb9569c37279::t_7ba3be643f8183 1097-1174
+  s_cfcb9569c37279::t_03a0a26f70a114 73
+app/saas/repository.py
+  s_cfcb9569c37279::t_8a6a0e880b09d3 22
+  s_cfcb9569c37279::t_c9e3d210eb8e50 1074-1229
+app/web/templates/_app.html
+  s_cfcb9569c37279::t_6b8022765e4ea3 20-27
+app/web/templates/waiting.html
+  s_cfcb9569c37279::t_c105596f1476dd 1-130
+app/web/templates/landing.html
+  s_cfcb9569c37279::t_99c93b2a7fd7da 72,80
+  s_cfcb9569c37279::t_2b137dc6f731b7 92,111-120
+docs/TECHNICAL_REFERENCE.md
+  s_cfcb9569c37279::t_b9bfcb78ab3617 355-356
+app/web/static/app.css
+  s_cfcb9569c37279::t_9e70857db8236c 1178-1240
+README.md
+  s_cfcb9569c37279::t_b9bfcb78ab3617 44,555-556
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "64eb5e6b989a4ff1a274e326e7e46d470a6b2ef9",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:93ea373b822ad556c6c6d6d89c033ddbb0816b6aa94c7d256e614945453ac75a",
+      "total_additions": 1278,
+      "total_deletions": 19,
+      "accepted_lines": 9038,
+      "overriden_lines": 2
+    }
+  },
+  "sessions": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:93ea373b822ad556c6c6d6d89c033ddbb0816b6aa94c7d256e614945453ac75a",
+      "stats": {
+        "total_additions": 1278,
+        "total_deletions": 19,
+        "accepted_lines": 9038,
+        "overriden_lines": 2,
+        "files": {
+          "README.md": {
+            "total_additions": 3,
+            "total_deletions": 1,
+            "accepted_lines": 3,
+            "overriden_lines": 0
+          },
+          "app/copilot/commitments.py": {
+            "total_additions": 298,
+            "total_deletions": 0,
+            "accepted_lines": 298,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 6,
+            "total_deletions": 1,
+            "accepted_lines": 382,
+            "overriden_lines": 0
+          },
+          "app/saas/data_lifecycle.py": {
+            "total_additions": 3,
+            "total_deletions": 0,
+            "accepted_lines": 84,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 62,
+            "total_deletions": 0,
+            "accepted_lines": 469,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 157,
+            "total_deletions": 0,
+            "accepted_lines": 1269,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 106,
+            "total_deletions": 2,
+            "accepted_lines": 780,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 85,
+            "total_deletions": 0,
+            "accepted_lines": 1548,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 63,
+            "total_deletions": 0,
+            "accepted_lines": 2673,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_app.html": {
+            "total_additions": 8,
+            "total_deletions": 0,
+            "accepted_lines": 90,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 22,
+            "total_deletions": 13,
+            "accepted_lines": 17,
+            "overriden_lines": 0
+          },
+          "app/web/templates/waiting.html": {
+            "total_additions": 130,
+            "total_deletions": 0,
+            "accepted_lines": 130,
+            "overriden_lines": 0
+          },
+          "docs/DEMO.md": {
+            "total_additions": 23,
+            "total_deletions": 2,
+            "accepted_lines": 321,
+            "overriden_lines": 0
+          },
+          "docs/TECHNICAL_REFERENCE.md": {
+            "total_additions": 2,
+            "total_deletions": 0,
+            "accepted_lines": 666,
+            "overriden_lines": 0
+          },
+          "tests/test_commitments.py": {
+            "total_additions": 310,
+            "total_deletions": 0,
+            "accepted_lines": 308,
+            "overriden_lines": 2
+          }
+        }
+      }
+    }
+  }
+}
