@@ -55,9 +55,20 @@ def legacy_db(tmp_path, monkeypatch):
     reloaded = importlib.reload(db_module)
     yield path, reloaded
 
-    # Restore the module's binding to the default database for later tests.
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    # Put the module back on whatever database the session was actually using.
+    #
+    # `monkeypatch.undo()` rather than `delenv`: this fixture rebinds a
+    # process-global engine, so the teardown has to restore the *previous*
+    # DATABASE_URL, not assume there wasn't one. Under CI's Postgres job there
+    # is — and deleting it here rebound `app.core.db.engine` to a SQLite file
+    # that nothing had ever migrated, for the whole rest of the session. Every
+    # test after this one then failed with "no such table: saas_users", in the
+    # one job whose entire purpose is to prove Postgres works.
+    monkeypatch.undo()
     importlib.reload(db_module)
+    # And make sure the schema exists on it: conftest migrated the original
+    # engine at import, which this reload has just replaced with a new object.
+    db_module.migrate_db()
 
 
 def test_migration_adds_columns_to_an_existing_table(legacy_db):
