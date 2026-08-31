@@ -1,0 +1,230 @@
+data/landing_metrics.json
+  s_cfcb9569c37279::t_3763543fb80512 3,41,64,111-113,116,118-119
+scripts/capture_screenshots.py
+  s_cfcb9569c37279::t_87e52584c51a3c 1-47,51-166
+  s_cfcb9569c37279::t_1a3e4c197e44b4 48-50
+app/web/templates/approvals.html
+  s_cfcb9569c37279::t_04ac877e6b010f 9,12,35,62,65,88,90,96,108
+tests/test_web_pages.py
+  s_cfcb9569c37279::t_09728f1a7a5476 886-890
+  s_cfcb9569c37279::t_1076bc39125e63 710-885,891-902
+scripts/optimize_images.py
+  s_cfcb9569c37279::t_05f55d3acb2e7c 1-82
+data/demo/inbox.json
+  s_cfcb9569c37279::t_3763543fb80512 59-72
+app/saas/models_db.py
+  s_cfcb9569c37279::t_9d8452935a44ed 242-243,245-249
+  s_cfcb9569c37279::t_cc4fc36afc6a80 271
+docs/DEMO.md
+  s_cfcb9569c37279::t_7041c10b9a756c 149-151,164,172,211-213,232,287
+  s_cfcb9569c37279::t_d6be5c985f4bb7 36,96-97,99,101,104-108,118-119,124-128
+app/core/db.py
+  s_cfcb9569c37279::t_254cab2c193386 324-329
+  s_cfcb9569c37279::t_4b5a72d7dcf1d2 225
+app/web/static/app.js
+  s_cfcb9569c37279::t_903ca995a0b6cb 78-156
+app/web/templates/base.html
+  s_cfcb9569c37279::t_c89b885bdf61cb 2-4
+app/web/templates/connect.html
+  s_cfcb9569c37279::t_04ac877e6b010f 9
+app/web/routes.py
+  s_cfcb9569c37279::t_44b8d07e7493d1 155-166
+  s_cfcb9569c37279::t_501ed5bb255bb6 20
+  s_cfcb9569c37279::t_a06bc8403fb3fb 482,503,567,614,657,710,1314,1349-1354
+  s_cfcb9569c37279::t_f408f89621d25a 850-853,855
+  s_cfcb9569c37279::t_43d73419b4a97a 1046-1061
+  s_cfcb9569c37279::t_3fd2e3f7c8b9c0 809-818,820-828,833-845,847-848,854,857-879,882-888,892,896,898-906,913-914,920-924
+  s_cfcb9569c37279::t_1312282d6577c0 1070-1072,1074-1079,1084-1085,1091-1092,1094-1131
+app/saas/sync_service.py
+  s_cfcb9569c37279::t_7653a33e80d6a7 289-290
+app/web/templates/activity.html
+  s_cfcb9569c37279::t_ecf0d86c8acabc 16-52,54-61,63-67,69-104,106
+app/saas/repository.py
+  s_cfcb9569c37279::t_df39b38115c1fa 45,68-69,572,725
+  s_cfcb9569c37279::t_d2a2e673e77ab7 41-44,54-67
+  s_cfcb9569c37279::t_812e550bc43407 609
+  s_cfcb9569c37279::t_ac342828a50f9b 808-882
+  s_cfcb9569c37279::t_6d8020e73f0227 590
+  s_cfcb9569c37279::t_9a1e22674d0d11 627-629,631-638,644-663,682-724
+  s_cfcb9569c37279::t_2fb4b93193fe62 315-363
+app/web/templates/_app.html
+  s_cfcb9569c37279::t_99a5526dbc257f 28-29
+  s_cfcb9569c37279::t_2c822122aa8776 45-47
+  s_cfcb9569c37279::t_e4db715fbf1f2f 64
+  s_cfcb9569c37279::t_255fea6640238e 6-9
+app/web/static/app.css
+  s_cfcb9569c37279::t_669ba5f4c036d5 190-222
+  s_cfcb9569c37279::t_24d7f6997d83e1 581,589,644-645,839,1652
+  s_cfcb9569c37279::t_0755309a014805 519-544
+  s_cfcb9569c37279::t_39078307b9918c 1192-1202
+  s_cfcb9569c37279::t_a3359a8e618474 1400-1571
+app/web/templates/landing.html
+  s_cfcb9569c37279::t_551ef8b10d72f3 50
+  s_cfcb9569c37279::t_4c8c92a5b7ac9e 139
+  s_cfcb9569c37279::t_f419a172ed4a1d 158
+  s_cfcb9569c37279::t_74531f267201f7 192,194
+app/web/templates/inbox.html
+  s_cfcb9569c37279::t_51fc5fa1983b58 45
+  s_cfcb9569c37279::t_bc73d4d884d2a4 9-10,12,28,65-96,103-116,120-125,127-129,139-188,191-199,201-202,204-213,216-236,240-250,252-270,272-276,279-318,320-323,331-340,342-344,346-355
+  s_cfcb9569c37279::t_7ff20b359cd6d4 98-101,126,132-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "ffde5afd87ae7bb17e4f0ba62eb769958016562f",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:04caf037f4a4cb01b5a967e1cd7653631ce5650b8db811986533e333d4067bd9",
+      "total_additions": 1628,
+      "total_deletions": 494,
+      "accepted_lines": 9041,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:04caf037f4a4cb01b5a967e1cd7653631ce5650b8db811986533e333d4067bd9",
+      "stats": {
+        "total_additions": 1628,
+        "total_deletions": 494,
+        "accepted_lines": 9041,
+        "overriden_lines": 0,
+        "files": {
+          "app/core/db.py": {
+            "total_additions": 7,
+            "total_deletions": 1,
+            "accepted_lines": 366,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 8,
+            "total_deletions": 0,
+            "accepted_lines": 382,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 223,
+            "total_deletions": 0,
+            "accepted_lines": 1028,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 2,
+            "total_deletions": 0,
+            "accepted_lines": 583,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 181,
+            "total_deletions": 40,
+            "accepted_lines": 1443,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 248,
+            "total_deletions": 229,
+            "accepted_lines": 2504,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.js": {
+            "total_additions": 79,
+            "total_deletions": 0,
+            "accepted_lines": 171,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_app.html": {
+            "total_additions": 10,
+            "total_deletions": 4,
+            "accepted_lines": 66,
+            "overriden_lines": 0
+          },
+          "app/web/templates/activity.html": {
+            "total_additions": 87,
+            "total_deletions": 30,
+            "accepted_lines": 87,
+            "overriden_lines": 0
+          },
+          "app/web/templates/approvals.html": {
+            "total_additions": 9,
+            "total_deletions": 11,
+            "accepted_lines": 114,
+            "overriden_lines": 0
+          },
+          "app/web/templates/base.html": {
+            "total_additions": 3,
+            "total_deletions": 1,
+            "accepted_lines": 54,
+            "overriden_lines": 0
+          },
+          "app/web/templates/connect.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 112,
+            "overriden_lines": 0
+          },
+          "app/web/templates/inbox.html": {
+            "total_additions": 270,
+            "total_deletions": 148,
+            "accepted_lines": 267,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 5,
+            "total_deletions": 5,
+            "accepted_lines": 5,
+            "overriden_lines": 0
+          },
+          "data/demo/inbox.json": {
+            "total_additions": 15,
+            "total_deletions": 0,
+            "accepted_lines": 15,
+            "overriden_lines": 0
+          },
+          "data/landing_metrics.json": {
+            "total_additions": 9,
+            "total_deletions": 9,
+            "accepted_lines": 122,
+            "overriden_lines": 0
+          },
+          "docs/DEMO.md": {
+            "total_additions": 27,
+            "total_deletions": 12,
+            "accepted_lines": 300,
+            "overriden_lines": 0
+          },
+          "scripts/capture_screenshots.py": {
+            "total_additions": 167,
+            "total_deletions": 1,
+            "accepted_lines": 166,
+            "overriden_lines": 0
+          },
+          "scripts/optimize_images.py": {
+            "total_additions": 82,
+            "total_deletions": 0,
+            "accepted_lines": 82,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 195,
+            "total_deletions": 2,
+            "accepted_lines": 1174,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
