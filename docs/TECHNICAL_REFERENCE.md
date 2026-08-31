@@ -352,6 +352,8 @@ destructive actions, and double-submit protection.
 | `GET /privacy` | public | Privacy policy, incl. the Google Limited Use disclosure |
 | `GET /terms` | public | Terms of service |
 | `GET,POST /contact-sales` | public | The lead form (honeypot + per-IP throttle) |
+| `GET /app/waiting` | session | Commitments in both directions ("Waiting on") |
+| `POST /app/commitments/{id}/{done\|dismiss\|reopen}` | session | Resolve one |
 | `GET,POST /login` | public | Sign in; offers SSO when OIDC is configured |
 | `GET,POST /signup` | public | Provisions org + owner + trial license |
 | `POST /logout` | session | Clears the session cookie |

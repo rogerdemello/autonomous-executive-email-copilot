@@ -17,6 +17,14 @@
         Approvals
         {% if pending_count %}<span class="count">{{ pending_count }}</span>{% endif %}
       </a>
+      <a href="/app/waiting" {% if active == 'waiting' %}aria-current="page"{% endif %}>
+        Waiting on
+        {% if waiting and waiting.overdue %}
+          <span class="count count--overdue" title="{{ waiting.overdue }} past their date">{{ waiting.overdue }}</span>
+        {% elif waiting and waiting.open %}
+          <span class="count count--quiet">{{ waiting.open }}</span>
+        {% endif %}
+      </a>
       <a href="/app/activity" {% if active == 'activity' %}aria-current="page"{% endif %}>Activity</a>
       <a href="/app/connect" {% if active == 'connect' %}aria-current="page"{% endif %}>Mailboxes</a>
       <a href="/app/settings" {% if active == 'settings' %}aria-current="page"{% endif %}>Settings</a>

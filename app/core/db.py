@@ -222,7 +222,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 7
+_SCHEMA_VERSION = 8
 
 
 class SchemaVersion(Base):
@@ -337,6 +337,11 @@ def _run_migration(version: int) -> None:
         # bound how often it does.
         _add_column_if_missing("saas_proposed_actions", "retry_count", "INTEGER")
         _add_column_if_missing("saas_proposed_actions", "last_error", "TEXT")
+        return
+    if version == 8:
+        # Commitment tracking (saas_commitments). A whole new table, so
+        # ``create_all`` above has already built it — this step exists to move
+        # the recorded version, not to alter anything.
         return
 
 

@@ -19,6 +19,7 @@ from app.core.db import get_session
 
 from .models_db import (
     AuditLogEntry,
+    Commitment,
     License,
     MailboxConnection,
     Organization,
@@ -1068,6 +1069,162 @@ class ProposedActionRepository:
                 setattr(row, key, value)
             session.flush()
             return row.to_dict()
+
+
+class CommitmentRepository:
+    """Tenant-scoped access to tracked commitments ("Waiting on")."""
+
+    @staticmethod
+    def fingerprint(message_id: str | None, direction: str, text: str) -> str:
+        """Stable identity for one promise.
+
+        Re-reading a mailbox re-reads the same sentences, and a follow-up list
+        that grows a duplicate on every sweep is a list nobody opens twice.
+        Normalised on whitespace and case so a provider that re-wraps a body
+        does not mint a second copy.
+        """
+        import hashlib
+
+        normalised = " ".join((text or "").lower().split())
+        raw = f"{message_id or ''}|{direction}|{normalised}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:64]
+
+    def upsert(
+        self,
+        *,
+        org_id: str,
+        message_id: str | None,
+        thread_id: str | None,
+        direction: str,
+        text: str,
+        due_at: str | None = None,
+        due_phrase: str | None = None,
+        counterparty: str | None = None,
+        subject: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Record a commitment, or leave the existing one alone.
+
+        Returns the row, or None when it already existed — so a caller can
+        count what is genuinely new. A resolved commitment is *not* reopened by
+        a re-sync: a human said it was done, and the message it came from has
+        not changed.
+        """
+        key = self.fingerprint(message_id, direction, text)
+        with get_session() as session:
+            existing = (
+                session.query(Commitment)
+                .filter(Commitment.org_id == org_id, Commitment.fingerprint == key)
+                .first()
+            )
+            if existing:
+                return None
+            row = Commitment(
+                org_id=org_id,
+                message_id=message_id,
+                thread_id=thread_id,
+                fingerprint=key,
+                direction=direction,
+                text=text,
+                due_at=due_at,
+                due_phrase=due_phrase,
+                counterparty=counterparty,
+                subject=subject,
+            )
+            session.add(row)
+            session.flush()
+            return row.to_dict()
+
+    def list_for_org(
+        self,
+        org_id: str,
+        *,
+        status: str | None = "open",
+        direction: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> dict[str, Any]:
+        """Commitments, soonest deadline first, undated last.
+
+        Ordering is the feature: a follow-up list sorted by anything other than
+        urgency is a list you scroll rather than act on.
+        """
+        safe_limit, safe_offset = clamp_page(limit, offset)
+        with get_session() as session:
+            query = session.query(Commitment).filter(Commitment.org_id == org_id)
+            if status:
+                query = query.filter(Commitment.status == status)
+            if direction:
+                query = query.filter(Commitment.direction == direction)
+            total = query.count()
+            rows = (
+                query.order_by(
+                    Commitment.due_at.asc().nullslast(),
+                    Commitment.created_at.desc(),
+                )
+                .offset(safe_offset)
+                .limit(safe_limit)
+                .all()
+            )
+            return {
+                "commitments": [r.to_dict() for r in rows],
+                "total": total,
+                "limit": safe_limit,
+                "offset": safe_offset,
+            }
+
+    def get(self, org_id: str, commitment_id: str) -> dict[str, Any] | None:
+        with get_session() as session:
+            row = (
+                session.query(Commitment)
+                .filter(Commitment.id == commitment_id, Commitment.org_id == org_id)
+                .first()
+            )
+            return row.to_dict() if row else None
+
+    def set_status(
+        self, org_id: str, commitment_id: str, status: str, *, actor_user_id: str | None = None
+    ) -> dict[str, Any] | None:
+        with get_session() as session:
+            row = (
+                session.query(Commitment)
+                .filter(Commitment.id == commitment_id, Commitment.org_id == org_id)
+                .first()
+            )
+            if not row:
+                return None
+            row.status = status
+            row.resolved_at = _now_iso() if status != "open" else None
+            row.resolved_by = actor_user_id if status != "open" else None
+            session.flush()
+            return row.to_dict()
+
+    def summarize_for_org(self, org_id: str, today: str) -> dict[str, int]:
+        """Open counts by direction, plus how many are past their date."""
+        with get_session() as session:
+            rows = (
+                session.query(Commitment.direction, func.count(Commitment.id))
+                .filter(Commitment.org_id == org_id, Commitment.status == "open")
+                .group_by(Commitment.direction)
+                .all()
+            )
+            by_direction = {str(direction): int(count) for direction, count in rows}
+            overdue = (
+                session.query(func.count(Commitment.id))
+                .filter(
+                    Commitment.org_id == org_id,
+                    Commitment.status == "open",
+                    Commitment.due_at.isnot(None),
+                    Commitment.due_at < today,
+                )
+                .scalar()
+                or 0
+            )
+        return {
+            "open": sum(by_direction.values()),
+            "ours": by_direction.get("ours", 0),
+            "theirs": by_direction.get("theirs", 0),
+            "overdue": int(overdue),
+        }
 
 
 class SalesLeadRepository:

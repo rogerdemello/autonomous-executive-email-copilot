@@ -39,6 +39,7 @@ from app.saas.provider_factory import BrokenConnectionError, build_provider
 from app.saas.rbac import role_at_least
 from app.saas.repository import (
     AuditRepository,
+    CommitmentRepository,
     MailboxRepository,
     OrganizationRepository,
     ProcessedMessageRepository,
@@ -69,6 +70,7 @@ _mailboxes = MailboxRepository()
 _messages = ProcessedMessageRepository()
 _actions = ProposedActionRepository()
 _audit = AuditRepository()
+_commitments = CommitmentRepository()
 
 # The demo workspace's identity lives with the seeder; re-exported here because
 # tests and scripts historically import these names from this module.
@@ -265,6 +267,11 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
         # can make, and it lived in the database being rendered as one chip on
         # one page. Two grouped queries, on every signed-in page.
         "verification": _actions.verification_summary(user["org_id"]),
+        # The overdue count drives the "Waiting on" badge in the sidebar: a
+        # follow-up tracker you have to remember to open is not a tracker.
+        "waiting": _commitments.summarize_for_org(
+            user["org_id"], datetime.now(timezone.utc).date().isoformat()
+        ),
     }
 
 
@@ -1085,6 +1092,84 @@ def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
 
     context["learning"] = FeedbackService().insights(user["org_id"])
     return _render(request, "approvals.html", context)
+
+
+# --------------------------------------------------------------------------- #
+# Waiting on: commitments in both directions
+# --------------------------------------------------------------------------- #
+WAITING_PAGE_SIZE = 100
+_COMMITMENT_DIRECTIONS = ("ours", "theirs")
+
+
+@web_router.get("/app/waiting", response_class=HTMLResponse)
+def waiting(
+    request: Request,
+    direction: str | None = None,
+    show: str | None = None,
+    notice: str | None = None,
+) -> HTMLResponse:
+    """What this workspace owes, and what it is waiting on.
+
+    The capability every competitor is missing and every review of them names.
+    An executive's real failure mode is not a mis-triaged message; it is a
+    promise made three weeks ago that nobody wrote down.
+    """
+    user = _require_user(request)
+    context = _app_context(request, user, "waiting")
+    context["notice"] = _WAITING_NOTICES.get(notice or "")
+
+    direction = direction if direction in _COMMITMENT_DIRECTIONS else None
+    status = "done" if show == "done" else "open"
+
+    listing = _commitments.list_for_org(
+        user["org_id"], status=status, direction=direction, limit=WAITING_PAGE_SIZE
+    )
+    today = datetime.now(timezone.utc).date().isoformat()
+    context["commitments"] = [
+        {**row, "overdue": bool(row["due_at"]) and row["due_at"] < today}
+        for row in listing["commitments"]
+    ]
+    context["filters"] = {"direction": direction, "show": status}
+    context["directions"] = _COMMITMENT_DIRECTIONS
+    return _render(request, "waiting.html", context)
+
+
+_WAITING_NOTICES = {
+    "done": "Marked done. It stays on the record under Done.",
+    "dropped": "Dismissed. The copilot will not raise it again.",
+    "reopened": "Reopened.",
+}
+
+
+@web_router.post("/app/commitments/{commitment_id}/{decision}")
+def resolve_commitment(
+    request: Request, commitment_id: str, decision: str, csrf_token: str = Form("")
+) -> Response:
+    """Mark a commitment done, dismiss it, or put it back.
+
+    "Dismissed" is a human saying this was never a real commitment. Keeping
+    that distinct from "done" is what makes the list worth reading: a tracker
+    you cannot correct becomes a tracker you stop opening.
+    """
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    status = {"done": "done", "dismiss": "dropped", "reopen": "open"}.get(decision)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Unknown decision")
+    if _commitments.get(user["org_id"], commitment_id) is None:
+        raise HTTPException(status_code=404, detail="That follow-up no longer exists")
+
+    _commitments.set_status(user["org_id"], commitment_id, status, actor_user_id=user["id"])
+    _audit.record(
+        action="commitment.resolve",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        target=commitment_id,
+        detail={"status": status},
+        ip=_client_ip(request),
+    )
+    notice = {"done": "done", "dropped": "dropped", "open": "reopened"}[status]
+    return RedirectResponse(url=f"/app/waiting?notice={notice}", status_code=303)
 
 
 ACTIVITY_PAGE_SIZE = 50

@@ -181,13 +181,34 @@ The draft is a textarea — change a sentence, then approve.
 > action. Once there are decisions to learn from, this page grows a 'what the
 > copilot has learned' panel that names them."
 
-### 7. Activity — `/app/activity`
+### 7. Waiting on — `/app/waiting`
+
+> "This is the thing none of the alternatives do. Every review of every AI email
+> tool names the same gap: nothing tracks follow-ups. The copilot reads the
+> promises out of your mail as they are made, in both directions — what someone
+> owes you, and what you committed to in a reply you approved — and shows you the
+> sentence it came from so you can check it in one glance instead of re-reading
+> the thread."
+
+Point at a row with a resolved date and hover the date chip: it names the words
+the sender actually used. Then point at one with **no date**.
+
+> "It didn't guess. Nobody stated a deadline there, so it isn't going to invent
+> one and then nag you about it — that's the same failure the draft verifier
+> exists to catch, one surface over."
+
+If asked how it avoids becoming noise: spam is excluded using the copilot's own
+classification, and every row can be dismissed as **Not a commitment** — kept
+separate from **Mark done** on purpose, because "this was never real" is
+different feedback from "this is finished".
+
+### 8. Activity — `/app/activity`
 
 > "Every security-relevant action is appended to a per-organization audit log —
 > sign-ins, mailbox connections, syncs, and every approval decision, with who did
 > it and when. This is usually the first thing procurement asks for."
 
-### 8. Settings — `/app/settings`
+### 9. Settings — `/app/settings`
 
 Access ("Trial · N days remaining", and the way to keep it), member management
 (invite with a one-time temporary password, change role, remove — seat limits

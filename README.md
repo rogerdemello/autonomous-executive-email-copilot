@@ -41,6 +41,7 @@ Open **http://localhost:8000** and walk:
 | `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
 | `/app/inbox` | 50 triaged messages, with the copilot's reasoning and its drafts |
 | `/app/approvals` | The 11 actions waiting on a human |
+| `/app/waiting` | Promises found in the mail, in both directions, with dates |
 | `/app/activity` | The audit trail of everything that just happened |
 
 [docs/DEMO.md](docs/DEMO.md) is a walkthrough script, including what is real and
@@ -551,7 +552,8 @@ WebSocket pong frame:
 
 Server-rendered from [app/web](app/web): Jinja templates plus one stylesheet, with
 no bundler and no build step. Pages: landing, login, signup, contact sales,
-privacy, terms, connect a mailbox, inbox, approvals, activity, settings. Every
+privacy, terms, connect a mailbox, inbox, approvals, waiting on, activity,
+settings. Every
 action works as a plain form POST, so the app functions with JavaScript
 disabled.
 

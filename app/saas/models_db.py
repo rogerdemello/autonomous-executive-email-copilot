@@ -376,6 +376,68 @@ class ProposedAction(Base):
         return claims if isinstance(claims, list) else []
 
 
+class Commitment(Base):
+    """A promise found in a message or in a reply the workspace sent.
+
+    Its own table rather than a new ``ProposedAction`` row type, though the
+    latter is superficially close. A commitment is not something the copilot
+    proposes and a human approves — it is an observation with a deadline and a
+    direction, and it has to survive being marked done without that meaning
+    "executed". Folding it into the actions table would have put non-actions
+    into the approval queue's counts, the learning corpus, and the idempotency
+    key, in exchange for skipping one migration.
+    """
+
+    __tablename__ = "saas_commitments"
+    __table_args__ = (
+        # The same promise re-read on a later sync is the same promise. The
+        # hash is over (message, direction, text) — see the repository.
+        UniqueConstraint("org_id", "fingerprint", name="uq_commitment_fingerprint"),
+    )
+
+    id = Column(String(32), primary_key=True, default=_new_id)
+    org_id = Column(String(32), ForeignKey("saas_organizations.id"), nullable=False, index=True)
+    message_id = Column(
+        String(32), ForeignKey("saas_processed_messages.id"), nullable=True, index=True
+    )
+    thread_id = Column(String(255), nullable=True, index=True)
+    fingerprint = Column(String(64), nullable=False)
+    # ours | theirs — who owes the thing. See app/copilot/commitments.py.
+    direction = Column(String(16), nullable=False, default="theirs")
+    text = Column(Text, nullable=False)
+    # The resolved date, and the words the writer actually used. Both, because
+    # showing the phrase is what lets a reviewer catch a bad resolution rather
+    # than trust it.
+    due_at = Column(String(32), nullable=True)
+    due_phrase = Column(String(64), nullable=True)
+    # open | done | dropped. "dropped" is a human saying this was never a real
+    # commitment, which is the feedback that keeps the list worth reading.
+    status = Column(String(16), nullable=False, default="open", index=True)
+    counterparty = Column(String(320), nullable=True)
+    subject = Column(Text, nullable=True)
+    created_at = Column(String(50), nullable=False, default=_now_iso)
+    resolved_at = Column(String(50), nullable=True)
+    resolved_by = Column(String(32), nullable=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "org_id": self.org_id,
+            "message_id": self.message_id,
+            "thread_id": self.thread_id,
+            "direction": self.direction,
+            "text": self.text,
+            "due_at": self.due_at,
+            "due_phrase": self.due_phrase,
+            "status": self.status,
+            "counterparty": self.counterparty,
+            "subject": self.subject,
+            "created_at": self.created_at,
+            "resolved_at": self.resolved_at,
+            "resolved_by": self.resolved_by,
+        }
+
+
 class SalesLead(Base):
     """A captured 'Contact sales' / license-request lead (sales-led funnel)."""
 

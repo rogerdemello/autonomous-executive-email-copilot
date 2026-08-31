@@ -22,6 +22,7 @@ from app.core.config import get_settings
 
 from .repository import (
     AuditRepository,
+    CommitmentRepository,
     MailboxRepository,
     OrganizationRepository,
     ProcessedMessageRepository,
@@ -178,6 +179,7 @@ class InboxSyncService:
         self.audit = AuditRepository()
         self.orgs = OrganizationRepository()
         self.users = UserRepository()
+        self.commitments = CommitmentRepository()
 
     def _require_active_plan(self, org_id: str) -> None:
         """Sync and approve are the value loop; a lapsed plan stops them here.
@@ -301,6 +303,21 @@ class InboxSyncService:
                 business_value=obs_email.business_value,
             )
             row_by_provider_id[msg.provider_message_id] = row
+
+        # What this mailbox is now waiting on, and what it now owes. Extracted
+        # from the message text the same deterministic way the routing signals
+        # are, so it costs nothing and behaves identically with the model off.
+        #
+        # Spam is excluded using the classifier's own verdict. "Subscribe now
+        # and we will register your team at a permanent discount" parses as a
+        # perfectly good promise, and two of them in a seven-row follow-up list
+        # is enough to make nobody open it again.
+        spam_ids = {
+            p.email_id for p in proposals if p.action_type == "classify" and p.label == "spam"
+        }
+        commitments_found = self._record_commitments(
+            org_id, fetched, row_by_provider_id, skip_ids=spam_ids
+        )
 
         proposed_count = 0
         auto_count = 0
@@ -450,6 +467,7 @@ class InboxSyncService:
                 "auto_executed": auto_count,
                 "skipped": skipped_count,
                 "downgraded": downgraded_count,
+                "commitments": commitments_found,
             },
         )
         return {
@@ -459,7 +477,60 @@ class InboxSyncService:
             "auto_executed": auto_count,
             "skipped": skipped_count,
             "downgraded": downgraded_count,
+            "commitments": commitments_found,
         }
+
+    def _record_commitments(
+        self,
+        org_id: str,
+        fetched: list[FetchedMessage],
+        row_by_provider_id: dict[str, dict],
+        *,
+        skip_ids: set[str] | None = None,
+    ) -> int:
+        """Extract and store the promises in a batch of incoming messages.
+
+        Best-effort by construction: a commitment the extractor misses is a
+        missing row, but an exception here would abort a sync that had already
+        done its real work. Returns how many were newly recorded.
+
+        Incoming mail is read with ``include_requests``: "please send the
+        figures by Thursday" is not a promise anyone made, but it is
+        unambiguously something you now owe, and leaving it off the list is
+        exactly the failure this surface exists to prevent.
+        """
+        from app.copilot import commitments as extractor
+
+        skip_ids = skip_ids or set()
+        recorded = 0
+        for msg in fetched:
+            if msg.provider_message_id in skip_ids:
+                continue
+            row = row_by_provider_id.get(msg.provider_message_id)
+            if row is None:
+                continue
+            try:
+                found = extractor.extract(
+                    msg.body or "", direction=extractor.THEIRS, include_requests=True
+                )
+            except Exception:  # noqa: BLE001 - never fail a sync over a follow-up
+                logger.exception("Commitment extraction failed for %s", msg.provider_message_id)
+                continue
+            for item in found:
+                created = self.commitments.upsert(
+                    org_id=org_id,
+                    message_id=row["id"],
+                    thread_id=row.get("thread_id"),
+                    direction=item.direction,
+                    text=item.text,
+                    due_at=item.due_at,
+                    due_phrase=item.due_phrase,
+                    counterparty=msg.sender,
+                    subject=msg.subject,
+                )
+                if created:
+                    recorded += 1
+        return recorded
 
     # -- approve / reject ---------------------------------------------------
     def approve(
@@ -544,6 +615,11 @@ class InboxSyncService:
                 decided_at=now,
                 last_error=result.detail or "the provider rejected the write",
             )
+        if result.ok:
+            # A promise in a reply you just sent is a promise you now owe. This
+            # is the half of follow-up tracking that only the sending party
+            # can see, and the reason a bolt-on tracker cannot do it properly.
+            self._record_own_commitments(org_id, action, message)
         self.audit.record(
             action="inbox.action.approve",
             org_id=org_id,
@@ -556,6 +632,34 @@ class InboxSyncService:
             },
         )
         return updated or {}
+
+    def _record_own_commitments(self, org_id: str, action: dict, message: dict) -> int:
+        """Extract promises from a reply the workspace just sent."""
+        if action.get("action_type") != "reply" or not action.get("content"):
+            return 0
+        from app.copilot import commitments as extractor
+
+        recorded = 0
+        try:
+            found = extractor.extract(action["content"], direction=extractor.OURS)
+        except Exception:  # noqa: BLE001 - the reply was sent; this is bookkeeping
+            logger.exception("Commitment extraction failed for action %s", action.get("id"))
+            return 0
+        for item in found:
+            created = self.commitments.upsert(
+                org_id=org_id,
+                message_id=message.get("id"),
+                thread_id=message.get("thread_id"),
+                direction=extractor.OURS,
+                text=item.text,
+                due_at=item.due_at,
+                due_phrase=item.due_phrase,
+                counterparty=message.get("sender"),
+                subject=message.get("subject"),
+            )
+            if created:
+                recorded += 1
+        return recorded
 
     def reject(
         self, *, org_id: str, user_id: str, action_id: str, comment: str | None = None
