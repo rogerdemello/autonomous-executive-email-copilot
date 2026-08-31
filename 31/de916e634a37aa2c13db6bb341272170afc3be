@@ -1,0 +1,245 @@
+app/saas/licensing.py
+  s_cfcb9569c37279::t_e8e7caf6203f5c 37-38,40-44,52-53
+  s_cfcb9569c37279::t_15a2320d66ef9f 1,3-6,12-15,39
+app/web/templates/landing.html
+  s_cfcb9569c37279::t_79617d782ca445 386-390
+  s_cfcb9569c37279::t_d7ce14022156cc 18-22,24-26
+app/web/templates/contact_sales.html
+  s_cfcb9569c37279::t_3921679dee610c 3,6-18,21-46,48-61,63-66,68-81,84-89,92-102,104-113,115-118,120-131,133-145,147
+tests/test_saas_marketing.py
+  s_cfcb9569c37279::t_ba880a2f875e72 65-76
+  s_cfcb9569c37279::t_9d0644875ee23f 22-38
+  s_cfcb9569c37279::t_0c76a9af5dcf19 49
+  s_cfcb9569c37279::t_a048c0d23e599d 1-2
+app/web/templates/_public.html
+  s_cfcb9569c37279::t_d199baece93e28 3
+  s_cfcb9569c37279::t_cbb06191e6c5f7 25
+  s_cfcb9569c37279::t_8804a4bbe4ee49 45,49-55
+tests/test_saas_mailbox.py
+  s_cfcb9569c37279::t_eba209ffd829c3 98,101-112
+docs/OAUTH_SETUP.md
+  s_cfcb9569c37279::t_3e35d8f1233e35 58-78,82-86
+app/web/static/app.css
+  s_cfcb9569c37279::t_9ef5c1f258d42f 1614-1664
+  s_cfcb9569c37279::t_85896cafdce800 884,1613
+  s_cfcb9569c37279::t_06f562b0a18c50 885-1090
+  s_cfcb9569c37279::t_0a0a50582df376 433
+app/saas/oauth.py
+  s_cfcb9569c37279::t_848687975fb04d 53-59
+app/web/templates/_app.html
+  s_cfcb9569c37279::t_f9cb6514ddbe61 52-55
+docs/TECHNICAL_REFERENCE.md
+  s_cfcb9569c37279::t_519d8298f94254 351-354
+  s_cfcb9569c37279::t_f1c6d952c2df50 574
+docs/COMMERCIAL.md
+  s_cfcb9569c37279::t_4a4c238bef17da 159
+  s_cfcb9569c37279::t_82ce60067b7de9 4
+  s_cfcb9569c37279::t_f10b2d7cd551d2 153-154
+  s_cfcb9569c37279::t_4ca5de5ab1f9f5 100,102-107,109,111-112,116-121
+  s_cfcb9569c37279::t_08c727b58074c8 68,70-73,75-76
+README.md
+  s_cfcb9569c37279::t_957d80f8fbded2 39
+  s_cfcb9569c37279::t_8a31b8e5881cd2 553-556
+CHANGELOG.md
+  s_cfcb9569c37279::t_82ce60067b7de9 14
+app/web/templates/privacy.html
+  s_cfcb9569c37279::t_7654c1d60fc515 187-188
+  s_cfcb9569c37279::t_5e5c3c16051d81 1-186,189-277
+app/web/templates/terms.html
+  s_cfcb9569c37279::t_6cd804d212de5d 1-67,69-139
+  s_cfcb9569c37279::t_9862794588d7c4 68
+app/web/templates/settings.html
+  s_cfcb9569c37279::t_f89a8aa64c05c5 49,51-68,70-76,80-82,85
+  s_cfcb9569c37279::t_83376c933a1609 5,8-11
+  s_cfcb9569c37279::t_7106aab64429bb 97,152,173,181,217,220,227-229
+  s_cfcb9569c37279::t_ac3cea6b0e5196 28,30
+.env.example
+  s_cfcb9569c37279::t_82ce60067b7de9 170-171
+docs/DEMO.md
+  s_cfcb9569c37279::t_cfc5ef3d0ccffa 65,67-72
+  s_cfcb9569c37279::t_7d6b34e7781132 180-185,187-189
+app/web/routes.py
+  s_cfcb9569c37279::t_63b0455742f7ec 104-108,110-111,296-297
+  s_cfcb9569c37279::t_01ae5a413f8ab1 272-276,280-295
+  s_cfcb9569c37279::t_70c5bb83bfa6af 982-994,999-1013,1015,1019
+  s_cfcb9569c37279::t_aaf96bce6e7c47 1243-1244
+tests/test_web_pages.py
+  s_cfcb9569c37279::t_eb995f79d091fd 922-950
+  s_cfcb9569c37279::t_f85469f7e431b4 412,418-452
+  s_cfcb9569c37279::t_4e784de22b8c8b 100-155
+  s_cfcb9569c37279::t_3b30134ef09778 76
+app/saas/marketing.py
+  s_cfcb9569c37279::t_cdb7cfe509a49d 3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "31de916e634a37aa2c13db6bb341272170afc3be",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:368f59f43fbf25a83385a9a1704c59c1a2534df205d789f2d05a21744886eb4a",
+      "total_additions": 1227,
+      "total_deletions": 306,
+      "accepted_lines": 8069,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_cfcb9569c37279": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "781c2b59-baa0-4334-9100-4e9ce88b3567",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:368f59f43fbf25a83385a9a1704c59c1a2534df205d789f2d05a21744886eb4a",
+      "stats": {
+        "total_additions": 1227,
+        "total_deletions": 306,
+        "accepted_lines": 8069,
+        "overriden_lines": 0,
+        "files": {
+          ".env.example": {
+            "total_additions": 2,
+            "total_deletions": 1,
+            "accepted_lines": 219,
+            "overriden_lines": 0
+          },
+          "CHANGELOG.md": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 146,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 5,
+            "total_deletions": 4,
+            "accepted_lines": 5,
+            "overriden_lines": 0
+          },
+          "app/saas/licensing.py": {
+            "total_additions": 19,
+            "total_deletions": 18,
+            "accepted_lines": 204,
+            "overriden_lines": 0
+          },
+          "app/saas/marketing.py": {
+            "total_additions": 6,
+            "total_deletions": 5,
+            "accepted_lines": 50,
+            "overriden_lines": 0
+          },
+          "app/saas/oauth.py": {
+            "total_additions": 7,
+            "total_deletions": 3,
+            "accepted_lines": 227,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 62,
+            "total_deletions": 9,
+            "accepted_lines": 1273,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 260,
+            "total_deletions": 77,
+            "accepted_lines": 2401,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_app.html": {
+            "total_additions": 4,
+            "total_deletions": 1,
+            "accepted_lines": 60,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_public.html": {
+            "total_additions": 10,
+            "total_deletions": 3,
+            "accepted_lines": 10,
+            "overriden_lines": 0
+          },
+          "app/web/templates/contact_sales.html": {
+            "total_additions": 130,
+            "total_deletions": 74,
+            "accepted_lines": 130,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 13,
+            "total_deletions": 8,
+            "accepted_lines": 13,
+            "overriden_lines": 0
+          },
+          "app/web/templates/privacy.html": {
+            "total_additions": 280,
+            "total_deletions": 3,
+            "accepted_lines": 277,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 46,
+            "total_deletions": 51,
+            "accepted_lines": 244,
+            "overriden_lines": 0
+          },
+          "app/web/templates/terms.html": {
+            "total_additions": 140,
+            "total_deletions": 1,
+            "accepted_lines": 139,
+            "overriden_lines": 0
+          },
+          "docs/COMMERCIAL.md": {
+            "total_additions": 27,
+            "total_deletions": 14,
+            "accepted_lines": 250,
+            "overriden_lines": 0
+          },
+          "docs/DEMO.md": {
+            "total_additions": 17,
+            "total_deletions": 13,
+            "accepted_lines": 285,
+            "overriden_lines": 0
+          },
+          "docs/OAUTH_SETUP.md": {
+            "total_additions": 26,
+            "total_deletions": 10,
+            "accepted_lines": 26,
+            "overriden_lines": 0
+          },
+          "docs/TECHNICAL_REFERENCE.md": {
+            "total_additions": 5,
+            "total_deletions": 2,
+            "accepted_lines": 664,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_mailbox.py": {
+            "total_additions": 13,
+            "total_deletions": 1,
+            "accepted_lines": 276,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_marketing.py": {
+            "total_additions": 32,
+            "total_deletions": 3,
+            "accepted_lines": 189,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 122,
+            "total_deletions": 4,
+            "accepted_lines": 981,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
