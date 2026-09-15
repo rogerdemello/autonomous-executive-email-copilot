@@ -67,6 +67,17 @@ class BackgroundSyncWorker:
         # attempt — without this, a lapsed plan or flaky provider would be
         # retried every poll, since a failed sync never advances last_synced_at.
         self._retry_after: dict[str, datetime] = {}
+        # Proof of life. Every pass used to be logged and dropped, so a worker
+        # that had died was invisible: /health/ready still returned 200 and the
+        # only symptom was a queue that stopped filling — which is exactly what
+        # a quiet mailbox looks like. Kept in memory on purpose; this answers
+        # "is *this* process still sweeping", which does not survive a restart
+        # and should not pretend to.
+        self.started_at: datetime | None = None
+        self.last_pass_at: datetime | None = None
+        self.last_pass: dict | None = None
+        self.passes = 0
+        self.recent: list[dict] = []
 
     # -- cadence --------------------------------------------------------------
     def _jitter(self, connection_id: str) -> float:
@@ -137,7 +148,52 @@ class BackgroundSyncWorker:
         # up. That is the product silently not doing the one thing it was
         # explicitly told to do, so it belongs in the sweep.
         summary.update(self._retry_failed_sends(service))
+        self._record_pass(summary, now)
         return summary
+
+    # -- heartbeat ------------------------------------------------------------
+    # Ten passes is a few hours of history at the production cadence — enough to
+    # see a pattern, small enough to never need trimming logic anyone thinks about.
+    _RECENT_LIMIT = 10
+
+    def _record_pass(self, summary: dict, now: datetime) -> None:
+        self.passes += 1
+        self.last_pass_at = now
+        self.last_pass = dict(summary)
+        self.recent.append({"at": now.isoformat(), **summary})
+        del self.recent[: -self._RECENT_LIMIT]
+
+    def stale_after_seconds(self) -> float:
+        """How long without a pass before the worker is presumed dead.
+
+        Three polls: one missed poll is a slow sync holding the thread, three in
+        a row is not.
+        """
+        return self.poll_seconds * 3
+
+    def heartbeat(self, now: datetime | None = None) -> dict:
+        """What this worker has been doing — read by the operator view."""
+        now = now or datetime.now(timezone.utc)
+        age = None if self.last_pass_at is None else (now - self.last_pass_at).total_seconds()
+        # Before the first pass completes, measure staleness from startup —
+        # otherwise a worker that died during its very first sweep looks fine
+        # forever, which is the one case where nobody is watching yet.
+        reference = self.last_pass_at or self.started_at
+        stale = (
+            reference is not None and (now - reference).total_seconds() > self.stale_after_seconds()
+        )
+        return {
+            "running": self._task is not None and not self._task.done(),
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "last_pass_at": self.last_pass_at.isoformat() if self.last_pass_at else None,
+            "seconds_since_last_pass": age,
+            "passes": self.passes,
+            "stale": stale,
+            "interval_seconds": self.interval_seconds,
+            "poll_seconds": self.poll_seconds,
+            "last_pass": self.last_pass,
+            "recent": list(self.recent),
+        }
 
     def _retry_failed_sends(self, service) -> dict:
         from .repository import ProposedActionRepository
@@ -177,6 +233,14 @@ class BackgroundSyncWorker:
                     )
             except Exception:
                 logger.exception("Background sync pass crashed; retrying next poll")
+                # Still a heartbeat: the loop *is* turning. Staleness means
+                # "nothing is sweeping"; a pass that runs and throws is a
+                # different fault, and conflating them would hide whichever
+                # one happened second.
+                self._record_pass(
+                    {"crashed": True, "checked": 0, "synced": 0, "errors": 1},
+                    datetime.now(timezone.utc),
+                )
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self.poll_seconds)
             except asyncio.TimeoutError:  # noqa: UP041 - on 3.10 this is NOT builtins TimeoutError
@@ -185,6 +249,7 @@ class BackgroundSyncWorker:
 
     def start(self) -> asyncio.Task:
         self._stop.clear()
+        self.started_at = datetime.now(timezone.utc)
         self._task = asyncio.get_running_loop().create_task(
             self.run_forever(), name="background-inbox-sync"
         )

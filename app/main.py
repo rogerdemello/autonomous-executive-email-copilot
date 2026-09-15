@@ -165,6 +165,10 @@ async def lifespan(_app: FastAPI):
 
         sync_worker = BackgroundSyncWorker()
         sync_worker.start()
+    # Published so readiness and the operator view can ask the worker how it is
+    # doing. Set unconditionally: "the worker is off" and "the worker is dead"
+    # are different answers, and both are better than no answer.
+    _app.state.sync_worker = sync_worker
     yield
     if sync_worker is not None:
         await sync_worker.stop()
@@ -419,8 +423,16 @@ def liveness() -> dict[str, str]:
 
 
 @app.get("/health/ready")
-def readiness() -> Response:
-    """Readiness: the schema is migrated and the database is reachable."""
+def readiness(request: Request) -> Response:
+    """Readiness: the schema is migrated and the database is reachable.
+
+    The background worker's state is *reported* here but deliberately does not
+    fail the probe. A dead worker means the approval queue stops filling on its
+    own — bad, and worth alerting on — but the web tier is still serving pages,
+    approvals and sends perfectly well. Returning 503 would make an orchestrator
+    pull a working instance out of rotation and, on a single-instance
+    deployment, take the whole product down to fix a background job.
+    """
     if not schema_is_current():
         # The startup migration failed or the DB is behind the code. Serving
         # traffic against an unmigrated schema produces confusing column errors
@@ -433,7 +445,21 @@ def readiness() -> Response:
     except Exception as exc:  # noqa: BLE001 - report not-ready rather than 500
         logger.warning("Readiness probe failed: %s", exc)
         return JSONResponse(status_code=503, content={"status": "not_ready"})
-    return JSONResponse(status_code=200, content={"status": "ready"})
+    return JSONResponse(
+        status_code=200, content={"status": "ready", "worker": worker_status(request)}
+    )
+
+
+def worker_status(request: Request) -> dict:
+    """The background sync worker's heartbeat, in a shape a probe can read."""
+    worker = getattr(request.app.state, "sync_worker", None)
+    if worker is None:
+        return {"enabled": False}
+    try:
+        return {"enabled": True, **worker.heartbeat()}
+    except Exception:  # noqa: BLE001 - a health probe never fails on its own reporting
+        logger.warning("Could not read the sync worker heartbeat", exc_info=True)
+        return {"enabled": True, "unknown": True}
 
 
 @app.get("/tasks", response_model=TasksResponse)
