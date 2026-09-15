@@ -1,0 +1,87 @@
+app/web/routes.py
+  s_c5f09332e20c5a::t_bda6d498116799 875-882
+app/web/templates/inbox.html
+  s_c5f09332e20c5a::t_250f2969fe50d3 116-129,131-135,139
+  s_c5f09332e20c5a::t_7001e52b13ec34 4-11
+app/web/templates/base.html
+  s_c5f09332e20c5a::t_99271881a4c784 49
+app/saas/mailbox_routes.py
+  s_c5f09332e20c5a::t_a0905d401c510f 12
+  s_c5f09332e20c5a::t_21020a7976d602 78-95,97-102,104-107,110-111,113-114
+  s_c5f09332e20c5a::t_dd9afd3143de1b 60
+tests/test_first_sync.py
+  s_c5f09332e20c5a::t_78dec3ef43b980 94-103,105-109,114-119
+  s_c5f09332e20c5a::t_de2cbaab06a7f6 104,110-113
+  s_c5f09332e20c5a::t_7512bc94aa77af 214
+  s_c5f09332e20c5a::t_99ef230e1e6023 1-93,120-213,215-234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "3730f13da4053b08844d8f6ace5d465f2908d3df",
+  "branch": "main",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:ec9fb99bb8cd4e3c4019ee56f2ea131b0dbc997f8dc7cc935f394fe27119bd76",
+      "total_additions": 333,
+      "total_deletions": 41,
+      "accepted_lines": 2412,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:ec9fb99bb8cd4e3c4019ee56f2ea131b0dbc997f8dc7cc935f394fe27119bd76",
+      "stats": {
+        "total_additions": 333,
+        "total_deletions": 41,
+        "accepted_lines": 2412,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/mailbox_routes.py": {
+            "total_additions": 34,
+            "total_deletions": 16,
+            "accepted_lines": 149,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 8,
+            "total_deletions": 0,
+            "accepted_lines": 1592,
+            "overriden_lines": 0
+          },
+          "app/web/templates/base.html": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 55,
+            "overriden_lines": 0
+          },
+          "app/web/templates/inbox.html": {
+            "total_additions": 28,
+            "total_deletions": 3,
+            "accepted_lines": 382,
+            "overriden_lines": 0
+          },
+          "tests/test_first_sync.py": {
+            "total_additions": 262,
+            "total_deletions": 22,
+            "accepted_lines": 234,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
