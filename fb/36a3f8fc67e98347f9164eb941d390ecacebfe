@@ -1,0 +1,78 @@
+app/saas/oauth.py
+  s_c5f09332e20c5a::t_1959f8d2b6a50c 21
+  s_c5f09332e20c5a::t_e19cf966467ad2 91-129
+tests/test_first_sync.py
+  s_c5f09332e20c5a::t_cd935a5ad59177 285
+  s_c5f09332e20c5a::t_37433b9ce92562 235-284,286-316
+app/saas/mailbox_routes.py
+  s_c5f09332e20c5a::t_926ed8fa95f67c 15-16
+  s_c5f09332e20c5a::t_3f8d24bf755498 67-74
+  s_c5f09332e20c5a::t_d55b04dce28837 143-160
+app/web/templates/admin_consent.html
+  s_c5f09332e20c5a::t_f483af79e7b3bc 1-21,25-26,28-60
+  s_c5f09332e20c5a::t_da2ff59a69bd5f 22-24,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "fb36a3f8fc67e98347f9164eb941d390ecacebfe",
+  "branch": "main",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:559886087e2b6713e555ce55637b171f61428a9b202da8149e21f1b838046536",
+      "total_additions": 222,
+      "total_deletions": 13,
+      "accepted_lines": 585,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:559886087e2b6713e555ce55637b171f61428a9b202da8149e21f1b838046536",
+      "stats": {
+        "total_additions": 222,
+        "total_deletions": 13,
+        "accepted_lines": 585,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/mailbox_routes.py": {
+            "total_additions": 28,
+            "total_deletions": 0,
+            "accepted_lines": 177,
+            "overriden_lines": 0
+          },
+          "app/saas/oauth.py": {
+            "total_additions": 40,
+            "total_deletions": 1,
+            "accepted_lines": 266,
+            "overriden_lines": 0
+          },
+          "app/web/templates/admin_consent.html": {
+            "total_additions": 69,
+            "total_deletions": 9,
+            "accepted_lines": 60,
+            "overriden_lines": 0
+          },
+          "tests/test_first_sync.py": {
+            "total_additions": 85,
+            "total_deletions": 3,
+            "accepted_lines": 82,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
