@@ -1,0 +1,83 @@
+app/copilot/providers/gmail.py
+  s_c5f09332e20c5a::t_5b493ec9a945d1 90-95,97-124
+  s_c5f09332e20c5a::t_070405b800d7ff 18
+app/copilot/providers/html_text.py
+  s_c5f09332e20c5a::t_d422a6b2c03d7a 223-227
+  s_c5f09332e20c5a::t_65499fec32c26c 3-5,12-15,19-31,69-73,93-95,100-109,112-117,122-142,147-153,169-171,193-197,200-202,204-215,222,228-232,236-238,240-241
+  s_c5f09332e20c5a::t_448650e9d3173a 154,159-168
+  s_c5f09332e20c5a::t_8bde283adf8df9 75-92,97
+  s_c5f09332e20c5a::t_87f7aa749e1190 32-68,242-245
+  s_c5f09332e20c5a::t_f6fbf8c88b458a 96
+  s_c5f09332e20c5a::t_3d89c6e24fe29b 110,118-121,143-146
+  s_c5f09332e20c5a::t_fab61163032ac3 155-158
+  s_c5f09332e20c5a::t_47fcc9d7655812 217-221
+  s_c5f09332e20c5a::t_d2c74312f9917a 172-191
+app/copilot/providers/graph.py
+  s_c5f09332e20c5a::t_70a666482ea340 16,69,74-95
+tests/test_html_email_bodies.py
+  s_c5f09332e20c5a::t_4cffa46a411565 1-245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "7d7d6327c1175285e3602ef383daf6f7c56ea1cb",
+  "branch": "main",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:2fed83a6669db77d5251bf9f732c8d96644af5cd8fc25f17bb51a95ae2f9555f",
+      "total_additions": 559,
+      "total_deletions": 22,
+      "accepted_lines": 836,
+      "overriden_lines": 10
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:2fed83a6669db77d5251bf9f732c8d96644af5cd8fc25f17bb51a95ae2f9555f",
+      "stats": {
+        "total_additions": 559,
+        "total_deletions": 22,
+        "accepted_lines": 836,
+        "overriden_lines": 10,
+        "files": {
+          "app/copilot/providers/gmail.py": {
+            "total_additions": 35,
+            "total_deletions": 9,
+            "accepted_lines": 259,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/graph.py": {
+            "total_additions": 24,
+            "total_deletions": 2,
+            "accepted_lines": 125,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/html_text.py": {
+            "total_additions": 255,
+            "total_deletions": 11,
+            "accepted_lines": 207,
+            "overriden_lines": 10
+          },
+          "tests/test_html_email_bodies.py": {
+            "total_additions": 245,
+            "total_deletions": 0,
+            "accepted_lines": 245,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
