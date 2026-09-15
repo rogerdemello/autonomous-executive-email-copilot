@@ -330,9 +330,7 @@ class TestConnectPageCopy:
 
         assert "read-only" not in html.lower()
 
-    def test_a_configured_provider_describes_what_it_will_actually_do(
-        self, signed_in, monkeypatch
-    ):
+    def test_a_configured_provider_describes_what_it_will_actually_do(self, signed_in, monkeypatch):
         """The copy that matters only renders once a provider is switched on,
         which is the state a real customer sees and the tests never were."""
         client, _ = signed_in
