@@ -250,6 +250,7 @@ app.include_router(dashboard_router)
 from .saas.mailbox_routes import mailbox_router  # noqa: E402
 from .saas.marketing import marketing_router  # noqa: E402
 from .saas.operator_routes import operator_router  # noqa: E402
+from .saas.operator_views import operator_view_router  # noqa: E402
 from .saas.processing_routes import inbox_router  # noqa: E402
 from .saas.routes import (  # noqa: E402
     SAAS_SELF_AUTH_PREFIXES,
@@ -265,6 +266,9 @@ app.include_router(mailbox_router)
 app.include_router(inbox_router)
 app.include_router(marketing_router)
 app.include_router(operator_router)
+# After the JSON routes: both mount under /operator, and the specific paths
+# (/operator/orgs, /operator/leads) must win over the view router's /operator.
+app.include_router(operator_view_router)
 
 from .web.routes import (  # noqa: E402
     _LoginRedirect,

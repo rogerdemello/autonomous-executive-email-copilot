@@ -516,6 +516,44 @@ h3 {
   background: var(--crit);
 }
 
+/* --- Operator health page ------------------------------------------------ */
+.op__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 32px 0 20px;
+}
+
+.op__head h1 {
+  margin: 0;
+}
+
+/* auto-fit rather than a fixed count: four tiles on a laptop, one on a phone,
+   with no breakpoint to keep in sync with the number of tiles. */
+.op__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.op__grid .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.op__grid .stat .chip {
+  margin-top: 6px;
+}
+
+.inline-form {
+  display: inline;
+}
+
 .chip--defer,
 .chip--warn,
 .chip--medium,
