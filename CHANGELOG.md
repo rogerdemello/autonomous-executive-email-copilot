@@ -22,9 +22,12 @@ that can be left running unattended.
   up?" and nothing stopping one large mailbox from running up a bill.
   `saas_llm_usage` bills every call to the org that caused it, and
   `LLM_MONTHLY_BUDGET_USD` (default 25 per org per calendar month; `0` for no
-  ceiling) caps it. At the cap, drafts fall back to rule-based prose — triage,
-  verification, commitment tracking and sending are unaffected. Surfaced in
-  Settings.
+  ceiling) caps it. It covers **both** paid calls a held action makes — writing
+  the draft and verifying it; billing only the first would have left about half
+  this feature's spend outside the ledger. At the cap, drafts fall back to
+  rule-based prose and verification to its deterministic checks, which is
+  exactly where a deployment with no API key already lives; triage, commitment
+  tracking and sending are unaffected. Surfaced in Settings.
 - **A broken mailbox is impossible to miss.** A revoked token flipped the
   connection to `error` and showed only as a chip on `/app/connect`, a page
   nobody opens twice. Everywhere else the inbox quietly stopped filling, which

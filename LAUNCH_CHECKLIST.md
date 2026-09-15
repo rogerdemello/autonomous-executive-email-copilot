@@ -44,8 +44,15 @@ Two settings worth a second look before you deploy:
 
 | | |
 |---|---|
-| `LLM_MONTHLY_BUDGET_USD` | Defaults to 25 per workspace per calendar month. This is the only thing between one large mailbox and an unbounded OpenAI bill. Reaching it degrades drafts to rule-based prose; triage, verification and sending keep working. `0` removes the ceiling — don't, until the bill is a line item somebody watches. |
+| `LLM_MONTHLY_BUDGET_USD` | Defaults to 25 per workspace per calendar month. This is the only thing between one large mailbox and an unbounded OpenAI bill. It covers **both** paid calls a held action makes — writing the draft and verifying it. Reaching it degrades drafts to rule-based prose and verification to its deterministic checks; triage and sending keep working. `0` removes the ceiling — don't, until the bill is a line item somebody watches. |
 | `SYNC_WORKER_INTERVAL_SECONDS` | 900 (15 min). Lower means fresher queues and more provider API calls. |
+
+**A second, separate source of model spend:** if you set `OPENAI_API_KEY` as a
+**GitHub repository secret**, the nightly `Draft quality` workflow runs an
+LLM judge over the 11 committed demo drafts. That is your CI spending your key,
+not a customer's workspace, so `LLM_MONTHLY_BUDGET_USD` does not govern it — it
+is a few cents a night, and the workflow skips the judge entirely when no key is
+configured. Mentioned only so it is not a surprise line on the invoice.
 
 ## 3. SMTP credentials
 
