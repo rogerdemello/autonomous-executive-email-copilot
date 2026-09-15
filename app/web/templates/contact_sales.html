@@ -63,7 +63,19 @@
   <div class="lead-page__form card">
     <div class="card__head"><span class="card__title">Send us a note</span></div>
     <div class="card__body">
-      {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+      {# tabindex + autofocus, not just role="alert": this is a full page
+       reload after a failed POST, so the banner is present at load rather than
+       injected, and a live region that never changes is never announced.
+       Focusing it puts the reason for the failure first. #}
+    {% if error %}
+      <div
+        class="banner banner--error"
+        role="alert"
+        id="form-error"
+        tabindex="-1"
+        autofocus
+      >{{ error }}</div>
+    {% endif %}
 
       {% if submitted %}
         <div class="banner banner--ok" role="status">

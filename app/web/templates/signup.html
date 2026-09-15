@@ -11,7 +11,19 @@
       You'll be the owner of a new organization, with a trial license activated immediately.
     </p>
 
-    {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+    {# tabindex + autofocus, not just role="alert": this is a full page
+       reload after a failed POST, so the banner is present at load rather than
+       injected, and a live region that never changes is never announced.
+       Focusing it puts the reason for the failure first. #}
+    {% if error %}
+      <div
+        class="banner banner--error"
+        role="alert"
+        id="form-error"
+        tabindex="-1"
+        autofocus
+      >{{ error }}</div>
+    {% endif %}
 
     {% if not signup_enabled %}
       <div class="banner">
@@ -31,6 +43,7 @@
             required
             value="{{ form.org_name or '' }}"
             placeholder="Northwind Industries"
+          {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}
           />
         </div>
 
@@ -43,6 +56,7 @@
             autocomplete="name"
             required
             value="{{ form.full_name or '' }}"
+          {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}
           />
         </div>
 
@@ -55,6 +69,7 @@
             autocomplete="username"
             required
             value="{{ form.email or '' }}"
+          {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}
           />
         </div>
 
@@ -67,6 +82,7 @@
             autocomplete="new-password"
             minlength="8"
             required
+          {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}
           />
           <span class="hint">At least 8 characters.</span>
         </div>

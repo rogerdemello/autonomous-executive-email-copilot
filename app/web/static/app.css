@@ -337,6 +337,24 @@ h3 {
   }
 }
 
+/* Below ~380px the header's gaps alone were wider than the space left after
+   the logo, the theme toggle, "Start free" and the menu — 16px of horizontal
+   page scroll on every public page, including the two legal ones. Tightening
+   the gaps recovers more than that and keeps the header on one line. */
+@media (max-width: 380px) {
+  .top {
+    gap: 10px;
+  }
+  .top nav {
+    gap: 10px;
+  }
+  .logo {
+    gap: 8px;
+    font-size: 1.05rem;
+    min-width: 0;
+  }
+}
+
 .theme-toggle {
   background: none;
   border: 1px solid var(--line);
@@ -534,7 +552,7 @@ h3 {
    with no breakpoint to keep in sync with the number of tiles. */
 .op__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -729,13 +747,29 @@ section {
 
 .scores {
   display: grid;
-  grid-template-columns: 1.1fr 1.4fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
   gap: 40px;
   align-items: center;
 }
 
+/* minmax(0, …) rather than plain fr for the same reason .table-wrap needs
+   min-width: 0 — an `fr` track floors at min-content unless told otherwise. */
+@media (max-width: 760px) {
+  .scores {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* `overflow-x: auto` alone does NOT make a grid or flex child shrink: its
+   automatic minimum size is its content's min-content width, so a wide table
+   pushes its container past the viewport and the *page* scrolls sideways
+   instead of the table. `min-width: 0` is the opt-out, and every scroll
+   container in this stylesheet needs it. */
 .table-wrap {
   overflow-x: auto;
+  min-width: 0;
+  position: relative;
 }
 
 table.bench {
@@ -783,7 +817,9 @@ table.bench th.num-head {
   line-height: 1.6;
 }
 
-table.bench td.task {
+/* The task name is a <th scope="row">, not a <td> — it labels its row rather
+   than being data. Selector is class-only so it matches either. */
+table.bench .task {
   font-weight: 600;
 }
 
@@ -1181,7 +1217,7 @@ table.bench td.task {
 /* ========================================================================== */
 .shell {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 232px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -1356,17 +1392,26 @@ table.bench td.task {
 }
 
 @media (max-width: 860px) {
+  /* minmax(0, 1fr), not 1fr: an `fr` track's minimum is min-content, so the
+     stacked sidebar's widest row still set the column width and the entire
+     signed-in app rendered 620px wide inside a 320px viewport. */
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .side {
     border-right: 0;
     border-bottom: 1px solid var(--line);
+    min-width: 0;
   }
   .side nav {
     grid-auto-flow: column;
     grid-auto-columns: max-content;
     overflow-x: auto;
+    /* Without this the nav's max-content width (five items in a row, ~620px)
+       became the grid column's minimum, so .shell — and therefore every
+       signed-in page — was 620px wide inside a 320px viewport. The nav was
+       never the thing that scrolled; the whole app was. */
+    min-width: 0;
   }
   .side__foot {
     margin-top: 0;
@@ -1929,7 +1974,7 @@ textarea.draft {
 /* ========================================================================== */
 .providers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
   gap: 16px;
   margin-top: 8px;
 }
@@ -1971,6 +2016,14 @@ textarea.draft {
 /* ========================================================================== */
 .table-scroll {
   overflow-x: auto;
+  min-width: 0;
+  /* `position: relative` is load-bearing, not cosmetic. An absolutely
+     positioned descendant is only clipped by an ancestor that is in its
+     containing-block chain, so a `.visually-hidden` table caption or column
+     label — position: absolute — escaped this scroll container entirely and
+     widened the whole document. Making the container a containing block is
+     the fix, and it is what a scroll container should have been all along. */
+  position: relative;
 }
 
 table.data {
@@ -2028,7 +2081,7 @@ table.data td.when {
 
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -2197,6 +2250,17 @@ table.data td.when {
   mask-image: linear-gradient(to bottom, #000 45%, transparent 95%);
   opacity: 0.5;
   pointer-events: none;
+}
+
+/* The -6vw bleed is deliberate on a wide screen — the texture should run past
+   the 92vw content column. On a narrow one there is no margin left to bleed
+   into: 6vw exceeds the 4vw gutter, so the dot grid pushed 6px of horizontal
+   scroll onto the landing page. Clamped rather than clipped with
+   `overflow: hidden`, which would also hide any *real* overflow added later. */
+@media (max-width: 760px) {
+  .hero-v3::before {
+    inset: -60px 0 auto;
+  }
 }
 
 .hero-v3__copy > * {
