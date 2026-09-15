@@ -1,0 +1,78 @@
+app/llm/verifier.py
+  s_c5f09332e20c5a::t_8924b5303fc027 247-253
+  s_c5f09332e20c5a::t_2903081ba3f615 234-239
+  s_c5f09332e20c5a::t_94fbd5746014a1 71-78,202-213,217,240-241,244-246,284-290,343
+  s_c5f09332e20c5a::t_a82eed8047abe3 302,309-315,337-342,344-352
+tests/test_llm_budget.py
+  s_c5f09332e20c5a::t_632d7ca10557dc 427-429,431
+  s_c5f09332e20c5a::t_bc4c80b28f0ef3 332-426,430,432-433
+tests/test_saas_marketing.py
+  s_c5f09332e20c5a::t_dba396b2b7cf3a 30-33,37-44
+  s_c5f09332e20c5a::t_bf9a0d5c5ba9bb 19-29,34-36,45-46,243,263
+app/saas/sync_service.py
+  s_c5f09332e20c5a::t_1e98df2416b503 420,422-433
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "0e905559db51c368732c122e3f92df9f65357d95",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0daf349fad49c7fdbb795ae35ef0bea9ab11a6d39dc7d386bd3c5569f412ddd2",
+      "total_additions": 221,
+      "total_deletions": 19,
+      "accepted_lines": 1545,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0daf349fad49c7fdbb795ae35ef0bea9ab11a6d39dc7d386bd3c5569f412ddd2",
+      "stats": {
+        "total_additions": 221,
+        "total_deletions": 19,
+        "accepted_lines": 1545,
+        "overriden_lines": 0,
+        "files": {
+          "app/llm/verifier.py": {
+            "total_additions": 74,
+            "total_deletions": 15,
+            "accepted_lines": 352,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 13,
+            "total_deletions": 0,
+            "accepted_lines": 816,
+            "overriden_lines": 0
+          },
+          "tests/test_llm_budget.py": {
+            "total_additions": 103,
+            "total_deletions": 1,
+            "accepted_lines": 102,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_marketing.py": {
+            "total_additions": 31,
+            "total_deletions": 3,
+            "accepted_lines": 275,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
