@@ -417,7 +417,20 @@ class InboxSyncService:
                         message=message,
                         action_type=prop.action_type,
                         live_llm=live_llm,
+                        budget=budget,
                     )
+                    # Verification is the second paid call a held action can
+                    # make. Billing only the draft would have left roughly half
+                    # this feature's spend outside the ledger and outside the
+                    # cap, which is the half you would notice on the invoice.
+                    if budget is not None and verdict.cost_usd:
+                        budget.record(
+                            cost_usd=verdict.cost_usd,
+                            model=verdict.model,
+                            purpose="verify",
+                            prompt_tokens=verdict.prompt_tokens,
+                            completion_tokens=verdict.completion_tokens,
+                        )
                     verification_status = verdict.status
                     verification_notes = verdict.notes
                     verification_claims = [f.to_dict() for f in verdict.findings]

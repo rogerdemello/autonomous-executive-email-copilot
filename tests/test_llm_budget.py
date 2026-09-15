@@ -329,6 +329,108 @@ def test_without_a_budget_nothing_changes(empty_cache, drafter_provider) -> None
     assert drafter_provider.calls == 1
 
 
+class TestVerificationIsMeteredToo:
+    """A held action makes *two* paid calls: one to write it, one to check it.
+
+    Billing only the draft would leave roughly half this feature's spend
+    outside the ledger and outside the cap — and it is the half you would
+    notice on the invoice rather than in the code.
+    """
+
+    def _stub_verifier(self, monkeypatch, tokens: int = 1000):
+        calls = []
+
+        class _VerifyProvider(LLMProvider):
+            provider_name = "verify-stub"
+
+            def generate(self, messages, **kwargs):  # type: ignore[override]
+                calls.append(messages)
+                return LLMResponse(
+                    content=json.dumps({"unsupported": ["a 3pm call was never proposed"]}),
+                    usage=TokenUsage(prompt_tokens=tokens, completion_tokens=tokens),
+                    model="gpt-4o-mini",
+                )
+
+        monkeypatch.setattr(
+            "app.llm.providers.auto_detect_provider", lambda: _VerifyProvider(), raising=True
+        )
+        return calls
+
+    def test_a_model_verification_is_billed_to_the_org(self, monkeypatch) -> None:
+        from app.llm.verifier import verify_draft
+
+        org = _org("Verified Co")
+        budget = LlmBudget(org, limit_usd=100.0)
+        self._stub_verifier(monkeypatch)
+
+        verdict = verify_draft(
+            "Confirmed, let's speak at 3pm.",
+            message=_message(),
+            action_type="reply",
+            live_llm=True,
+            budget=budget,
+        )
+
+        assert verdict.cost_usd > 0
+        assert verdict.prompt_tokens == 1000
+        assert budget.allows()  # still inside a generous cap
+
+    def test_at_budget_verification_falls_back_to_the_deterministic_checks(
+        self, monkeypatch
+    ) -> None:
+        """Claims are still checked against the source — just not by a model."""
+        from app.llm.verifier import verify_draft
+
+        org = _org("Capped Verify Co")
+        LlmUsageRepository().record(org_id=org, cost_usd=25.0)
+        calls = self._stub_verifier(monkeypatch)
+
+        verdict = verify_draft(
+            "Confirmed, let's speak at 3pm.",
+            message=_message(),
+            action_type="reply",
+            live_llm=True,
+            budget=LlmBudget(org, limit_usd=25.0),
+        )
+
+        assert calls == []
+        assert verdict.cost_usd == 0.0
+        assert verdict.status in ("verified", "flagged")  # a verdict was still reached
+
+    def test_a_model_that_answers_uselessly_is_still_billed(self, monkeypatch) -> None:
+        """Spend that only lands in the ledger when the answer parses is spend
+        that hides — and the provider charges either way."""
+        from app.llm.verifier import verify_draft
+
+        class _Rambling(LLMProvider):
+            provider_name = "rambling"
+
+            def generate(self, messages, **kwargs):  # type: ignore[override]
+                return LLMResponse(
+                    content="Sure! Here are my thoughts, in prose, as requested...",
+                    usage=TokenUsage(prompt_tokens=900, completion_tokens=900),
+                    model="gpt-4o-mini",
+                )
+
+        monkeypatch.setattr(
+            "app.llm.providers.auto_detect_provider", lambda: _Rambling(), raising=True
+        )
+
+        verdict = verify_draft(
+            "Confirmed, let's speak at 3pm.",
+            message=_message(),
+            action_type="reply",
+            live_llm=True,
+            budget=LlmBudget("org-x", limit_usd=100.0),
+        )
+
+        # The model contributed nothing (the deterministic checks still ran)
+        # and was charged for anyway.
+        assert not [f for f in verdict.findings if f.kind == "unsupported_claim"]
+        assert verdict.cost_usd > 0
+        assert verdict.prompt_tokens == 900
+
+
 def test_a_sync_cannot_overshoot_by_more_than_one_call(empty_cache, drafter_provider) -> None:
     """In-memory metering is what stops 60 messages blowing a budget of one."""
     org = _org("Runaway Co")
