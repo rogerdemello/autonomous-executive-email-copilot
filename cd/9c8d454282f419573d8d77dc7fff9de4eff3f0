@@ -1,0 +1,100 @@
+app/web/templates/operator.html
+  s_c5f09332e20c5a::t_2f83c15dadb2fd 1-225
+tests/test_operator_view.py
+  s_c5f09332e20c5a::t_ef3f34be164d9b 1-224
+app/web/templates/operator_login.html
+  s_c5f09332e20c5a::t_3e181d49f3f209 2-3,13,19,37
+  s_c5f09332e20c5a::t_065222dd32af04 1,4-12,14-18,20-36
+app/web/templates/_operator.html
+  s_c5f09332e20c5a::t_5eead4fb497c00 1-7,9-30
+  s_c5f09332e20c5a::t_38d1ac265b542d 8
+app/main.py
+  s_c5f09332e20c5a::t_21e4d094398d6a 253
+  s_c5f09332e20c5a::t_f91ef54fa1a3b1 269-271
+app/saas/operator_views.py
+  s_c5f09332e20c5a::t_550fe2fa4a541e 1-260
+app/web/static/app.css
+  s_c5f09332e20c5a::t_c7cb3f9d595653 519-556
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "cd9c8d454282f419573d8d77dc7fff9de4eff3f0",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:abfdb4c1c80b73ef4d4f2f86a1f173be5183510a4459596d0435fadc5522981b",
+      "total_additions": 852,
+      "total_deletions": 34,
+      "accepted_lines": 3513,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:abfdb4c1c80b73ef4d4f2f86a1f173be5183510a4459596d0435fadc5522981b",
+      "stats": {
+        "total_additions": 852,
+        "total_deletions": 34,
+        "accepted_lines": 3513,
+        "overriden_lines": 0,
+        "files": {
+          "app/main.py": {
+            "total_additions": 4,
+            "total_deletions": 0,
+            "accepted_lines": 4,
+            "overriden_lines": 0
+          },
+          "app/saas/operator_views.py": {
+            "total_additions": 260,
+            "total_deletions": 0,
+            "accepted_lines": 260,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 38,
+            "total_deletions": 0,
+            "accepted_lines": 2733,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_operator.html": {
+            "total_additions": 31,
+            "total_deletions": 1,
+            "accepted_lines": 30,
+            "overriden_lines": 0
+          },
+          "app/web/templates/operator.html": {
+            "total_additions": 226,
+            "total_deletions": 1,
+            "accepted_lines": 225,
+            "overriden_lines": 0
+          },
+          "app/web/templates/operator_login.html": {
+            "total_additions": 69,
+            "total_deletions": 32,
+            "accepted_lines": 37,
+            "overriden_lines": 0
+          },
+          "tests/test_operator_view.py": {
+            "total_additions": 224,
+            "total_deletions": 0,
+            "accepted_lines": 224,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
