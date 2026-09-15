@@ -1,0 +1,49 @@
+.github/workflows/release.yml
+  s_c5f09332e20c5a::t_ba67ee565b6b15 99-108,110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "19b069755bb40585b5c9f56a6a6c8fe22ed20890",
+  "branch": "main",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:10d500774fac16eb67cdfb928092f5b35de757eb1b4c4fc9a97c15433ac4aa4a",
+      "total_additions": 11,
+      "total_deletions": 2,
+      "accepted_lines": 128,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:10d500774fac16eb67cdfb928092f5b35de757eb1b4c4fc9a97c15433ac4aa4a",
+      "stats": {
+        "total_additions": 11,
+        "total_deletions": 2,
+        "accepted_lines": 128,
+        "overriden_lines": 0,
+        "files": {
+          ".github/workflows/release.yml": {
+            "total_additions": 11,
+            "total_deletions": 2,
+            "accepted_lines": 128,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
