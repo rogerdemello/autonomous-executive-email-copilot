@@ -38,6 +38,49 @@ python scripts/build_landing_metrics.py --check  # CI's landing-claims check
 
 ---
 
+## Onboarding a real client mailbox
+
+The Gmail and Microsoft 365 integrations are **built** — OAuth, encrypted
+tokens, refresh-on-401, fetch/reply/draft/label/archive, the connect UI, and
+background sync. What gates a real client is credentials and Google's queue,
+not code. See `LAUNCH_CHECKLIST.md` and `docs/OAUTH_SETUP.md`.
+
+- **The first sync never runs in the OAuth callback.** It is a
+  `BackgroundTasks` job. Inline, a real mailbox (100 messages × a sequential
+  Gmail fetch, plus two model calls per held action) took minutes inside an
+  HTTP redirect and timed out the proxy at the highest-trust moment in the
+  product. The demo path *is* still inline, and should stay that way.
+- If that background task dies, nothing needs to recover it: `last_synced_at`
+  is still `NULL` and `BackgroundSyncWorker.is_due()` treats a never-synced
+  connection as immediately due.
+- **`/app/inbox` has three empty states**, not two: no mailbox, *reading your
+  mailbox* (self-refreshing, the normal view for the first minutes of a real
+  account), and synced-but-empty.
+- **Admin consent is the expected first outcome on Microsoft**, not an error.
+  `Mail.ReadWrite`/`Mail.Send` need tenant-admin approval in most managed
+  directories, and Microsoft reports it as `access_denied` — the same code as
+  a user clicking Cancel. `oauth.needs_admin_consent()` tells them apart and
+  the callback renders the adminconsent URL to hand to their IT.
+
+### Growing to several mailboxes per client — the seam already exists
+
+Today every member of a workspace sees every connected mailbox's mail, which is
+correct for the current ICP (a solo exec, or an exec plus an assistant who is
+*meant* to see it). It is wrong the moment one client has several people each
+connecting their own inbox.
+
+That change is a `WHERE` clause, not a migration:
+
+- `ProcessedMessage` **already carries `connection_id`** (`models_db.py:240`,
+  part of the `uq_processed_message` constraint), as does `ProposedAction`.
+- The inbox reads through exactly one chokepoint,
+  `ProcessedMessageRepository.list_for_org` (`repository.py:679`); approvals
+  mirror it at `repository.py:833`. Both filter on `org_id` alone.
+
+So: add an access rule (who may see which connection) and a filter in those two
+methods. No speculative parameters have been added for it — don't add any until
+the feature is real.
+
 ## Things worth knowing before you change something
 
 - **`overflow-x: auto` does not make a grid or flex child shrink.** Its

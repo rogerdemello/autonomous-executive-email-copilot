@@ -314,3 +314,45 @@ class TestAdminConsent:
         assert not oauth.needs_admin_consent("access_denied", "AADSTS50011: redirect mismatch")
         assert not oauth.needs_admin_consent("server_error", None)
         assert not oauth.needs_admin_consent(None, None)
+
+
+# --------------------------------------------------------------------------- #
+# What the connect page promises
+# --------------------------------------------------------------------------- #
+class TestConnectPageCopy:
+    def test_it_does_not_claim_read_only_access(self, signed_in):
+        """It said "read-only access" while requesting gmail.modify, which
+        writes labels. Untrue to the customer, and the sort of claim that fails
+        an OAuth review for contradicting the scope list beside it."""
+        client, _ = signed_in
+
+        html = client.get("/app/connect").text
+
+        assert "read-only" not in html.lower()
+
+    def test_a_configured_provider_describes_what_it_will_actually_do(
+        self, signed_in, monkeypatch
+    ):
+        """The copy that matters only renders once a provider is switched on,
+        which is the state a real customer sees and the tests never were."""
+        client, _ = signed_in
+        monkeypatch.setenv("MICROSOFT_OAUTH_CLIENT_ID", "cid")
+        monkeypatch.setenv("MICROSOFT_OAUTH_CLIENT_SECRET", "secret")
+
+        html = client.get("/app/connect").text
+
+        assert "files what it handles with a label" in html
+        # Jinja escapes the apostrophe; assert on the part that has none.
+        assert "never sends anything you" in html
+        assert "read-only" not in html.lower()
+
+    def test_an_unavailable_provider_addresses_the_customer_not_the_operator(self, signed_in):
+        """On a self-serve signup the person reading this can never be the
+        person who would fix it."""
+        client, _ = signed_in
+
+        html = client.get("/app/connect").text
+
+        assert "An operator must set" not in html
+        assert "client id and secret" not in html
+        assert "isn't switched on for this workspace yet" in html

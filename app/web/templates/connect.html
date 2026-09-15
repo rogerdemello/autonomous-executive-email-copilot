@@ -89,9 +89,18 @@
       <div class="provider__name">{{ provider.name }}</div>
       {% if provider.configured %}
         <span class="chip chip--good">Ready</span>
+        {# Accurate, not reassuring-sounding. This said "read-only access"
+           while the app requests gmail.modify, which writes labels — untrue to
+           the customer, and the kind of claim that fails an OAuth review for
+           contradicting the scope list it is shown beside. #}
         <p>
-          Read-only access to your inbox plus the ability to send the replies you approve. You'll be
-          taken to {{ provider.name }} to grant consent.
+          The copilot reads your inbox, files what it handles with a label, and
+          prepares replies. <strong>It never sends anything you haven't
+          approved.</strong>
+        </p>
+        <p class="muted">
+          You'll be taken to {{ provider.name }} to grant access, and you can
+          disconnect here at any time. <a href="/privacy">What we do with it</a>.
         </p>
         <form method="post" action="/app/connect/{{ provider.key }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
@@ -100,13 +109,16 @@
           </button>
         </form>
       {% else %}
-        <span class="chip chip--neutral">Not configured</span>
+        <span class="chip chip--neutral">Not available yet</span>
+        {# Addressed to the customer looking at it, not to the operator who
+           would have to fix it — they are not the same person, and on a
+           self-serve signup they never will be. #}
         <p>
-          An operator must set this server's {{ provider.name }} OAuth client id and secret before
-          real mailboxes can be linked. The demo mailbox needs no setup.
+          {{ provider.name }} isn't switched on for this workspace yet. The demo
+          mailbox below works right now and needs no setup.
         </p>
         <button class="btn btn--block" type="button" disabled aria-disabled="true">
-          Unavailable on this server
+          Not available yet
         </button>
       {% endif %}
     </div>
