@@ -80,8 +80,17 @@ arrangement that avoids it. The only escape is not reading the mailbox, which
 is the product.
 
 Order: create the Google Cloud project → create the OAuth client → enable the
-Gmail API → add your first test users (Gmail allows 100 immediately, each
-seeing an "unverified app" warning) → submit for verification → book the lab.
+Gmail API → **set the consent screen's publishing status to "In production"** →
+connect your first users (100, each seeing an "unverified app" warning) →
+submit for verification → book the lab.
+
+**Do not leave the consent screen in "Testing" once real people are
+connecting.** In Testing, Google expires refresh tokens after **seven days** —
+so every client stops syncing weekly and has to reconnect by hand. Moving to
+"In production" while still unverified keeps the 100-user cap and the warning
+screen but removes that clock. The product degrades correctly either way (the
+mailbox flips to "needs reconnect", they get a banner and an email) — it is
+just not something you can ask a customer to live with every week.
 
 **Two things to settle before you submit:**
 
