@@ -473,3 +473,42 @@ class SalesLead(Base):
             "status": self.status,
             "created_at": self.created_at,
         }
+
+
+class LlmUsage(Base):
+    """One billable model call, attributed to the org that caused it.
+
+    Cost was already computed per call and handed to ``telemetry.metrics`` — an
+    in-process Prometheus counter that is not per-org and does not survive a
+    restart. On a single-instance deployment that means the honest answer to
+    "what did last week cost, and who ran it up?" was nobody knows. This table
+    is that answer, and it is what ``app.saas.llm_budget`` meters against.
+
+    Rows are append-only and small (one per drafted message, and drafts are
+    cached), so no retention policy is needed at the scale this product runs at.
+    """
+
+    __tablename__ = "saas_llm_usage"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    org_id = Column(String(32), nullable=False, index=True)
+    # ISO-8601 UTC, matching every other timestamp in this schema. Indexed
+    # because every query here is "this org, since the start of the month".
+    created_at = Column(String(50), nullable=False, default=_now_iso, index=True)
+    model = Column(String(128), nullable=True)
+    purpose = Column(String(32), nullable=False, default="draft")
+    prompt_tokens = Column(Integer, nullable=False, default=0)
+    completion_tokens = Column(Integer, nullable=False, default=0)
+    cost_usd = Column(Float, nullable=False, default=0.0)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "org_id": self.org_id,
+            "created_at": self.created_at,
+            "model": self.model,
+            "purpose": self.purpose,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "cost_usd": self.cost_usd,
+        }

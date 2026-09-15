@@ -65,6 +65,12 @@ class DraftResult:
     model: str = ""
     cost_usd: float = 0.0
     source: str = "llm"
+    # Carried out so the caller — which is the only layer that knows *which
+    # org* to bill — can write the spend ledger. The drafter stays org-unaware
+    # on purpose: it is a pure prose function, and giving it a tenant would
+    # make it one more place that could leak across one.
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
 
 @dataclass(frozen=True)
@@ -251,8 +257,11 @@ class EmailDrafter:
 
         cost = 0.0
         model = response.model or ""
+        prompt_tokens = completion_tokens = 0
         if response.usage:
             cost = calculate_cost(model, response.usage)
+            prompt_tokens = response.usage.prompt_tokens
+            completion_tokens = response.usage.completion_tokens
             try:
                 from telemetry.metrics import record_llm_usage
 
@@ -272,6 +281,8 @@ class EmailDrafter:
             confidence=_clamp_confidence(parsed.get("confidence")),
             model=model,
             cost_usd=cost,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
         )
 
 

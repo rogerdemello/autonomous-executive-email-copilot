@@ -89,10 +89,78 @@ def _make_refresher(connection: dict):
 
 
 def _mark_broken(connection: dict, reason: str) -> BrokenConnectionError:
-    """Flag the connection as errored and return the exception to raise."""
-    MailboxRepository().set_status(connection["org_id"], connection["id"], "error")
+    """Flag the connection as errored, tell somebody, and return the exception.
+
+    A revoked token is the failure mode that hurts most, because it looks like
+    nothing: the worker correctly stops retrying a broken connection, the queue
+    stops filling, and an inbox that has gone quiet is indistinguishable from a
+    quiet week. So the transition is announced — in the audit log, and by mail
+    to the people who can act on it.
+
+    ``set_status`` returns true only on a *change*, which is what keeps this to
+    one message: the worker re-derives this state on every sweep, and 96 mails
+    a day about the same dead token is how a notification becomes a filter rule.
+    """
+    changed = MailboxRepository().set_status(connection["org_id"], connection["id"], "error")
     logger.warning("Connection %s marked broken: %s", connection.get("id"), reason)
+    if changed:
+        _announce_broken(connection, reason)
     return BrokenConnectionError(reason)
+
+
+def _announce_broken(connection: dict, reason: str) -> None:
+    """Audit the breakage and email the org's admins. Never raises."""
+    org_id = connection["org_id"]
+    account = connection.get("account_email") or "a mailbox"
+    try:
+        from .repository import AuditRepository
+
+        AuditRepository().record(
+            action="mailbox.broken",
+            org_id=org_id,
+            target=connection.get("id"),
+            detail={
+                "provider": connection.get("provider"),
+                "account_email": account,
+                "reason": reason,
+            },
+        )
+    except Exception:  # noqa: BLE001 - the audit row is not worth a failed sync
+        logger.warning("Could not audit the broken connection for org %s", org_id, exc_info=True)
+
+    try:
+        _email_admins_about(org_id, account, reason)
+    except Exception:  # noqa: BLE001 - notification is best-effort
+        logger.warning("Could not notify org %s about a broken mailbox", org_id, exc_info=True)
+
+
+def _email_admins_about(org_id: str, account: str, reason: str) -> None:
+    from app.core.config import get_settings
+
+    from .email import send_email
+    from .models_db import ROLE_ADMIN
+    from .rbac import role_at_least
+    from .repository import UserRepository
+
+    recipients = [
+        user["email"]
+        for user in UserRepository().list_for_org(org_id)
+        if user.get("email") and role_at_least(user.get("role", ""), ROLE_ADMIN)
+    ]
+    if not recipients:
+        return
+
+    link = f"{get_settings().resolved_app_public_url}/app/connect"
+    body = (
+        f"{account} has stopped syncing and needs to be reconnected.\n\n"
+        f"{reason}\n\n"
+        "Until it is reconnected, no new mail from that account is being "
+        "triaged and no drafts are being prepared for it. Nothing already in "
+        "your queue has been lost.\n\n"
+        f"Reconnect it here: {link}\n"
+    )
+    for address in recipients:
+        send_email(address, f"Action needed: {account} stopped syncing", body)
 
 
 def build_provider(connection: dict) -> MailProvider:

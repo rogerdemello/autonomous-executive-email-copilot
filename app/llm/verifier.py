@@ -68,6 +68,14 @@ class Verdict:
     status: str
     notes: list[str] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
+    # What the model check cost, when one was made. Carried out rather than
+    # recorded here for the same reason the drafter carries its usage out: this
+    # module has no business knowing which tenant to bill, and giving it one
+    # would make it another place that could get it wrong.
+    cost_usd: float = 0.0
+    model: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
     @property
     def flagged(self) -> bool:
@@ -191,11 +199,22 @@ def _deterministic_findings(draft_body: str, verdict: dict, *, source_text: str)
     return findings
 
 
-def _model_findings(draft_body: str, message: FetchedMessage) -> list[Finding] | None:
+@dataclass(frozen=True)
+class _ModelCheck:
+    """What the model check found, and what it cost."""
+
+    findings: list[Finding]
+    cost_usd: float = 0.0
+    model: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+
+def _model_findings(draft_body: str, message: FetchedMessage) -> _ModelCheck | None:
     """The model layer. Returns None when unavailable — never raises."""
     try:
         from app.llm.parsing import extract_json_object
-        from app.llm.providers import auto_detect_provider
+        from app.llm.providers import auto_detect_provider, calculate_cost
 
         provider = auto_detect_provider()
         response = provider.generate(
@@ -212,9 +231,26 @@ def _model_findings(draft_body: str, message: FetchedMessage) -> list[Finding] |
             temperature=0.0,
             max_tokens=600,
         )
+        # getattr, not attribute access: the contract of this layer is that it
+        # never costs verification anything. A provider that returns a response
+        # without usage metadata should cost the *ledger* a row, not cost the
+        # reviewer the findings.
+        model = getattr(response, "model", "") or ""
+        usage = getattr(response, "usage", None)
+        cost = calculate_cost(model, usage) if usage else 0.0
+
         parsed = extract_json_object(response.content or "")
         if parsed is None or not isinstance(parsed.get("unsupported"), list):
-            return None
+            # The call was still made and still billed. Report the cost with no
+            # findings rather than dropping it — spend that only lands in the
+            # ledger when the model answers usefully is spend that hides.
+            return _ModelCheck(
+                findings=[],
+                cost_usd=cost,
+                model=model,
+                prompt_tokens=usage.prompt_tokens if usage else 0,
+                completion_tokens=usage.completion_tokens if usage else 0,
+            )
 
         source_text = f"{message.subject or ''}\n{message.body or ''}"
         findings: list[Finding] = []
@@ -245,7 +281,13 @@ def _model_findings(draft_body: str, message: FetchedMessage) -> list[Finding] |
                     source=source,
                 )
             )
-        return findings
+        return _ModelCheck(
+            findings=findings,
+            cost_usd=cost,
+            model=model,
+            prompt_tokens=usage.prompt_tokens if usage else 0,
+            completion_tokens=usage.completion_tokens if usage else 0,
+        )
     except Exception as exc:  # noqa: BLE001 - verification must never break a sync
         logger.info("Model verification unavailable: %s", exc)
         return None
@@ -257,12 +299,20 @@ def verify_draft(
     message: FetchedMessage,
     action_type: str,
     live_llm: bool = False,
+    budget=None,
 ) -> Verdict:
     """Verify one draft.
 
     Returns a :class:`Verdict`, which also unpacks as ``(status, notes)``.
     Soft rubric warnings do not flag on their own — they exist for the eval
     report, not the reviewer.
+
+    ``budget`` is an :class:`~app.saas.llm_budget.LlmBudget` when the caller
+    knows whose bill this is. Verification is the *second* paid call a held
+    action can make — one to write the draft, one to check it — so it is
+    metered on the same allowance. Out of budget drops to the deterministic
+    checks, which is where every deployment without an API key already lives:
+    claims are still checked against the source text, just not by a model.
     """
     from app.llm.draft_eval import evaluate_draft
 
@@ -284,10 +334,19 @@ def verify_draft(
     source_text = f"{message.subject or ''}\n{message.body or ''}"
     findings = _deterministic_findings(draft_body, verdict, source_text=source_text)
 
-    if live_llm:
-        model_findings = _model_findings(draft_body, message)
-        if model_findings:
-            findings.extend(model_findings)
-            notes.extend(f"unsupported claim: {f.claim}" for f in model_findings)
+    usage = None
+    if live_llm and (budget is None or budget.allows()):
+        usage = _model_findings(draft_body, message)
+        if usage and usage.findings:
+            findings.extend(usage.findings)
+            notes.extend(f"unsupported claim: {f.claim}" for f in usage.findings)
 
-    return Verdict(status=FLAGGED if notes else VERIFIED, notes=notes, findings=findings)
+    return Verdict(
+        status=FLAGGED if notes else VERIFIED,
+        notes=notes,
+        findings=findings,
+        cost_usd=usage.cost_usd if usage else 0.0,
+        model=usage.model if usage else "",
+        prompt_tokens=usage.prompt_tokens if usage else 0,
+        completion_tokens=usage.completion_tokens if usage else 0,
+    )

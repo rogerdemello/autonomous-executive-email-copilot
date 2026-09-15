@@ -3,6 +3,11 @@
 {# Chrome for the public, logged-out pages: landing, login, signup, legal. #}
 
 {% block body %}
+{# The same barrier the app shell's sidebar is: six header links and a theme
+   toggle before the content, on every public page including the two legal ones
+   somebody may be reading with a screen reader because they have to. #}
+<a class="skip-link" href="#content">Skip to content</a>
+
 <header class="site-head">
   <div class="wrap top">
     <a class="logo" href="/"><span class="glyph">EC</span> Email Copilot</a>
@@ -49,7 +54,7 @@
   </div>
 </header>
 
-<main>{% block main %}{% endblock %}</main>
+<main id="content">{% block main %}{% endblock %}</main>
 
 <footer class="site-foot">
   <div class="wrap foot">

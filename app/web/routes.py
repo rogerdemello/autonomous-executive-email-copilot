@@ -257,12 +257,19 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
     the two numbers that say what the copilot is for."""
     org = _orgs.get(user["org_id"]) or {"name": "Your workspace", "slug": ""}
     pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100)
+    connections = _mailboxes.list_for_org(user["org_id"])
     return {
         "organization": org,
         "active": active,
         "pending_count": pending.get("total", 0),
         "can_manage": role_at_least(user["role"], ROLE_ADMIN),
-        "connections": _mailboxes.list_for_org(user["org_id"]),
+        "connections": connections,
+        # A mailbox that can no longer authenticate was visible only as a chip
+        # on /app/connect — a page nobody revisits after setup. Everywhere
+        # else, the symptom was an inbox that quietly stopped filling, which
+        # reads as a quiet week rather than as a broken product. It is now a
+        # banner on every signed-in page until somebody reconnects it.
+        "mailbox_broken": any(c.get("status") == "error" for c in connections),
         # "142 drafts verified · 9 claims caught" is the claim no competitor
         # can make, and it lived in the database being rendered as one chip on
         # one page. Two grouped queries, on every signed-in page.
@@ -1293,7 +1300,36 @@ def _settings_context(request: Request, user: dict) -> dict[str, Any]:
         role for role in ROLES if rbac.can_assign_role(user["role"], role)
     ]
     context["is_owner"] = user["role"] == ROLE_OWNER
+    context["model_usage"] = _model_usage(user["org_id"])
     return context
+
+
+def _model_usage(org_id: str) -> dict[str, Any] | None:
+    """This month's model spend against its ceiling, or ``None`` to hide it.
+
+    Hidden when drafting is off and nothing has ever been spent: a workspace
+    running on cached and deterministic prose has no spend to explain, and a
+    row of zeroes reads as a broken feature rather than an absent one.
+    """
+    from app.saas.repository import LlmUsageRepository
+
+    settings = get_settings()
+    try:
+        summary = LlmUsageRepository().summary(org_id)
+    except Exception:  # noqa: BLE001 - a settings page must render regardless
+        return None
+    if not summary["calls"] and not settings.llm_drafting_enabled:
+        return None
+    limit = float(settings.llm_monthly_budget_usd)
+    return {
+        "cost_usd": summary["cost_usd"],
+        "calls": summary["calls"],
+        "tokens": summary["prompt_tokens"] + summary["completion_tokens"],
+        "limit_usd": limit,
+        "capped": limit > 0,
+        "exhausted": limit > 0 and summary["cost_usd"] >= limit,
+        "percent": min(100, round(summary["cost_usd"] / limit * 100)) if limit > 0 else 0,
+    }
 
 
 @web_router.get("/app/settings", response_class=HTMLResponse)

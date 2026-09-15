@@ -86,6 +86,18 @@ class Settings(BaseSettings):
     # shows model-written prose with this off and no network available.
     llm_drafting_enabled: bool = False
 
+    # Hard ceiling on model spend per organization per calendar month, in USD.
+    # `0` disables the cap entirely.
+    #
+    # This is a safety default, not a pricing decision. Drafting is on in
+    # production and a background worker sweeps every connected mailbox every
+    # 15 minutes; without a ceiling, one large mailbox is an unbounded bill
+    # against somebody's personal card, and the only record of it was an
+    # in-process counter that a deploy resets. Reaching the cap degrades the
+    # prose to the deterministic fallback — the copilot keeps triaging,
+    # queueing and sending; it just stops paying a model to write.
+    llm_monthly_budget_usd: float = 25.0
+
     # Background sync worker. Off by default so tests and one-shot scripts get
     # no surprise threads; a deployment turns it on to get "the copilot worked
     # your inbox while you slept" instead of sync-on-click. Each connection

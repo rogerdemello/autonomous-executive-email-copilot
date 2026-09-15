@@ -9,7 +9,19 @@
     <h1>Sign in</h1>
     <p class="auth__sub">Pick up your inbox where the copilot left it.</p>
 
-    {% if error %}<div class="banner banner--error" role="alert">{{ error }}</div>{% endif %}
+    {# tabindex + autofocus, not just role="alert": this is a full page
+       reload after a failed POST, so the banner is present at load rather than
+       injected, and a live region that never changes is never announced.
+       Focusing it puts the reason for the failure first. #}
+    {% if error %}
+      <div
+        class="banner banner--error"
+        role="alert"
+        id="form-error"
+        tabindex="-1"
+        autofocus
+      >{{ error }}</div>
+    {% endif %}
     {% if notice %}<div class="banner banner--ok">{{ notice }}</div>{% endif %}
 
     <form method="post" action="/login" novalidate>
@@ -25,6 +37,7 @@
           autocomplete="username"
           required
           value="{{ email or (demo_credentials.email if demo_credentials else '') }}"
+          {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}
         />
       </div>
 
@@ -37,6 +50,7 @@
           autocomplete="current-password"
           required
           value="{{ demo_credentials.password if demo_credentials else '' }}"
+          {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}
         />
         <p class="field__hint"><a href="/forgot-password">Forgot password?</a></p>
       </div>

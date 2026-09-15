@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{# Chrome for the operator surface. Deliberately NOT _public.html: this is not
+   a page about the product, and marketing nav on an admin console invites
+   someone to click "Start free" while diagnosing an incident. #}
+
+{% block body %}
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap top">
+    <span class="logo"><span class="glyph">EC</span> Operator</span>
+    <nav aria-label="Operator">
+      <button
+        class="theme-toggle"
+        type="button"
+        data-theme-toggle
+        aria-label="Switch between light and dark theme"
+      >
+        ◐
+      </button>
+      {% block headnav %}{% endblock %}
+    </nav>
+  </div>
+</header>
+
+<main id="content">
+  <div class="wrap">{% block main %}{% endblock %}</div>
+</main>
+{% endblock %}

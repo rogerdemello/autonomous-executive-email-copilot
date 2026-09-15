@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autonomous-executive-email-copilot"
-version = "1.0.0"
+version = "1.1.0"
 description = "An executive email copilot: reads the inbox, triages by risk and deadline, drafts replies, and holds every outbound action for human approval"
 readme = "README.md"
 license = { text = "MIT" }

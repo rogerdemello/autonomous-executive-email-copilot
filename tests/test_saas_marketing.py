@@ -16,6 +16,34 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture
+def frozen_minute(monkeypatch):
+    """Pin the rate limiter's window for the duration of a test.
+
+    ``FixedWindowRateLimiter`` buckets on ``int(time.time() // 60)``, so a burst
+    that straddles a wall-clock minute boundary has its counter reset half way
+    through and the request that should be refused is allowed. That made both
+    throttle tests fail roughly once per hour of CI — the flake rate rises with
+    however long the suite takes to reach them, which is not a property a
+    release gate should have. Freezing the clock tests the actual rule (N
+    submissions inside one window, then refusal) instead of racing it.
+
+    Pins only the limiter's clock. Freezing the `time` module wholesale would
+    also freeze CSRF token issue/expiry stamps, which is a much larger claim
+    than this test needs to make.
+    """
+    import app.core.security as security
+
+    real_allow = security.FixedWindowRateLimiter.allow
+    monkeypatch.setattr(
+        security.FixedWindowRateLimiter,
+        "allow",
+        lambda self, key, limit_per_minute, now=None: real_allow(
+            self, key, limit_per_minute, now=1_800_000_000.0
+        ),
+    )
+
+
 def test_landing_renders(client):
     resp = client.get("/welcome")
     assert resp.status_code == 200
@@ -212,7 +240,7 @@ class TestContactSalesForm:
         assert "Thanks" in response.text
         assert email not in _lead_emails()
 
-    def test_submissions_are_throttled(self, client):
+    def test_submissions_are_throttled(self, client, frozen_minute):
         from app.core.security import LEAD_SUBMISSIONS_PER_MINUTE, lead_rate_limiter
 
         lead_rate_limiter.reset()
@@ -232,7 +260,7 @@ class TestContactSalesForm:
         assert all(code == 200 for code in statuses[:-1])
         lead_rate_limiter.reset()
 
-    def test_json_endpoint_is_throttled_too(self, client):
+    def test_json_endpoint_is_throttled_too(self, client, frozen_minute):
         from app.core.security import LEAD_SUBMISSIONS_PER_MINUTE, lead_rate_limiter
 
         lead_rate_limiter.reset()

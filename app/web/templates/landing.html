@@ -354,11 +354,16 @@
     <div class="scores">
       <div class="table-wrap" data-reveal>
         <table class="bench">
+          <caption class="visually-hidden">
+            Benchmark scores by task for each policy. Higher is better; the
+            best score in each row is marked. Measured by
+            scripts/build_landing_metrics.py and re-verified in CI.
+          </caption>
           <thead>
             <tr>
-              <th>Task</th>
+              <th scope="col">Task</th>
               {% for column in bench.columns %}
-                <th class="num-head">{{ column.label }}</th>
+                <th scope="col" class="num-head">{{ column.label }}</th>
               {% endfor %}
             </tr>
           </thead>
@@ -368,7 +373,10 @@
               {% set scores = bench.columns | map(attribute='cells') | map(attribute=row.task_id) | map(attribute='score') | list %}
               {% set best = scores | max %}
               <tr>
-                <td class="task">{{ row.label }}</td>
+                {# A row header, not a cell: it names what the numbers beside it
+                   measure, so a screen reader can announce "Escalation, policy
+                   B, 0.82" instead of three bare decimals. #}
+                <th scope="row" class="task">{{ row.label }}</th>
                 {% for column in bench.columns %}
                   {% set score = column.cells[row.task_id].score %}
                   {# The bars draw in on a diagonal, so the eye reads the table

@@ -1,0 +1,237 @@
+{% extends "_operator.html" %}
+{% block title %}Health · Operator{% endblock %}
+
+{% block headnav %}
+  <form method="post" action="/operator/session/end" class="inline-form">
+    <button class="btn btn--sm" type="submit">Sign out</button>
+  </form>
+{% endblock %}
+
+{% block main %}
+<header class="op__head">
+  <div>
+    <p class="eyebrow">Deployment health</p>
+    <h1>Is it working?</h1>
+  </div>
+  <p class="muted mono">as of {{ now }} UTC</p>
+</header>
+
+{# The four things that answer the question, in the order they go wrong. #}
+<section class="op__grid" aria-label="Summary">
+  <div class="card">
+    <div class="card__body stat">
+      <span class="n">{{ totals.workspaces }}</span>
+      <span class="l">workspace{{ 's' if totals.workspaces != 1 }}</span>
+      <span class="muted">{{ totals.members }} member{{ 's' if totals.members != 1 }}</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__body stat">
+      <span class="n">{{ connections.get("connected", 0) }}</span>
+      <span class="l">mailbox{{ 'es' if connections.get("connected", 0) != 1 }} syncing</span>
+      {% set broken = connections.get("error", 0) %}
+      {% if broken %}
+        <span class="chip chip--danger">{{ broken }} need{{ '' if broken != 1 else 's' }} reconnecting</span>
+      {% else %}
+        <span class="muted">none broken</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__body stat">
+      <span class="n">${{ "%.2f" | format(totals.spend_usd) }}</span>
+      <span class="l">model spend this month, all workspaces</span>
+      <span class="muted">
+        {% if budget_usd > 0 %}
+          ${{ "%.0f" | format(budget_usd) }} cap each
+        {% else %}
+          no cap set
+        {% endif %}
+        {%- if not drafting_enabled %} · drafting off{% endif %}
+      </span>
+      {% if totals.at_budget %}
+        <span class="chip chip--danger">
+          {{ totals.at_budget }} at cap — drafting rule-based prose
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__body stat">
+      {% if not worker.enabled %}
+        <span class="n">off</span>
+        <span class="l">background sync</span>
+        <span class="muted">the queue only fills when someone clicks Sync</span>
+      {% elif worker.stale %}
+        <span class="n">stale</span>
+        <span class="l">background sync</span>
+        <span class="chip chip--danger">no pass in {{ worker.seconds_since_last_pass | round | int if worker.seconds_since_last_pass else "?" }}s</span>
+      {% else %}
+        <span class="n">{{ worker.passes }}</span>
+        <span class="l">sync pass{{ 'es' if worker.passes != 1 }}</span>
+        <span class="muted">every {{ worker.interval_seconds }}s per mailbox</span>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% if worker.enabled and worker.stale %}
+  <div class="banner banner--error" role="alert">
+    The background sync worker has not completed a pass recently. Nothing is
+    being triaged on its own — customers' approval queues have stopped filling.
+  </div>
+{% endif %}
+
+{% if failed_sends.orgs %}
+  <div class="banner banner--error" role="alert">
+    {{ failed_sends.orgs }} workspace{{ 's' if failed_sends.orgs != 1 }} have replies a
+    human approved that the provider refused. They retry up to
+    {{ failed_sends.max_retries }} times, then wait for a person.
+  </div>
+{% endif %}
+
+<div class="card card--stacked">
+  <div class="card__head">
+    <span class="card__title">Workspaces</span>
+    {% if totals.lapsed or totals.expiring_soon %}
+      <span class="chip chip--warn">
+        {{ totals.lapsed }} lapsed · {{ totals.expiring_soon }} expiring within a week
+      </span>
+    {% endif %}
+  </div>
+  <div class="table-scroll">
+    <table class="data">
+      <caption class="visually-hidden">
+        Every workspace, with its owner, access status and model spend this month.
+        Those needing attention are listed first.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Workspace</th>
+          <th scope="col">Owner</th>
+          <th scope="col">Signed up</th>
+          <th scope="col">Members</th>
+          <th scope="col">Access</th>
+          <th scope="col">Spend</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in workspaces %}
+          <tr>
+            <td>{{ row.name }}</td>
+            <td class="mono">{{ row.owner_email or "—" }}</td>
+            <td class="mono">{{ row.created_at or "—" }}</td>
+            <td>{{ row.members }}</td>
+            <td>
+              {% if not row.active %}
+                <span class="chip chip--danger">lapsed</span>
+              {% elif row.expiring_soon %}
+                <span class="chip chip--warn">
+                  {{ row.days_remaining }} day{{ 's' if row.days_remaining != 1 }} left
+                </span>
+              {% else %}
+                <span class="chip chip--good">{{ row.plan or "active" }}</span>
+              {% endif %}
+            </td>
+            <td class="mono">
+              ${{ "%.2f" | format(row.spend_usd) }}
+              {% if row.at_budget %}
+                <span class="chip chip--danger">at cap</span>
+              {% elif row.near_budget %}
+                <span class="chip chip--warn">near cap</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="muted">No workspaces yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if worker.enabled and worker.recent %}
+  <div class="card card--stacked">
+    <div class="card__head"><span class="card__title">Recent sync passes</span></div>
+    <div class="table-scroll">
+      <table class="data">
+        <caption class="visually-hidden">
+          The last {{ worker.recent | length }} background sync passes and what each did.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Checked</th>
+            <th scope="col">Synced</th>
+            <th scope="col">Messages</th>
+            <th scope="col">Proposed</th>
+            <th scope="col">Errors</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pass_ in worker.recent | reverse %}
+            <tr>
+              <td class="mono">{{ pass_.at[11:19] }}</td>
+              {% if pass_.crashed %}
+                <td colspan="4" class="muted">the pass itself crashed — see the logs</td>
+                <td><span class="chip chip--danger">crash</span></td>
+              {% else %}
+                <td>{{ pass_.checked }}</td>
+                <td>{{ pass_.synced }}</td>
+                <td>{{ pass_.messages }}</td>
+                <td>{{ pass_.proposed }}</td>
+                <td>
+                  {% if pass_.errors %}
+                    <span class="chip chip--danger">{{ pass_.errors }}</span>
+                  {% else %}
+                    0
+                  {% endif %}
+                </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+{% if leads %}
+  <div class="card card--stacked">
+    <div class="card__head">
+      <span class="card__title">Leads</span>
+      <span class="chip chip--neutral">{{ leads | length }}</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data">
+        <caption class="visually-hidden">
+          Recent "Talk to us" submissions, newest first.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Email</th>
+            <th scope="col">Company</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+            <tr>
+              <td class="mono">{{ lead.created_at[:10] }}</td>
+              <td class="mono">{{ lead.email }}</td>
+              <td>{{ lead.company or "—" }}</td>
+              <td>{{ lead.status }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
