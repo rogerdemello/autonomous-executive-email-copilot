@@ -46,6 +46,7 @@
     {# No defer: the saved theme must apply before first paint. Kept in a file
        rather than inline so the CSP needs no inline-script allowance. #}
     <script src="/static/theme-init.js"></script>
+    {% block head_extra %}{% endblock %}
   </head>
   <body>
     {% block body %}{% endblock %}

@@ -872,6 +872,14 @@ def inbox(
     # page. `message_total` is the filtered count and drives the list header.
     context["message_total"] = total
     context["mailbox_total"] = _messages.list_for_org(user["org_id"], limit=1)["total"]
+    # A mailbox connected but never synced is a third state, and it used to
+    # render as "nothing matches that filter" — telling a customer their inbox
+    # is empty when the copilot simply has not finished reading it. The first
+    # pull of a real mailbox takes minutes and now happens in the background,
+    # so this is the normal view for the first few minutes of every account.
+    context["first_sync_pending"] = not messages and any(
+        not connection.get("last_synced_at") for connection in context["connections"]
+    )
     context["summary"] = _actions.summarize_for_org(user["org_id"])
     context["filters"] = {"q": query, "label": label, "priority": priority}
     context["filter_labels"] = _INBOX_LABELS

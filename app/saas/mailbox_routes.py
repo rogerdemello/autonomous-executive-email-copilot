@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from . import oauth
@@ -57,7 +57,7 @@ def connect(
 
 
 @mailbox_router.get("/oauth/callback", include_in_schema=False)
-def oauth_callback(request: Request) -> Response:
+def oauth_callback(request: Request, background: BackgroundTasks) -> Response:
     """Public OAuth redirect target. Identity is carried in the signed state."""
     params = request.query_params
     error = params.get("error")
@@ -75,27 +75,45 @@ def oauth_callback(request: Request) -> Response:
         logger.warning("Mailbox OAuth callback failed: %s", exc.message)
         return _connect_failed(request, exc.message)
 
-    # First sync right away, like the demo-connect path: a freshly connected
-    # mailbox that renders empty reads as broken. Best-effort — the inbox has a
-    # Sync button, so a slow or failing first pull must not turn success into
-    # an error page after the connection itself worked.
-    try:
-        from .provider_factory import build_provider
-        from .sync_service import InboxSyncService
+    # The first sync runs AFTER this response is sent, never inside it.
+    #
+    # It used to run inline, which the demo mailbox hid completely: DemoProvider
+    # is in memory and its drafts are cached, so the call returned instantly. A
+    # real mailbox is not that. At the default inbox_sync_limit of 100, Gmail
+    # alone is one list call plus a hundred sequential message fetches, and with
+    # drafting on every held action costs two more model calls. That is minutes
+    # of work, and it was sitting in an HTTP redirect handler with nothing
+    # bounding it — so the customer's first act after granting consent, the most
+    # trust-dependent moment in the product, returned a proxy timeout.
+    #
+    # No new state and no retry logic is needed if this task dies: the sync
+    # never ran, so last_synced_at is still NULL, and BackgroundSyncWorker
+    # already treats a never-synced connection as immediately due. The worker
+    # finishes whatever the request started.
+    background.add_task(_first_sync, conn)
+    return RedirectResponse(url="/app/inbox", status_code=303)
 
+
+def _first_sync(connection: dict) -> None:
+    """Pull a freshly connected mailbox. Runs after the response; never raises."""
+    from .provider_factory import build_provider
+    from .sync_service import InboxSyncService
+
+    try:
         InboxSyncService().sync(
-            org_id=conn["org_id"],
-            user_id=conn.get("connected_by") or "system",
-            connection_id=conn["id"],
-            provider=build_provider(conn),
+            org_id=connection["org_id"],
+            user_id=connection.get("connected_by") or "system",
+            connection_id=connection["id"],
+            provider=build_provider(connection),
         )
     except Exception:
+        # Left to the background worker, which will see last_synced_at is still
+        # unset and try again. The inbox also has a Sync button.
         logger.warning(
-            "First sync after connecting %s failed; the user can sync manually",
-            conn["id"],
+            "First sync after connecting %s failed; the worker will retry",
+            connection["id"],
             exc_info=True,
         )
-    return RedirectResponse(url="/app/inbox", status_code=303)
 
 
 @mailbox_router.delete("/connections/{connection_id}")

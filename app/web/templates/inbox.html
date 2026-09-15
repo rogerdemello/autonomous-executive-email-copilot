@@ -1,6 +1,14 @@
 {% extends "_app.html" %}
 
 {% block title %}Inbox · Executive Email Copilot{% endblock %}
+
+{% block head_extra %}
+  {# A meta refresh rather than a poll: the whole app is server-rendered and
+     works with scripting off, and the one screen a brand-new customer stares
+     at should not be the exception. Only while the first sync is pending — a
+     page that reloads forever would fight anyone trying to read it. #}
+  {% if first_sync_pending %}<meta http-equiv="refresh" content="10" />{% endif %}
+{% endblock %}
 {% block heading %}Inbox{% endblock %}
 {% block lede %}What the copilot is working on right now.{% endblock %}
 
@@ -105,13 +113,30 @@
           <h3>No messages match that</h3>
           <p>Try a broader search, or clear the filters.</p>
           <a class="btn" href="/app/inbox">Clear filters</a>
+        {% elif first_sync_pending %}
+          {# The normal view for the first few minutes of every real account.
+             Distinct from "nothing matches" on purpose: telling somebody their
+             inbox is empty when the copilot has not finished reading it is the
+             worst possible first impression, and it is what this used to say. #}
+          <h3>Reading your mailbox…</h3>
+          <p>
+            The copilot is working through your inbox now — classifying each
+            message, ranking it by deadline and risk, and drafting the replies
+            worth sending. A first pass usually takes a couple of minutes.
+          </p>
+          <p class="muted">
+            This page refreshes itself. You can leave it and come back.
+          </p>
         {% else %}
-          <h3>Nothing processed yet</h3>
-          <p>The mailbox is connected but hasn't been synced. Run a sync to pull messages in.</p>
+          <h3>Nothing to triage</h3>
+          <p>
+            The mailbox synced and there was nothing new in it. The copilot
+            checks again on its own; there is nothing you need to do.
+          </p>
           {% if can_manage %}
             <form method="post" action="/app/sync">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-              <button class="btn btn--primary" type="submit">Sync now</button>
+              <button class="btn" type="submit">Check now</button>
             </form>
           {% endif %}
         {% endif %}
