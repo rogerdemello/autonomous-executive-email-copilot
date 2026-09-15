@@ -42,15 +42,20 @@
   <div class="card">
     <div class="card__body stat">
       <span class="n">${{ "%.2f" | format(totals.spend_usd) }}</span>
-      <span class="l">model spend this month</span>
+      <span class="l">model spend this month, all workspaces</span>
       <span class="muted">
         {% if budget_usd > 0 %}
-          ${{ "%.0f" | format(budget_usd) }} cap per workspace
+          ${{ "%.0f" | format(budget_usd) }} cap each
         {% else %}
           no cap set
         {% endif %}
         {%- if not drafting_enabled %} · drafting off{% endif %}
       </span>
+      {% if totals.at_budget %}
+        <span class="chip chip--danger">
+          {{ totals.at_budget }} at cap — drafting rule-based prose
+        </span>
+      {% endif %}
     </div>
   </div>
 
@@ -131,7 +136,14 @@
                 <span class="chip chip--good">{{ row.plan or "active" }}</span>
               {% endif %}
             </td>
-            <td class="mono">${{ "%.2f" | format(row.spend_usd) }}</td>
+            <td class="mono">
+              ${{ "%.2f" | format(row.spend_usd) }}
+              {% if row.at_budget %}
+                <span class="chip chip--danger">at cap</span>
+              {% elif row.near_budget %}
+                <span class="chip chip--warn">near cap</span>
+              {% endif %}
+            </td>
           </tr>
         {% else %}
           <tr>

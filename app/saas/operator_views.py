@@ -180,6 +180,7 @@ def build_health(request: Request, now: datetime | None = None) -> dict:
             "members": sum(w["members"] for w in workspaces),
             "expiring_soon": sum(1 for w in workspaces if w["expiring_soon"]),
             "lapsed": sum(1 for w in workspaces if not w["active"]),
+            "at_budget": sum(1 for w in workspaces if w["at_budget"]),
             "spend_usd": round(sum(spend_by_org.values()), 2),
         },
         "connections": _safe(_mailboxes.count_by_status, {}),
@@ -205,6 +206,10 @@ def _safe(call, fallback):
 
 
 def _workspaces(now: datetime, spend_by_org: dict[str, float]) -> list[dict]:
+    # A workspace at its ceiling has silently stopped getting model-written
+    # prose. That is the designed behaviour and it is invisible from the
+    # outside, so it belongs on the page that exists to make things visible.
+    budget = float(get_settings().llm_monthly_budget_usd)
     rows = []
     for org in _safe(lambda: _orgs.list_all(limit=500), []):
         members = _safe(lambda org_id=org["id"]: _users.list_for_org(org_id), [])
@@ -214,6 +219,7 @@ def _workspaces(now: datetime, spend_by_org: dict[str, float]) -> list[dict]:
             {},
         )
         days = _days_until(entitlement.get("expires_at"), now)
+        spend = round(spend_by_org.get(org["id"], 0.0), 2)
         rows.append(
             {
                 "id": org["id"],
@@ -225,7 +231,12 @@ def _workspaces(now: datetime, spend_by_org: dict[str, float]) -> list[dict]:
                 "active": bool(entitlement.get("is_valid")),
                 "days_remaining": days,
                 "expiring_soon": days is not None and 0 <= days <= _EXPIRING_SOON_DAYS,
-                "spend_usd": round(spend_by_org.get(org["id"], 0.0), 2),
+                "spend_usd": spend,
+                "at_budget": budget > 0 and spend >= budget,
+                # 80% is a warning, not a threshold anything acts on — it is
+                # far enough ahead to talk to the customer before their drafts
+                # quietly stop being model-written.
+                "near_budget": budget > 0 and budget * 0.8 <= spend < budget,
             }
         )
     # Whoever needs attention first: lapsed, then expiring, then by spend.

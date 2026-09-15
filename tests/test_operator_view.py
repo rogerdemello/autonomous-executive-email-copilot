@@ -196,6 +196,47 @@ class TestTheNumbers:
         assert "budget_usd" in health
         assert "drafting_enabled" in health
 
+    def test_a_workspace_at_its_cap_is_flagged(self, monkeypatch):
+        """It has silently stopped getting model-written prose. That is the
+        designed behaviour, and it is invisible from anywhere else."""
+        from app.saas.repository import LlmUsageRepository
+
+        monkeypatch.setenv("LLM_MONTHLY_BUDGET_USD", "25")
+        org_id = self._workspace("Capped Co")
+        LlmUsageRepository().record(org_id=org_id, cost_usd=25.50)
+
+        health = self._health()
+
+        row = next(w for w in health["workspaces"] if w["id"] == org_id)
+        assert row["at_budget"] is True
+        assert row["near_budget"] is False
+        assert health["totals"]["at_budget"] >= 1
+
+    def test_a_workspace_approaching_its_cap_is_warned_about(self, monkeypatch):
+        """Far enough ahead to talk to the customer before their drafts change."""
+        from app.saas.repository import LlmUsageRepository
+
+        monkeypatch.setenv("LLM_MONTHLY_BUDGET_USD", "25")
+        org_id = self._workspace("Nearly Capped Co")
+        LlmUsageRepository().record(org_id=org_id, cost_usd=21.00)  # 84%
+
+        row = next(w for w in self._health()["workspaces"] if w["id"] == org_id)
+
+        assert row["near_budget"] is True
+        assert row["at_budget"] is False
+
+    def test_no_cap_means_no_flags(self, monkeypatch):
+        from app.saas.repository import LlmUsageRepository
+
+        monkeypatch.setenv("LLM_MONTHLY_BUDGET_USD", "0")
+        org_id = self._workspace("Uncapped Co")
+        LlmUsageRepository().record(org_id=org_id, cost_usd=9_999.0)
+
+        row = next(w for w in self._health()["workspaces"] if w["id"] == org_id)
+
+        assert row["at_budget"] is False
+        assert row["near_budget"] is False
+
 
 class TestItStaysUpWhenThingsAreBroken:
     def test_one_failed_query_does_not_take_the_page_down(self, signed_in, monkeypatch):
