@@ -255,8 +255,10 @@ class TestDemoMailbox:
         assert response.status_code == 200
         assert "Demo mailbox" in response.text
         # Real providers are unconfigured in tests and must say so rather than
-        # erroring when clicked.
-        assert "Not configured" in response.text
+        # erroring when clicked — in the customer's terms, since on a
+        # self-serve signup the reader is never the person who could fix it.
+        assert "Not available yet" in response.text
+        assert "switched on for this workspace yet" in response.text
 
     def test_connecting_the_demo_mailbox_triages_it(self, with_demo_mailbox):
         from app.saas.repository import UserRepository
