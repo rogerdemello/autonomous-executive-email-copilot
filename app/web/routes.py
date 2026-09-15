@@ -257,12 +257,19 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
     the two numbers that say what the copilot is for."""
     org = _orgs.get(user["org_id"]) or {"name": "Your workspace", "slug": ""}
     pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100)
+    connections = _mailboxes.list_for_org(user["org_id"])
     return {
         "organization": org,
         "active": active,
         "pending_count": pending.get("total", 0),
         "can_manage": role_at_least(user["role"], ROLE_ADMIN),
-        "connections": _mailboxes.list_for_org(user["org_id"]),
+        "connections": connections,
+        # A mailbox that can no longer authenticate was visible only as a chip
+        # on /app/connect — a page nobody revisits after setup. Everywhere
+        # else, the symptom was an inbox that quietly stopped filling, which
+        # reads as a quiet week rather than as a broken product. It is now a
+        # banner on every signed-in page until somebody reconnects it.
+        "mailbox_broken": any(c.get("status") == "error" for c in connections),
         # "142 drafts verified · 9 claims caught" is the claim no competitor
         # can make, and it lived in the database being rendered as one chip on
         # one page. Two grouped queries, on every signed-in page.

@@ -83,6 +83,17 @@
          silently appearing. settings.html used to be the only page that got
          this, by re-rendering its own copy of the banner. #}
       {% if notice %}<div class="banner banner--ok" role="status">{{ notice }}</div>{% endif %}
+      {# A mailbox that can no longer authenticate stops the queue filling, and
+         the symptom — nothing new arriving — looks exactly like a quiet week.
+         role="status" rather than "alert": it is a standing condition on every
+         page, not an event, and alert would re-interrupt on each navigation. #}
+      {% if mailbox_broken and active != "connect" %}
+        <div class="banner banner--error" role="status">
+          A connected mailbox has stopped syncing and needs to be reconnected —
+          new mail from it is not being triaged.
+          <a href="/app/connect">Reconnect it</a>.
+        </div>
+      {% endif %}
       {% block main %}{% endblock %}
     </div>
   </main>

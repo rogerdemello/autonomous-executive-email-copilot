@@ -452,6 +452,14 @@ class MailboxRepository:
             return [r.to_dict() for r in rows]
 
     def set_status(self, org_id: str, connection_id: str, status: str) -> bool:
+        """Set the connection's status. Returns ``True`` only if it *changed*.
+
+        The return value is a transition signal, not a found/not-found one: the
+        background worker re-derives a broken connection's status on every
+        sweep, and telling a customer their mailbox just broke every 15 minutes
+        for as long as it stays broken is how a notification becomes a filter
+        rule. Callers that need "did this row exist" should read it back.
+        """
         with get_session() as session:
             row = (
                 session.query(MailboxConnection)
@@ -461,11 +469,39 @@ class MailboxRepository:
                 )
                 .first()
             )
-            if not row:
+            if not row or row.status == status:
                 return False
             row.status = status
             row.updated_at = _now_iso()
             return True
+
+    def any_broken(self, org_id: str) -> bool:
+        """Does this org have a mailbox that needs reconnecting?
+
+        Read on every signed-in page render, so it is a bounded existence check
+        rather than a list: a broken mailbox is a banner, and the banner does
+        not name them.
+        """
+        with get_session() as session:
+            return (
+                session.query(MailboxConnection.id)
+                .filter(
+                    MailboxConnection.org_id == org_id,
+                    MailboxConnection.status == "error",
+                )
+                .first()
+                is not None
+            )
+
+    def count_by_status(self) -> dict[str, int]:
+        """Connections grouped by status, across all orgs — the operator view."""
+        with get_session() as session:
+            rows = (
+                session.query(MailboxConnection.status, func.count(MailboxConnection.id))
+                .group_by(MailboxConnection.status)
+                .all()
+            )
+        return {str(status): int(count) for status, count in rows}
 
     def delete(self, org_id: str, connection_id: str) -> dict[str, int] | None:
         """Delete the connection AND everything derived from it, in one
