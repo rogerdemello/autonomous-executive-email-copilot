@@ -96,9 +96,18 @@ jobs:
         id: changelog
         run: |
           version="${GITHUB_REF_NAME#v}"
-          # Pull the body between the matching `## [X.Y.Z]` heading and the next `## ` heading.
+          # Pull the body between the matching `## [X.Y.Z]` heading and the next
+          # `## ` heading.
+          #
+          # index(), not a dynamic regex. The previous form built the pattern as
+          # "^## \\[" ver "\\]", and POSIX leaves the meaning of `\[` inside a
+          # regex *unspecified*: mawk (what the runner uses) reads it as a
+          # literal bracket and this works, gawk warns and drops the escape, at
+          # which point `[1.1.0]` becomes a character class, nothing matches,
+          # and the release silently ships the "see CHANGELOG.md" fallback
+          # instead of its notes. A prefix test has no escaping to get wrong.
           body="$(awk -v ver="$version" '
-            $0 ~ "^## \\[" ver "\\]" { capture=1; next }
+            index($0, "## [" ver "]") == 1 { capture=1; next }
             capture && /^## / { exit }
             capture { print }
           ' CHANGELOG.md)"
