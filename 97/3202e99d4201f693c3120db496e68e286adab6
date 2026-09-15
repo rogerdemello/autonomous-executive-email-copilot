@@ -1,0 +1,84 @@
+tests/test_broken_mailbox.py
+  s_c5f09332e20c5a::t_b298a3cdb854f1 1-218
+app/web/templates/_app.html
+  s_c5f09332e20c5a::t_71fe0d752d0474 86-96
+app/saas/provider_factory.py
+  s_c5f09332e20c5a::t_42d82cf579a2c9 119,121-126
+  s_c5f09332e20c5a::t_be6f28cab516ce 141-142,153
+  s_c5f09332e20c5a::t_c843f9e0badec7 92-104,106-107,111-118,120,127-140,143-152,154-165
+app/saas/repository.py
+  s_c5f09332e20c5a::t_518845f4f6f208 455-462,472,478-505
+app/web/routes.py
+  s_c5f09332e20c5a::t_196cf3e189d0da 260
+  s_c5f09332e20c5a::t_3f301a5deb80e4 266-272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "973202e99d4201f693c3120db496e68e286adab6",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0496723927b7206ff04fca784651639b5c2736ed6f4cfac4fdc837b81ba56cba",
+      "total_additions": 359,
+      "total_deletions": 19,
+      "accepted_lines": 3504,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0496723927b7206ff04fca784651639b5c2736ed6f4cfac4fdc837b81ba56cba",
+      "stats": {
+        "total_additions": 359,
+        "total_deletions": 19,
+        "accepted_lines": 3504,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/provider_factory.py": {
+            "total_additions": 77,
+            "total_deletions": 9,
+            "accepted_lines": 203,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 37,
+            "total_deletions": 1,
+            "accepted_lines": 1398,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 8,
+            "total_deletions": 1,
+            "accepted_lines": 1584,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_app.html": {
+            "total_additions": 11,
+            "total_deletions": 0,
+            "accepted_lines": 101,
+            "overriden_lines": 0
+          },
+          "tests/test_broken_mailbox.py": {
+            "total_additions": 226,
+            "total_deletions": 8,
+            "accepted_lines": 218,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
