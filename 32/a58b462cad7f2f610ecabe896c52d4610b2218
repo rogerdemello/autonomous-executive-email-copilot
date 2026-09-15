@@ -1,0 +1,73 @@
+pyproject.toml
+  s_c5f09332e20c5a::t_9b815b0a896881 7
+app/__init__.py
+  s_c5f09332e20c5a::t_9b815b0a896881 16
+helm/exec-email-copilot/Chart.yaml
+  s_c5f09332e20c5a::t_17f8cec488a615 5-6
+CHANGELOG.md
+  s_c5f09332e20c5a::t_187dd67cd15653 10-15,18-46,93-96,110-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "32a58b462cad7f2f610ecabe896c52d4610b2218",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:a3eab4bc35b80c78aec51eee73024b3401aaa389d3bff3c2ab76a3af348af350",
+      "total_additions": 111,
+      "total_deletions": 61,
+      "accepted_lines": 399,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:a3eab4bc35b80c78aec51eee73024b3401aaa389d3bff3c2ab76a3af348af350",
+      "stats": {
+        "total_additions": 111,
+        "total_deletions": 61,
+        "accepted_lines": 399,
+        "overriden_lines": 0,
+        "files": {
+          "CHANGELOG.md": {
+            "total_additions": 107,
+            "total_deletions": 57,
+            "accepted_lines": 247,
+            "overriden_lines": 0
+          },
+          "app/__init__.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 18,
+            "overriden_lines": 0
+          },
+          "helm/exec-email-copilot/Chart.yaml": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 15,
+            "overriden_lines": 0
+          },
+          "pyproject.toml": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 119,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
