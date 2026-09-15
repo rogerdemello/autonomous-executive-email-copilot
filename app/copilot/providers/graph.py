@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 from .base import FetchedMessage, MailProvider, WriteResult, write_guard
 from .gmail import ProviderError, Transport, _seg
+from .html_text import html_to_text, looks_like_html
 
 _BASE = "https://graph.microsoft.com/v1.0/me"
 
@@ -59,17 +60,38 @@ class MicrosoftGraphProvider(MailProvider):
 
     def _to_fetched(self, m: dict) -> FetchedMessage:
         sender_obj = (m.get("from") or {}).get("emailAddress", {})
-        body = m.get("body", {}) or {}
         return FetchedMessage(
             provider_message_id=m.get("id", ""),
             thread_id=m.get("conversationId", ""),
             sender=sender_obj.get("address", ""),
             sender_name=sender_obj.get("name", ""),
             subject=m.get("subject", ""),
-            body=body.get("content") or m.get("bodyPreview", ""),
+            body=self._body_text(m),
             references=[],
             received_at=m.get("receivedDateTime", ""),
         )
+
+    @staticmethod
+    def _body_text(m: dict) -> str:
+        """The readable text of a Graph message.
+
+        Graph's ``body.contentType`` is **html** by default, so taking
+        ``body.content`` as-is stored markup for essentially every Outlook
+        message — which then became what the reader showed, what the drafter
+        was given as the message, and what the verifier checked claims against.
+
+        The declared type is trusted when it says ``text`` but still sniffed,
+        because a sender can compose HTML into a message Graph labels text, and
+        the cost of being wrong in that direction is a wall of tags.
+        """
+        body = m.get("body", {}) or {}
+        content = body.get("content") or ""
+        if not content.strip():
+            return m.get("bodyPreview", "") or ""
+        declared = str(body.get("contentType") or "").strip().lower()
+        if declared == "html" or looks_like_html(content):
+            return html_to_text(content) or m.get("bodyPreview", "") or ""
+        return content
 
     @write_guard
     def send_reply(self, provider_message_id: str, body: str) -> WriteResult:

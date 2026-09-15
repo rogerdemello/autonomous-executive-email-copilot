@@ -15,6 +15,7 @@ from collections.abc import Callable
 from urllib.parse import quote
 
 from .base import FetchedMessage, MailProvider, WriteResult, write_guard
+from .html_text import html_to_text, looks_like_html
 
 _BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
@@ -86,16 +87,41 @@ def _header(headers: list[dict], name: str) -> str:
     return ""
 
 
-def _extract_body(payload: dict) -> str:
-    """Walk the MIME tree for the first text/plain part."""
-    if payload.get("mimeType") == "text/plain":
-        return _decode_b64url(payload.get("body", {}).get("data", ""))
+def _find_part(payload: dict, mime_type: str) -> str:
+    """First decoded part of ``mime_type`` anywhere in the MIME tree."""
+    if payload.get("mimeType") == mime_type:
+        decoded = _decode_b64url(payload.get("body", {}).get("data", ""))
+        if decoded:
+            return decoded
     for part in payload.get("parts", []) or []:
-        text = _extract_body(part)
-        if text:
-            return text
-    # Fallback: a top-level body with data.
-    return _decode_b64url(payload.get("body", {}).get("data", ""))
+        found = _find_part(part, mime_type)
+        if found:
+            return found
+    return ""
+
+
+def _extract_body(payload: dict) -> str:
+    """The readable text of a Gmail message.
+
+    ``text/plain`` wins when the sender provided it: it is what they wrote,
+    already wrapped the way they wrote it. Failing that the ``text/html``
+    alternative is rendered to text — a large share of real mail is HTML-only
+    (notifications, newsletters, anything from a modern client), and this used
+    to fall through to the raw-body fallback below and store the markup. That
+    markup then *was* the email: shown in the reader, handed to the drafter as
+    the message, and checked by the verifier as the source.
+    """
+    plain = _find_part(payload, "text/plain")
+    if plain:
+        return plain
+
+    html = _find_part(payload, "text/html")
+    if html:
+        return html_to_text(html)
+
+    # Fallback: a top-level body with data and no declared part structure.
+    raw = _decode_b64url(payload.get("body", {}).get("data", ""))
+    return html_to_text(raw) if looks_like_html(raw) else raw
 
 
 class GmailProvider(MailProvider):
