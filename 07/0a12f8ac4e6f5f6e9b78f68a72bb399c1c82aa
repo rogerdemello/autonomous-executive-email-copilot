@@ -1,0 +1,49 @@
+LAUNCH_CHECKLIST.md
+  s_c5f09332e20c5a::t_c62e6c395222e6 47,50-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "070a12f8ac4e6f5f6e9b78f68a72bb399c1c82aa",
+  "branch": "security-scan-green",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:45af103ae1ef8fea6d87c45fe475247abc5642c2e296b12aa05f736198ed4153",
+      "total_additions": 8,
+      "total_deletions": 1,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:45af103ae1ef8fea6d87c45fe475247abc5642c2e296b12aa05f736198ed4153",
+      "stats": {
+        "total_additions": 8,
+        "total_deletions": 1,
+        "accepted_lines": 8,
+        "overriden_lines": 0,
+        "files": {
+          "LAUNCH_CHECKLIST.md": {
+            "total_additions": 8,
+            "total_deletions": 1,
+            "accepted_lines": 8,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
