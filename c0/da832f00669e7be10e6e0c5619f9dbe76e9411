@@ -1,0 +1,50 @@
+tests/test_web_pages.py
+  s_c5f09332e20c5a::t_4aea8d0e54c73f 261
+  s_c5f09332e20c5a::t_44f5ca85ba5810 258-260
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "c0da832f00669e7be10e6e0c5619f9dbe76e9411",
+  "branch": "main",
+  "prompts": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:4cb6cc69b3bc82718036949ca7eb5c728476e87a50f06a1d8c34f377c4428251",
+      "total_additions": 5,
+      "total_deletions": 3,
+      "accepted_lines": 1176,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c5f09332e20c5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a0153a-25dc-4aa8-be54-541bf2d77bcf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:4cb6cc69b3bc82718036949ca7eb5c728476e87a50f06a1d8c34f377c4428251",
+      "stats": {
+        "total_additions": 5,
+        "total_deletions": 3,
+        "accepted_lines": 1176,
+        "overriden_lines": 0,
+        "files": {
+          "tests/test_web_pages.py": {
+            "total_additions": 5,
+            "total_deletions": 3,
+            "accepted_lines": 1176,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
