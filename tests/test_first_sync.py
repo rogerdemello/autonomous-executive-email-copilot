@@ -232,3 +232,85 @@ class TestTheWaitingState:
 
         assert "Reading your mailbox" not in html
         assert 'http-equiv="refresh"' not in html
+
+
+# --------------------------------------------------------------------------- #
+# The admin-consent wall
+# --------------------------------------------------------------------------- #
+class TestAdminConsent:
+    """`Mail.ReadWrite`/`Mail.Send` need tenant-admin approval in most managed
+    directories, so for a corporate customer this is the *expected* first
+    outcome of clicking Connect — not an edge case. Microsoft reports it as
+    `access_denied`, which is indistinguishable from the user saying no, so
+    without this the onboarding call ends on "authorization was denied" and
+    nobody knows which permission to chase.
+    """
+
+    @pytest.fixture
+    def microsoft(self, monkeypatch):
+        monkeypatch.setenv("MICROSOFT_OAUTH_CLIENT_ID", "ms-client-id")
+        monkeypatch.setenv("MICROSOFT_OAUTH_CLIENT_SECRET", "ms-secret")
+
+    def test_a_consent_wall_shows_the_administrator_link(self, client, microsoft):
+        response = client.get(
+            "/mailbox/oauth/callback",
+            params={
+                "error": "access_denied",
+                "error_description": (
+                    "AADSTS65001: The user or administrator has not consented to use "
+                    "the application with ID '...'."
+                ),
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.text
+        assert "administrator" in body.lower()
+        assert "login.microsoftonline.com" in body
+        assert "adminconsent" in body
+        assert "ms-client-id" in body
+        # It must not read as the customer's mistake.
+        assert "Authorization was denied" not in body
+
+    def test_an_ordinary_refusal_is_still_an_ordinary_error(self, client, microsoft):
+        """Someone who genuinely clicked Cancel should not be sent to IT."""
+        response = client.get(
+            "/mailbox/oauth/callback",
+            params={"error": "access_denied", "error_description": "User cancelled the flow"},
+        )
+
+        assert response.status_code == 400
+        assert "adminconsent" not in response.text
+
+    def test_the_consent_url_avoids_common_which_has_no_administrator(self, monkeypatch, microsoft):
+        """`common` also covers personal Microsoft accounts, which have no
+        admin and cannot grant this."""
+        monkeypatch.setenv("MICROSOFT_OAUTH_TENANT", "common")
+        url = oauth.admin_consent_url("https://app.example/mailbox/oauth/callback")
+        assert "/organizations/adminconsent" in url
+
+    def test_a_pinned_tenant_is_used_as_given(self, monkeypatch, microsoft):
+        monkeypatch.setenv("MICROSOFT_OAUTH_TENANT", "contoso.onmicrosoft.com")
+        url = oauth.admin_consent_url("https://app.example/mailbox/oauth/callback")
+        assert "/contoso.onmicrosoft.com/adminconsent" in url
+
+    def test_no_client_id_means_no_link_rather_than_a_broken_one(self, monkeypatch):
+        monkeypatch.delenv("MICROSOFT_OAUTH_CLIENT_ID", raising=False)
+        monkeypatch.delenv("MICROSOFT_OAUTH_CLIENT_SECRET", raising=False)
+        assert oauth.admin_consent_url("https://app.example/cb") is None
+
+    @pytest.mark.parametrize(
+        "description",
+        [
+            "AADSTS65001: The user or administrator has not consented",
+            "AADSTS900941: admin consent is required",
+            "consent_required",
+        ],
+    )
+    def test_the_known_consent_codes_are_recognised(self, description):
+        assert oauth.needs_admin_consent("access_denied", description)
+
+    def test_an_unrelated_failure_is_not_mistaken_for_a_consent_wall(self):
+        assert not oauth.needs_admin_consent("access_denied", "AADSTS50011: redirect mismatch")
+        assert not oauth.needs_admin_consent("server_error", None)
+        assert not oauth.needs_admin_consent(None, None)

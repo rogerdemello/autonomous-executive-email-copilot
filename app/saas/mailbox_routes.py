@@ -12,6 +12,8 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from app.core.config import get_settings
+
 from . import oauth
 from .deps import get_current_user, reject_shared_demo_account, require_role
 from .mailbox import MailboxError, MailboxService
@@ -62,6 +64,14 @@ def oauth_callback(request: Request, background: BackgroundTasks) -> Response:
     params = request.query_params
     error = params.get("error")
     if error:
+        description = params.get("error_description")
+        if oauth.needs_admin_consent(error, description):
+            # Not a refusal — a wall. Mail.ReadWrite/Mail.Send require tenant
+            # admin approval in most managed directories, so for a corporate
+            # customer this is the *expected* first outcome. Saying
+            # "authorization was denied" would send them off to debug a
+            # permission they never had the power to grant.
+            return _admin_consent_required(request)
         return _connect_failed(request, f"Authorization was denied ({error}).")
     code = params.get("code")
     state = params.get("state")
@@ -128,6 +138,24 @@ def disconnect(
     if not ok:
         raise HTTPException(status_code=404, detail="Connection not found")
     return {"status": "ok", "disconnected": connection_id}
+
+
+def _admin_consent_required(request: Request) -> HTMLResponse:
+    """Show the exact URL the customer's IT administrator has to open.
+
+    The point is that the onboarding call does not end here. Without this the
+    screen says "denied", nobody knows why, and the next step is an email thread
+    with an IT department that has not been told what it is approving.
+    """
+    from app.web.routes import _render
+
+    redirect_uri = f"{get_settings().resolved_app_public_url}/mailbox/oauth/callback"
+    return _render(
+        request,
+        "admin_consent.html",
+        {"consent_url": oauth.admin_consent_url(redirect_uri)},
+        status_code=200,
+    )
 
 
 def _connect_failed(request: Request, message: str) -> HTMLResponse:

@@ -1,0 +1,60 @@
+{% extends "_public.html" %}
+
+{% block title %}Your IT administrator needs to approve this · Executive Email Copilot{% endblock %}
+
+{% block main %}
+<div class="auth">
+  <div class="auth__card">
+    <p class="eyebrow">One approval needed</p>
+    <h1>Your IT administrator has to allow this once</h1>
+    <p class="auth__sub">
+      Nothing went wrong. Microsoft 365 requires an administrator to approve
+      apps that read and send mail on behalf of people in your organisation —
+      so this is a decision your IT team makes for everyone, once, rather than
+      one you can make for yourself.
+    </p>
+
+    {% if consent_url %}
+      <p>Send your administrator this link. It takes them about a minute.</p>
+      {# Selectable and readable rather than a mystery button: an IT admin is
+         about to grant an app access to their mail tenant, and "click this
+         link I was sent" is exactly the instinct they are trained to resist.
+         Showing the login.microsoftonline.com URL in full is the reassurance.
+         No inline onfocus handler — the CSP is `script-src 'self'` and it
+         would be blocked, leaving an affordance that silently does nothing. #}
+      <div class="field">
+        <label for="consent_url">Administrator approval link</label>
+        <input id="consent_url" class="mono" type="text" value="{{ consent_url }}" readonly />
+      </div>
+      <a class="btn btn--primary btn--block" href="{{ consent_url }}">
+        Open the approval page
+      </a>
+      <p class="muted">
+        If you <em>are</em> the administrator, open it now — you'll be asked to
+        sign in and approve, and then you can connect the mailbox.
+      </p>
+    {% else %}
+      <p>
+        Microsoft 365 isn't configured on this workspace yet. Ask whoever set it
+        up to finish the connection, or use the demo mailbox in the meantime.
+      </p>
+    {% endif %}
+
+    <details class="disclosure">
+      <summary class="muted">What is being approved?</summary>
+      <div class="disclosure__body">
+        <p>
+          Read the mail in the connected mailbox, apply labels, and send the
+          replies a person has explicitly approved. Nothing is sent without
+          sign-off. The full list of permissions and why each is needed is on
+          our <a href="/privacy">privacy page</a>.
+        </p>
+      </div>
+    </details>
+
+    <p class="auth__alt">
+      <a href="/app/connect">Back to mailboxes</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

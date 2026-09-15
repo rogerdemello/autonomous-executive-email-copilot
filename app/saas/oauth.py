@@ -18,7 +18,7 @@ the feature stays fully opt-in. The token exchange (the one impure step) uses
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from app.core.config import get_settings
 
@@ -86,6 +86,45 @@ def _providers() -> dict[str, OAuthProvider]:
 
 def get_provider(key: str) -> OAuthProvider | None:
     return _providers().get(key)
+
+
+# Microsoft's code for "this app needs an administrator to approve it for the
+# whole tenant". It arrives inside error_description, not as the error itself,
+# which is access_denied — indistinguishable from the user simply saying no.
+_ADMIN_CONSENT_CODES = ("AADSTS65001", "AADSTS900941", "consent_required")
+
+
+def needs_admin_consent(error: str | None, description: str | None) -> bool:
+    """Whether a failed Microsoft callback is an admin-consent wall.
+
+    ``Mail.ReadWrite`` and ``Mail.Send`` trip this in most managed tenants, so
+    for a real corporate customer it is not an edge case — it is the *expected*
+    first outcome, and telling them "authorization was denied" sends everyone
+    away to debug the wrong thing.
+    """
+    haystack = f"{error or ''} {description or ''}"
+    return any(code.lower() in haystack.lower() for code in _ADMIN_CONSENT_CODES)
+
+
+def admin_consent_url(redirect_uri: str, tenant: str | None = None) -> str | None:
+    """The URL a tenant administrator opens to approve this app once, org-wide.
+
+    ``organizations`` rather than the configured tenant when that is ``common``:
+    ``common`` also covers personal Microsoft accounts, which have no
+    administrator and cannot grant this. The admin's own sign-in resolves
+    ``organizations`` to their directory, so no tenant id has to be discovered
+    from the failed attempt — which Microsoft does not reliably return anyway.
+    """
+    client_id, _ = provider_credentials("microsoft")
+    if not client_id:
+        return None
+    configured = (tenant or get_settings().microsoft_oauth_tenant or "").strip()
+    target = configured if configured and configured != "common" else "organizations"
+    return (
+        f"https://login.microsoftonline.com/{quote(target, safe='')}/adminconsent"
+        f"?client_id={quote(client_id, safe='')}"
+        f"&redirect_uri={quote(redirect_uri, safe='')}"
+    )
 
 
 def provider_credentials(key: str) -> tuple[str | None, str | None]:
