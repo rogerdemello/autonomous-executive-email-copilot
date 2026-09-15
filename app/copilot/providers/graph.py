@@ -52,9 +52,20 @@ class MicrosoftGraphProvider(MailProvider):
         return data
 
     def fetch_messages(self, folder: str = "INBOX", limit: int = 25) -> list[FetchedMessage]:
+        """The newest ``limit`` messages in the folder.
+
+        ``$orderby`` is explicit rather than relying on the service default.
+        Triage is about what just arrived, and a mailbox is capped at
+        ``inbox_sync_limit`` per sweep — so if the ordering were ever oldest
+        first, a real account would sync mail from years ago, forever, and
+        never show the message the user is waiting on. Gmail's list endpoint
+        documents reverse-chronological order; Graph's does not.
+        """
         mailfolder = "inbox" if folder.upper() == "INBOX" else folder
         data = self._call(
-            "GET", f"{_BASE}/mailFolders/{_seg(mailfolder)}/messages?$top={int(limit)}"
+            "GET",
+            f"{_BASE}/mailFolders/{_seg(mailfolder)}/messages"
+            f"?$top={int(limit)}&$orderby=receivedDateTime%20desc",
         )
         return [self._to_fetched(m) for m in data.get("value", []) or []]
 

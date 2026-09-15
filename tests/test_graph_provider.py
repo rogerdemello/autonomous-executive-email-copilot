@@ -44,6 +44,28 @@ def test_fetch_maps_messages():
     assert "review the attached contract" in msgs[0].body
 
 
+def test_fetch_asks_for_the_newest_messages_first():
+    """Triage is about what just arrived.
+
+    A mailbox is capped at ``inbox_sync_limit`` per sweep, so if the service
+    ever returned oldest-first a real account would sync mail from years ago,
+    every time, and never surface the message someone is waiting on. Gmail's
+    list endpoint documents reverse-chronological order; Graph's does not, so
+    this asks explicitly rather than trusting a default.
+    """
+    seen = []
+
+    def transport(method, url, token, json_body):
+        seen.append(url)
+        return 200, {"value": []}
+
+    MicrosoftGraphProvider("tok", transport=transport).fetch_messages(limit=50)
+
+    assert len(seen) == 1
+    assert "$top=50" in seen[0]
+    assert "$orderby=receivedDateTime%20desc" in seen[0]
+
+
 def test_401_triggers_single_refresh_and_retry():
     state = {"n": 0}
 
