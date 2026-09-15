@@ -13,6 +13,6 @@ The research benchmark this project grew out of lives in ``research/`` and
 imports from here, never the other way around.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = ["__version__"]

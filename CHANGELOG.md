@@ -7,8 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-15
+
+The launch pass — turning the repo into something a stranger could be shown —
+and the pre-launch hardening that followed it, which turned it into something
+that can be left running unattended.
+
 ### Added
 
+- **A ceiling on model spend, and a ledger under it.** Cost was computed per
+  call and handed to an in-process Prometheus counter: not per-org, and reset
+  by every deploy. With drafting on and a worker sweeping every mailbox every
+  15 minutes, there was no answer to "what did last week cost, and who ran it
+  up?" and nothing stopping one large mailbox from running up a bill.
+  `saas_llm_usage` bills every call to the org that caused it, and
+  `LLM_MONTHLY_BUDGET_USD` (default 25 per org per calendar month; `0` for no
+  ceiling) caps it. At the cap, drafts fall back to rule-based prose — triage,
+  verification, commitment tracking and sending are unaffected. Surfaced in
+  Settings.
+- **A broken mailbox is impossible to miss.** A revoked token flipped the
+  connection to `error` and showed only as a chip on `/app/connect`, a page
+  nobody opens twice. Everywhere else the inbox quietly stopped filling, which
+  is indistinguishable from a quiet week. Now: a banner on every signed-in
+  page, one email to the org's admins on the transition, and an audit row.
+- **A background-worker heartbeat.** Each sweep records its timestamp and
+  summary, the last ten are kept, and `/health/ready` reports whether the
+  worker has gone stale. Deliberately not a 503 — the web tier is still
+  serving, and cycling a single-instance deployment to fix a background job
+  takes the whole product down.
+- **`/operator`**, one page that answers "is this working right now?".
+  Workspaces with owners and access status, mailboxes by status, the worker's
+  heartbeat and recent passes, failed sends awaiting a human, model spend per
+  workspace, and recent leads. Behind the existing `OPERATOR_TOKEN`, exchanged
+  for a short-lived signed cookie because a browser cannot type an
+  `Authorization` header by visiting a URL; the token is never accepted from a
+  query string, where it would land in access and proxy logs.
+- **`LAUNCH_CHECKLIST.md`** — the remaining deployment steps that need a
+  person, in the order they unblock each other.
 - **`/privacy` and `/terms`.** Neither existed. Google will not *begin* OAuth
   verification for the restricted `gmail.*` scopes without a published privacy
   policy on the app's own domain, so their absence gated a 6-12 week queue.
@@ -55,6 +90,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `MailboxRepository.set_status` returns whether the status *changed* rather
+  than whether the row was found. The worker re-derives a broken connection's
+  state on every sweep; without a transition signal the new notification would
+  have fired 96 times a day for as long as the mailbox stayed broken.
 - **Restructured** `env/` into `app/` (the product: `core`, `copilot`, `llm`,
   `saas`, `web`) and `research/` (the benchmark: `sim`, `baseline`, `benchmark`).
   Dependencies point one way — research may import from app, never the reverse.
@@ -68,6 +107,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The signed-in app was unusable on a phone.** Every page rendered 620px wide
+  inside a 320px viewport, in both themes. One cause in three guises: an `fr`
+  grid track, an `overflow-x: auto` nav, and `minmax(300px, 1fr)` all floor at
+  min-content unless told otherwise, so the sidebar's widest row set the width
+  of the entire application. Thirteen pages now reflow cleanly at 320px.
+- **Accessibility gaps on every page Phase 3 did not touch.** The landing
+  page's benchmark table and both of `/privacy`'s OAuth scope tables had no
+  caption and unscoped headers; the public pages had no skip link at all. Form
+  errors now take focus and are associated with their fields — these are full
+  page reloads, so the banner exists at load and `role="alert"` alone never
+  fires. `tests/test_web_a11y.py` sweeps every page rather than sampling two.
 - **A clean `git clone` shipped a broken landing page.** `static/fonts/` and
   `static/img/` were untracked while 18 tracked files referenced them, and the
   package-data glob was non-recursive so a wheel dropped both.
