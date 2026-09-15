@@ -1,7 +1,7 @@
 # Executive Email Copilot
 
-![Tests](https://img.shields.io/badge/tests-1020%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-78%25-green)
+![Tests](https://img.shields.io/badge/tests-1097%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-83%25-green)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -610,9 +610,11 @@ provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.m
 
 ## Testing Coverage
 
-**1020 tests pass at 78% coverage.** Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
+**1097 tests pass at 83% coverage.** Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
 
 The drafter is tested for how it *fails* rather than how it writes ([tests/test_llm_drafter.py](tests/test_llm_drafter.py)): a missing key, a dead provider, a non-JSON answer, an injected message and a risky generation must each degrade to the fallback prose without raising, because all of them happen inside a request that is syncing someone's mailbox.
+
+Accessibility is swept, not sampled ([tests/test_web_a11y.py](tests/test_web_a11y.py)): every public, signed-in and operator page is rendered and checked for one `<h1>`, a `<main>` landmark, an accessible name on every control, no positive `tabindex`, `alt` on every image, and captions with scoped headers on every table. The stdlib HTML parser does the work — an accessibility gate that needs a new dependency is a gate someone eventually deletes. [tests/test_web_reflow.py](tests/test_web_reflow.py) drives a real browser to assert no page scrolls sideways at 320px in either theme (WCAG 1.4.10); it needs Playwright and skips without it.
 
 ## Important Constraints
 
