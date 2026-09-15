@@ -1293,7 +1293,36 @@ def _settings_context(request: Request, user: dict) -> dict[str, Any]:
         role for role in ROLES if rbac.can_assign_role(user["role"], role)
     ]
     context["is_owner"] = user["role"] == ROLE_OWNER
+    context["model_usage"] = _model_usage(user["org_id"])
     return context
+
+
+def _model_usage(org_id: str) -> dict[str, Any] | None:
+    """This month's model spend against its ceiling, or ``None`` to hide it.
+
+    Hidden when drafting is off and nothing has ever been spent: a workspace
+    running on cached and deterministic prose has no spend to explain, and a
+    row of zeroes reads as a broken feature rather than an absent one.
+    """
+    from app.saas.repository import LlmUsageRepository
+
+    settings = get_settings()
+    try:
+        summary = LlmUsageRepository().summary(org_id)
+    except Exception:  # noqa: BLE001 - a settings page must render regardless
+        return None
+    if not summary["calls"] and not settings.llm_drafting_enabled:
+        return None
+    limit = float(settings.llm_monthly_budget_usd)
+    return {
+        "cost_usd": summary["cost_usd"],
+        "calls": summary["calls"],
+        "tokens": summary["prompt_tokens"] + summary["completion_tokens"],
+        "limit_usd": limit,
+        "capped": limit > 0,
+        "exhausted": limit > 0 and summary["cost_usd"] >= limit,
+        "percent": min(100, round(summary["cost_usd"] / limit * 100)) if limit > 0 else 0,
+    }
 
 
 @web_router.get("/app/settings", response_class=HTMLResponse)

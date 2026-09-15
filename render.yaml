@@ -63,6 +63,14 @@ services:
         value: "900" # every 15 min per connection, with per-connection jitter
       - key: LLM_DRAFTING_ENABLED
         value: "true" # requires a key below; falls back safely without one
+      # ⚠ The ceiling on what one workspace can spend on the model in a calendar
+      # month. Drafting is on and the worker sweeps every mailbox every 15
+      # minutes, so this is the only thing standing between a large mailbox and
+      # an unbounded bill. Reaching it degrades prose to the deterministic
+      # fallback; triage, verification and sending are unaffected. `0` removes
+      # the ceiling — don't, until the bill is a line item somebody watches.
+      - key: LLM_MONTHLY_BUDGET_USD
+        value: "25"
       # --- Abuse limits -------------------------------------------------------
       - key: RATE_LIMIT_PER_MINUTE
         value: "120"

@@ -494,6 +494,28 @@ h3 {
   border-color: color-mix(in srgb, var(--crit) 30%, transparent);
 }
 
+/* Spend against a ceiling. The fill carries a border as well as a colour so
+   the bar is still readable with colour filtered out or forced-colours on. */
+.meter {
+  height: 8px;
+  margin: 0.75rem 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--accent);
+}
+
+.meter__fill--full {
+  background: var(--crit);
+}
+
 .chip--defer,
 .chip--warn,
 .chip--medium,

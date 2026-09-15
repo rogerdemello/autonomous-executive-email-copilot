@@ -21,6 +21,7 @@ from .models_db import (
     AuditLogEntry,
     Commitment,
     License,
+    LlmUsage,
     MailboxConnection,
     Organization,
     ProcessedMessage,
@@ -1267,3 +1268,95 @@ class SalesLeadRepository:
             lead.status = status
             session.flush()
             return lead.to_dict()
+
+
+def month_start_iso(now: datetime | None = None) -> str:
+    """The first instant of the current UTC month, as a comparable ISO string.
+
+    Billing periods are calendar months in UTC, not rolling 30-day windows: a
+    customer reading "spent this month" means the month on the calendar, and a
+    rolling window would make the number drift under them.
+    """
+    moment = now or datetime.now(timezone.utc)
+    return moment.replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc
+    ).isoformat()
+
+
+class LlmUsageRepository:
+    """The spend ledger: what each org's model calls actually cost.
+
+    String timestamps compare correctly here because every writer uses
+    :func:`_now_iso` — the same offset-aware ISO-8601 format, so lexical order
+    is chronological order. That is already how this schema filters on time
+    everywhere else.
+    """
+
+    def record(
+        self,
+        *,
+        org_id: str,
+        cost_usd: float,
+        model: str | None = None,
+        purpose: str = "draft",
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+    ) -> dict[str, Any]:
+        with get_session() as session:
+            row = LlmUsage(
+                org_id=org_id,
+                model=(model or None),
+                purpose=purpose,
+                prompt_tokens=int(prompt_tokens or 0),
+                completion_tokens=int(completion_tokens or 0),
+                cost_usd=float(cost_usd or 0.0),
+            )
+            session.add(row)
+            session.flush()
+            return row.to_dict()
+
+    def month_to_date(self, org_id: str, now: datetime | None = None) -> float:
+        """This org's spend since the start of the UTC month, in USD."""
+        since = month_start_iso(now)
+        with get_session() as session:
+            total = (
+                session.query(func.sum(LlmUsage.cost_usd))
+                .filter(LlmUsage.org_id == org_id, LlmUsage.created_at >= since)
+                .scalar()
+            )
+        return float(total or 0.0)
+
+    def summary(self, org_id: str, now: datetime | None = None) -> dict[str, Any]:
+        """Month-to-date spend, call count and tokens — what Settings renders."""
+        since = month_start_iso(now)
+        with get_session() as session:
+            row = (
+                session.query(
+                    func.sum(LlmUsage.cost_usd),
+                    func.count(LlmUsage.id),
+                    func.sum(LlmUsage.prompt_tokens),
+                    func.sum(LlmUsage.completion_tokens),
+                )
+                .filter(LlmUsage.org_id == org_id, LlmUsage.created_at >= since)
+                .one()
+            )
+        cost, calls, prompt, completion = row
+        return {
+            "cost_usd": float(cost or 0.0),
+            "calls": int(calls or 0),
+            "prompt_tokens": int(prompt or 0),
+            "completion_tokens": int(completion or 0),
+            "since": since,
+        }
+
+    def by_org(self, now: datetime | None = None) -> dict[str, float]:
+        """Month-to-date spend for every org that has any — the operator view."""
+        since = month_start_iso(now)
+        with get_session() as session:
+            rows = (
+                session.query(LlmUsage.org_id, func.sum(LlmUsage.cost_usd))
+                .filter(LlmUsage.created_at >= since)
+                .group_by(LlmUsage.org_id)
+                .all()
+            )
+        return {str(org_id): float(total or 0.0) for org_id, total in rows}

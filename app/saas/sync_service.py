@@ -99,6 +99,7 @@ def resolve_draft(
     context=None,
     live_llm: bool = False,
     examples: list[dict] | None = None,
+    budget=None,
 ) -> ResolvedDraft:
     """Resolve the prose for one held action, best source first.
 
@@ -111,6 +112,12 @@ def resolve_draft(
     :mod:`app.saas.learning`); they ride along in the prompt and in the cache
     key, so a workspace whose voice has changed re-drafts rather than replaying
     prose written before the feedback existed.
+
+    ``budget`` is an :class:`~app.saas.llm_budget.LlmBudget` when the caller
+    knows which org to bill. An exhausted budget simply skips the model, which
+    lands on exactly the same fallback as having no API key at all. It is
+    checked *after* the cache: replaying prose already paid for costs nothing,
+    and refusing to serve it would punish the customer twice.
 
     Every step degrades rather than raises. Losing the model costs prose, not the
     decision — which was made deterministically before any of this ran.
@@ -141,7 +148,7 @@ def resolve_draft(
             rationale=list(cached.get("rationale") or []),
         )
 
-    if live_llm:
+    if live_llm and (budget is None or budget.allows()):
         from app.llm.drafter import get_drafter
 
         result = get_drafter().draft(
@@ -153,6 +160,14 @@ def resolve_draft(
             examples=examples,
         )
         if result is not None:
+            if budget is not None:
+                budget.record(
+                    cost_usd=result.cost_usd,
+                    model=result.model,
+                    purpose="draft",
+                    prompt_tokens=result.prompt_tokens,
+                    completion_tokens=result.completion_tokens,
+                )
             cache.put(
                 key,
                 body=result.body,
@@ -262,6 +277,13 @@ class InboxSyncService:
         message_by_id = {m.provider_message_id: m for m in fetched}
         signals_by_id = {e.id: e for e in observation.emails}
         draft_context = self._draft_context(org_id, user_id) if live_llm else None
+
+        # One ledger read for the whole sync, then metered in memory as drafts
+        # are written. Built even when drafting is off: it costs nothing (an
+        # unenforced budget reads nothing) and keeps the call site uniform.
+        from .llm_budget import LlmBudget
+
+        budget = LlmBudget(org_id) if live_llm else None
 
         # What this org's reviewers have taught the copilot (see app.saas.learning):
         # pairs they keep rejecting get downgraded below, and their accepted drafts
@@ -379,6 +401,7 @@ class InboxSyncService:
                     context=draft_context,
                     live_llm=live_llm,
                     examples=_examples(prop.action_type),
+                    budget=budget,
                 )
                 # Draft-then-verify: check the prose against its source before
                 # it queues. A flagged draft still queues — the human is the

@@ -94,6 +94,55 @@
   </div>
 </div>
 
+{% if model_usage %}
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">Model usage this month</span>
+      {% if model_usage.exhausted %}
+        <span class="chip chip--danger">budget reached</span>
+      {% endif %}
+    </div>
+    <div class="card__body">
+      <p class="access__state">
+        <span class="access__headline">
+          ${{ "%.2f" | format(model_usage.cost_usd) }}
+          {%- if model_usage.capped %}
+            <span class="muted">of ${{ "%.2f" | format(model_usage.limit_usd) }}</span>
+          {%- endif %}
+        </span>
+        <span class="muted">
+          {{ model_usage.calls }} draft{{ 's' if model_usage.calls != 1 }} written ·
+          {{ "{:,}".format(model_usage.tokens) }} tokens
+        </span>
+      </p>
+
+      {% if model_usage.capped %}
+        <div
+          class="meter"
+          role="meter"
+          aria-valuenow="{{ model_usage.percent }}"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-label="Model budget used this month"
+        >
+          <span
+            class="meter__fill{{ ' meter__fill--full' if model_usage.exhausted }}"
+            style="width: {{ model_usage.percent }}%"
+          ></span>
+        </div>
+      {% endif %}
+
+      {% if model_usage.exhausted %}
+        <p class="muted">
+          Drafts are still being written — from cached and rule-based prose
+          rather than the model. Triage, verification, follow-up tracking and
+          sending are unaffected. This resets when the month rolls over.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
 <div class="card card--stacked">
   <div class="card__head">
     <span class="card__title">Members</span>
