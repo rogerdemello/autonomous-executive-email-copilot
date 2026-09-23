@@ -183,29 +183,62 @@ class GmailProvider(MailProvider):
         return from_header.strip(), ""
 
     # -- write --------------------------------------------------------------
-    def _raw_message(self, to: str, subject: str, body: str) -> str:
-        mime = f"To: {to}\r\nSubject: {subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{body}"
-        return _b64url(mime.encode("utf-8"))
+    def _raw_message(
+        self, to: str, subject: str, body: str, *, in_reply_to: str = "", references: str = ""
+    ) -> str:
+        # Built with EmailMessage rather than hand-concatenated header lines:
+        # a non-ASCII subject ("Re: Présentation") in a raw f-string is an
+        # RFC-violating header, and whether it survives depends on the
+        # receiving server. EmailMessage encodes headers per RFC 2047.
+        from email.message import EmailMessage
 
-    def _recipient_and_thread(self, provider_message_id: str) -> tuple[str, str, str]:
+        msg = EmailMessage()
+        msg["To"] = to
+        msg["Subject"] = subject
+        # Gmail's send API documents In-Reply-To/References as required for
+        # threadId to apply — and the *recipient's* client threads only by
+        # these headers, threadId being a Gmail-internal concept. Without
+        # them, every approved reply lands at the other end as a brand-new
+        # conversation.
+        if in_reply_to:
+            msg["In-Reply-To"] = in_reply_to
+            msg["References"] = f"{references} {in_reply_to}".strip()
+        msg.set_content(body)
+        return _b64url(msg.as_bytes())
+
+    def _reply_context(self, provider_message_id: str) -> tuple[str, str, str, str, str]:
+        """(to, subject, thread_id, message_id_header, references) of a message.
+
+        ``to`` honours Reply-To when the sender set one — ticket systems and
+        no-reply senders route replies away from From, and answering From
+        anyway sends the approved reply somewhere nobody reads.
+        """
         msg = self._call("GET", f"{_BASE}/messages/{_seg(provider_message_id)}?format=metadata")
         headers = msg.get("payload", {}).get("headers", [])
-        sender, _ = self._split_from(_header(headers, "From"))
-        subject = _header(headers, "Subject")
-        return sender, subject, msg.get("threadId", "")
+        to, _ = self._split_from(_header(headers, "Reply-To") or _header(headers, "From"))
+        return (
+            to,
+            _header(headers, "Subject"),
+            msg.get("threadId", ""),
+            _header(headers, "Message-ID"),
+            _header(headers, "References"),
+        )
 
     @write_guard
     def send_reply(self, provider_message_id: str, body: str) -> WriteResult:
-        to, subject, thread_id = self._recipient_and_thread(provider_message_id)
+        to, subject, thread_id, message_id, references = self._reply_context(provider_message_id)
         reply_subject = subject if subject.lower().startswith("re:") else f"Re: {subject}"
-        payload = {"raw": self._raw_message(to, reply_subject, body), "threadId": thread_id}
-        data = self._call("POST", f"{_BASE}/messages/send", payload)
+        raw = self._raw_message(
+            to, reply_subject, body, in_reply_to=message_id, references=references
+        )
+        data = self._call("POST", f"{_BASE}/messages/send", {"raw": raw, "threadId": thread_id})
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
     @write_guard
     def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
-        to, subject, thread_id = self._recipient_and_thread(provider_message_id)
-        payload = {"message": {"raw": self._raw_message(to, subject, body), "threadId": thread_id}}
+        to, subject, thread_id, message_id, references = self._reply_context(provider_message_id)
+        raw = self._raw_message(to, subject, body, in_reply_to=message_id, references=references)
+        payload = {"message": {"raw": raw, "threadId": thread_id}}
         data = self._call("POST", f"{_BASE}/drafts", payload)
         return WriteResult(ok=True, provider_ref=data.get("id"))
 

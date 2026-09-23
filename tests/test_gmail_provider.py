@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import email
 import uuid
 
 from fastapi.testclient import TestClient
@@ -16,6 +17,11 @@ from app.saas.repository import MailboxRepository
 
 def _b64url(text: str) -> str:
     return base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
+
+
+def _sent_mime(raw: str) -> email.message.Message:
+    """Decode the ``raw`` field of a Gmail send payload back into a message."""
+    return email.message_from_bytes(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
 
 
 def _full_message(mid: str) -> dict:
@@ -42,9 +48,11 @@ class RecordingTransport:
     def __init__(self, responses: dict[tuple[str, str], tuple[int, dict]]):
         self._responses = responses
         self.calls: list[tuple[str, str, str]] = []
+        self.payloads: list[dict | None] = []
 
     def __call__(self, method, url, token, json_body):
         self.calls.append((method, url, token))
+        self.payloads.append(json_body)
         for (m, needle), resp in self._responses.items():
             if m == method and needle in url:
                 return resp
@@ -116,6 +124,50 @@ class TestGmailProvider:
         assert result.ok
         assert result.provider_ref == "sent-1"
         assert any(m == "POST" and "/messages/send" in u for m, u, _ in transport.calls)
+        # The original carried no Message-ID, so no threading headers are
+        # invented — an In-Reply-To pointing at nothing is worse than none.
+        mime = _sent_mime(transport.payloads[-1]["raw"])
+        assert mime["In-Reply-To"] is None
+        assert mime["References"] is None
+
+    def test_send_reply_threads_for_the_recipient(self):
+        """The reply must carry In-Reply-To/References — what the *recipient's*
+        client threads by; threadId is Gmail-internal — and honour Reply-To,
+        which ticket systems use to route answers away from a no-reply From."""
+        transport = RecordingTransport(
+            {
+                ("GET", "/messages/g1"): (
+                    200,
+                    {
+                        "threadId": "t-g1",
+                        "payload": {
+                            "headers": [
+                                {"name": "From", "value": "Desk <no-reply@desk.example>"},
+                                {"name": "Reply-To", "value": "support@desk.example"},
+                                {"name": "Subject", "value": "Présentation budget"},
+                                {"name": "Message-ID", "value": "<orig-123@desk.example>"},
+                                {"name": "References", "value": "<root-1@desk.example>"},
+                            ]
+                        },
+                    },
+                ),
+                ("POST", "/messages/send"): (200, {"id": "sent-1"}),
+            }
+        )
+        provider = GmailProvider("tok", transport=transport)
+        assert provider.send_reply("g1", "On it.").ok
+
+        sent = transport.payloads[-1]
+        assert sent["threadId"] == "t-g1"
+        mime = _sent_mime(sent["raw"])
+        assert mime["To"] == "support@desk.example"
+        assert mime["In-Reply-To"] == "<orig-123@desk.example>"
+        assert mime["References"] == "<root-1@desk.example> <orig-123@desk.example>"
+        # The non-ASCII subject survives as a properly encoded header — a raw
+        # f-string header would have shipped bare UTF-8 in violation of RFC 5322.
+        from email.header import decode_header, make_header
+
+        assert str(make_header(decode_header(mime["Subject"]))) == "Re: Présentation budget"
 
     def test_create_draft_hits_drafts_endpoint(self):
         transport = RecordingTransport(
