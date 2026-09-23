@@ -1,0 +1,61 @@
+app/copilot/providers/gmail.py
+  s_c1482b12f5c5d6::t_347c8d6879ec60 186-191,193-215,218-225,229,231-234,239-241
+  s_c1482b12f5c5d6::t_a9d49866725169 192
+tests/test_gmail_provider.py
+  s_c1482b12f5c5d6::t_42dd03bc8adf12 51,55
+  s_c1482b12f5c5d6::t_140964c5015150 22-26
+  s_c1482b12f5c5d6::t_784363c7bc1c3e 6
+  s_c1482b12f5c5d6::t_0dee74349e24e1 127-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "657dfbfae3021eee1c17962759c400f23e3797aa",
+  "branch": "main",
+  "prompts": {
+    "s_c1482b12f5c5d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8c3decd3-c711-4465-b6d9-31d144ff17f1",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e026f0f7bb7f130e487cfe6c4baf291cf6c5ee636d290774803e21d84d183c8f",
+      "total_additions": 99,
+      "total_deletions": 14,
+      "accepted_lines": 629,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_c1482b12f5c5d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8c3decd3-c711-4465-b6d9-31d144ff17f1",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e026f0f7bb7f130e487cfe6c4baf291cf6c5ee636d290774803e21d84d183c8f",
+      "stats": {
+        "total_additions": 99,
+        "total_deletions": 14,
+        "accepted_lines": 629,
+        "overriden_lines": 0,
+        "files": {
+          "app/copilot/providers/gmail.py": {
+            "total_additions": 47,
+            "total_deletions": 14,
+            "accepted_lines": 292,
+            "overriden_lines": 0
+          },
+          "tests/test_gmail_provider.py": {
+            "total_additions": 52,
+            "total_deletions": 0,
+            "accepted_lines": 337,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
