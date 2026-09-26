@@ -1,7 +1,7 @@
 name: Security Scan
 
 # Procurement-grade security scanning, separate from the fast CI gate:
-#   - CodeQL   — static analysis (SAST) for Python and JS/TS
+#   - CodeQL   — static analysis (SAST) for Python, JS/TS and the workflows here
 #   - Gitleaks — secret scanning across the history and PR diff
 #   - Trivy    — container image vulnerability + misconfiguration scan
 # Findings surface in the repo's Security tab (SARIF upload).
@@ -24,26 +24,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [python, javascript-typescript]
+        # `actions` is here because CodeQL was already scanning it. The input
+        # below used to be spelled `language`, which is not a valid input name,
+        # so it was ignored with a warning and every matrix job fell back to
+        # autodetection — "Autodetected languages: python, javascript, actions".
+        # Both jobs therefore analysed all three, twice over, under job names
+        # that each claimed to be one language. Naming the languages explicitly
+        # removes the duplicate work; naming `actions` keeps the coverage that
+        # the accident was providing, which is worth keeping in a repo whose
+        # workflows handle an API key and a release token.
+        language: [python, javascript-typescript, actions]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
-          language: ${{ matrix.language }}
+          languages: ${{ matrix.language }}
           queries: security-and-quality
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
       - name: Analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
+          # A SARIF category, not a language input — the "/language:" prefix is
+          # the convention GitHub keys separate analyses of the same commit on.
           category: "/language:${{ matrix.language }}"
 
   gitleaks:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history so historical leaks are caught
       - name: Run gitleaks
@@ -55,7 +66,7 @@ jobs:
     name: Container scan (Trivy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build -t exec-email-copilot:scan .
       - name: Scan image
@@ -67,7 +78,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-results.sarif
