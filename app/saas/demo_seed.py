@@ -24,6 +24,16 @@ DEMO_OWNER_EMAIL = demo_account_email()
 DEMO_OWNER_PASSWORD = "demo1234"  # nosec B105 - deliberately public demo credential
 DEMO_OWNER_NAME = "Alex Chen"
 
+# Who Northwind hands an escalation to. Seeded because a workspace without them
+# is a half-configured one: every escalation in the queue would carry "no
+# mailbox set", which is a true warning about an unfinished setup and a false
+# impression of the product. Same domain as the demo mailbox, so the addresses
+# read as colleagues rather than as anything a visitor might write to.
+DEMO_ESCALATION_CONTACTS = {
+    "legal_team": "legal@northwind.example",
+    "chief_of_staff": "chief.of.staff@northwind.example",
+}
+
 
 def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
     """Create or reset the demo workspace; idempotent and cheap when current.
@@ -42,6 +52,7 @@ def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
     from app.saas.provider_factory import build_provider
     from app.saas.provisioning import provision_org
     from app.saas.repository import (
+        EscalationContactRepository,
         MailboxRepository,
         OrganizationRepository,
         ProposedActionRepository,
@@ -88,6 +99,10 @@ def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
         )
         owner, org = result["owner"], result["organization"]
         logger.info("Created %s with owner %s", org["name"], owner["email"])
+
+    contacts = EscalationContactRepository()
+    for role, address in DEMO_ESCALATION_CONTACTS.items():
+        contacts.set_email(owner["org_id"], role, address)
 
     connection = mailboxes.upsert_connection(
         org_id=owner["org_id"],

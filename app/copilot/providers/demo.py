@@ -106,8 +106,10 @@ class DemoProvider(MailProvider):
         logger.info("Demo mailbox: recorded a reply to %s (not sent)", provider_message_id)
         return WriteResult(ok=True, provider_ref=f"demo-sent-{provider_message_id}")
 
-    def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
-        self.drafts.append({"message_id": provider_message_id, "body": body})
+    def create_escalation_draft(
+        self, provider_message_id: str, body: str, *, to: str
+    ) -> WriteResult:
+        self.drafts.append({"message_id": provider_message_id, "body": body, "to": to})
         return WriteResult(ok=True, provider_ref=f"demo-draft-{provider_message_id}")
 
     def add_label(self, provider_message_id: str, label: str) -> WriteResult:

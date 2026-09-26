@@ -17,12 +17,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from app.copilot import enrich, pipeline
-from app.copilot.providers.base import FetchedMessage, MailProvider
+from app.copilot.providers.base import FetchedMessage, MailProvider, WriteResult
 from app.core.config import get_settings
 
 from .repository import (
     AuditRepository,
     CommitmentRepository,
+    EscalationContactRepository,
     MailboxRepository,
     OrganizationRepository,
     ProcessedMessageRepository,
@@ -195,6 +196,7 @@ class InboxSyncService:
         self.orgs = OrganizationRepository()
         self.users = UserRepository()
         self.commitments = CommitmentRepository()
+        self.escalation_contacts = EscalationContactRepository()
 
     def _require_active_plan(self, org_id: str) -> None:
         """Sync and approve are the value loop; a lapsed plan stops them here.
@@ -619,7 +621,7 @@ class InboxSyncService:
             action["content"] = edited
             outcome = "edited"
 
-        result = self._execute(provider, action, provider_message_id, message)
+        result = self._execute(provider, action, provider_message_id, message, org_id=org_id)
         now = _now_iso()
         if result.ok:
             amended = (
@@ -760,7 +762,9 @@ class InboxSyncService:
 
             summary["attempted"] += 1
             attempts = int(action.get("retry_count") or 0) + 1
-            result = self._execute(provider, action, message["provider_message_id"], message)
+            result = self._execute(
+                provider, action, message["provider_message_id"], message, org_id=org_id
+            )
             now = _now_iso()
             if result.ok:
                 self.actions.set_status(
@@ -796,7 +800,13 @@ class InboxSyncService:
         return summary
 
     def _execute(
-        self, provider: MailProvider, action: dict, provider_message_id: str, message: dict
+        self,
+        provider: MailProvider,
+        action: dict,
+        provider_message_id: str,
+        message: dict,
+        *,
+        org_id: str,
     ):
         """Dispatch an approved action to the provider's write surface."""
         action_type = action["action_type"]
@@ -804,13 +814,31 @@ class InboxSyncService:
             body = action.get("content") or "Acknowledged — we will follow up shortly."
             return provider.send_reply(provider_message_id, body)
         if action_type == "escalate":
-            target = action.get("escalate_to") or "the appropriate team"
-            subject = message.get("subject") or ""
-            body = (
-                f"Escalating to {target}.\n\n"
-                f"Original subject: {subject}\n"
-                f"{action.get('content') or ''}"
-            ).strip()
-            return provider.create_draft(provider_message_id, body)
+            return self._execute_escalation(provider, action, provider_message_id, org_id=org_id)
         # Any other approved action falls back to a label.
         return provider.add_label(provider_message_id, action.get("label") or action_type)
+
+    def _execute_escalation(
+        self, provider: MailProvider, action: dict, provider_message_id: str, *, org_id: str
+    ) -> WriteResult:
+        """Draft the hand-off to whoever this workspace says holds that role.
+
+        Fails rather than guesses when the role has no mailbox configured. The
+        action lands in ``failed`` with this as its ``last_error``, which is
+        surfaced on the approvals page and is picked up unchanged by
+        :meth:`retry_failed_sends` once somebody fills the address in — so the
+        approval the human already gave is not thrown away.
+        """
+        role = (action.get("escalate_to") or "").strip()
+        recipient = self.escalation_contacts.email_for(org_id, role) if role else None
+        if not recipient:
+            named = role.replace("_", " ") or "that role"
+            return WriteResult(
+                ok=False,
+                detail=(
+                    f"no mailbox is configured for escalations to {named} — "
+                    f"add one in Settings, then retry this action"
+                ),
+            )
+        body = (f"Escalating to {role.replace('_', ' ')}.\n\n{action.get('content') or ''}").strip()
+        return provider.create_escalation_draft(provider_message_id, body, to=recipient)

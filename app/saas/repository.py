@@ -20,6 +20,7 @@ from app.core.db import get_session
 from .models_db import (
     AuditLogEntry,
     Commitment,
+    EscalationContact,
     License,
     LlmUsage,
     MailboxConnection,
@@ -1396,3 +1397,62 @@ class LlmUsageRepository:
                 .all()
             )
         return {str(org_id): float(total or 0.0) for org_id, total in rows}
+
+
+class EscalationContactRepository:
+    """Which mailbox each escalation role resolves to, per workspace."""
+
+    def email_for(self, org_id: str, role: str) -> str | None:
+        """The configured address for ``role``, or ``None`` if there isn't one.
+
+        ``None`` is a real answer the caller must handle, never a reason to fall
+        back to some other recipient — see :class:`EscalationContact`.
+        """
+        with get_session() as session:
+            row = (
+                session.query(EscalationContact)
+                .filter(
+                    EscalationContact.org_id == org_id,
+                    EscalationContact.role == role,
+                )
+                .one_or_none()
+            )
+            return str(row.email) if row else None
+
+    def map_for_org(self, org_id: str) -> dict[str, str]:
+        """``{role: email}`` for every role this workspace has configured."""
+        with get_session() as session:
+            rows = session.query(EscalationContact).filter(EscalationContact.org_id == org_id).all()
+            return {str(r.role): str(r.email) for r in rows}
+
+    def set_email(self, org_id: str, role: str, email: str) -> dict[str, Any]:
+        """Point ``role`` at ``email``, creating or updating the one row."""
+        with get_session() as session:
+            row = (
+                session.query(EscalationContact)
+                .filter(
+                    EscalationContact.org_id == org_id,
+                    EscalationContact.role == role,
+                )
+                .one_or_none()
+            )
+            if row is None:
+                row = EscalationContact(org_id=org_id, role=role, email=email)
+                session.add(row)
+            else:
+                row.email = email
+            session.flush()
+            return row.to_dict()
+
+    def clear(self, org_id: str, role: str) -> bool:
+        """Remove ``role``'s contact. Returns whether a row was removed."""
+        with get_session() as session:
+            deleted = (
+                session.query(EscalationContact)
+                .filter(
+                    EscalationContact.org_id == org_id,
+                    EscalationContact.role == role,
+                )
+                .delete()
+            )
+            return bool(deleted)

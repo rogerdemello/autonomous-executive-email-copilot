@@ -25,6 +25,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_message_count
 from app.core.config import get_settings
+from app.core.models import ESCALATION_ROLES
 from app.core.paths import DATA_ROOT, TEMPLATES_DIR
 from app.core.security import lead_submission_allowed, login_attempt_allowed
 from app.saas import licensing, oauth, rbac
@@ -40,6 +41,7 @@ from app.saas.rbac import role_at_least
 from app.saas.repository import (
     AuditRepository,
     CommitmentRepository,
+    EscalationContactRepository,
     MailboxRepository,
     OrganizationRepository,
     ProcessedMessageRepository,
@@ -1074,6 +1076,9 @@ def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
     # design the busiest page in the product, so an N+1 here is the worst place
     # for one.
     pending = _actions.list_pending_with_messages(user["org_id"], limit=100)
+    # An escalation whose role has no mailbox configured cannot be executed.
+    # Said here, beside the button, rather than discovered as a failed send.
+    escalation_targets = _escalation_map(user["org_id"])
     context["actions"] = [
         {
             "action": item["action"],
@@ -1082,6 +1087,11 @@ def approvals(request: Request, notice: str | None = None) -> HTMLResponse:
             # is what makes it an informed one.
             "rationale": item["action"].get("rationale")
             or _rationale_for(user["org_id"], item["message"]),
+            "escalation_to": escalation_targets.get(item["action"].get("escalate_to") or ""),
+            "escalation_unset": (
+                item["action"]["action_type"] == "escalate"
+                and not escalation_targets.get(item["action"].get("escalate_to") or "")
+            ),
         }
         for item in pending["items"]
     ]
@@ -1260,6 +1270,10 @@ _SETTINGS_NOTICES = {
     "license_activated": "License activated. Your plan is live.",
     "role_updated": "Member role updated.",
     "member_removed": "Member removed from the workspace.",
+    "escalation_set": "Escalation contact saved.",
+    "escalation_cleared": (
+        "Escalation contact removed. Escalations to that role cannot be sent until one is set."
+    ),
 }
 
 
@@ -1309,7 +1323,34 @@ def _settings_context(request: Request, user: dict) -> dict[str, Any]:
     ]
     context["is_owner"] = user["role"] == ROLE_OWNER
     context["model_usage"] = _model_usage(user["org_id"])
+    context["escalation_contacts"] = _escalation_contacts(user["org_id"])
     return context
+
+
+def _escalation_map(org_id: str) -> dict[str, str]:
+    """``{role: mailbox}`` for this workspace; empty if it cannot be read."""
+    try:
+        return EscalationContactRepository().map_for_org(org_id)
+    except Exception:  # noqa: BLE001 - a page must render regardless
+        return {}
+
+
+def _escalation_contacts(org_id: str) -> list[dict[str, Any]]:
+    """Every escalation role and the mailbox it resolves to, in a fixed order.
+
+    Rendered for all members, editable only by admins: whether escalations can
+    be sent at all is something the person approving them needs to know, and the
+    unset state is the interesting one.
+    """
+    configured = _escalation_map(org_id)
+    return [
+        {
+            "role": role,
+            "label": role.replace("_", " "),
+            "email": configured.get(role, ""),
+        }
+        for role in ESCALATION_ROLES
+    ]
 
 
 def _model_usage(org_id: str) -> dict[str, Any] | None:
@@ -1481,6 +1522,64 @@ def activate_license_web(
     except BillingError as exc:
         return _render_settings(request, user, error=exc.message, status_code=exc.status_code)
     return RedirectResponse(url="/app/settings?notice=license_activated", status_code=303)
+
+
+@web_router.post("/app/settings/escalation")
+def set_escalation_contact_web(
+    request: Request,
+    role: str = Form(""),
+    email: str = Form(""),
+    csrf_token: str = Form(""),
+) -> Response:
+    """Point one escalation role at a mailbox, or clear it.
+
+    An empty address clears the contact rather than storing a blank one: half a
+    contact would satisfy the "is it configured?" check and then produce a draft
+    addressed to nobody.
+    """
+    verify_csrf(request, csrf_token)
+    user = _require_user(request)
+    _require_manage(user)
+    reject_shared_demo_account(user)
+
+    chosen = (role or "").strip()
+    if chosen not in ESCALATION_ROLES:
+        return _render_settings(
+            request, user, error="That is not an escalation role.", status_code=400
+        )
+
+    address = (email or "").strip()
+    contacts = EscalationContactRepository()
+    if not address:
+        contacts.clear(user["org_id"], chosen)
+        notice = "escalation_cleared"
+    else:
+        from email_validator import EmailNotValidError, validate_email
+
+        try:
+            # Deliverability is not checked: it costs a DNS lookup inside a form
+            # POST, and a syntactically valid address that does not exist fails
+            # visibly at send time anyway, on a retryable action.
+            address = validate_email(address, check_deliverability=False).normalized
+        except EmailNotValidError:
+            return _render_settings(
+                request,
+                user,
+                error="That does not look like an email address.",
+                status_code=400,
+            )
+        contacts.set_email(user["org_id"], chosen, address)
+        notice = "escalation_set"
+
+    _audit.record(
+        action="org.escalation_contact",
+        org_id=user["org_id"],
+        actor_user_id=user["id"],
+        target=chosen,
+        detail={"email": address or None},
+        ip=_client_ip(request),
+    )
+    return RedirectResponse(url=f"/app/settings?notice={notice}", status_code=303)
 
 
 @web_router.get("/app/settings/export")

@@ -112,9 +112,24 @@ class MicrosoftGraphProvider(MailProvider):
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
     @write_guard
-    def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
+    def create_escalation_draft(
+        self, provider_message_id: str, body: str, *, to: str
+    ) -> WriteResult:
+        """Draft a forward of this message to ``to``.
+
+        ``createForward`` is exactly this operation, and Graph attaches the
+        original itself. It replaced ``createReply``, which addressed the
+        hand-off to the outside party who wrote in.
+        """
+        if not to.strip():
+            return WriteResult(ok=False, detail="no escalation recipient was given")
         data = self._call(
-            "POST", f"{_BASE}/messages/{_seg(provider_message_id)}/createReply", {"comment": body}
+            "POST",
+            f"{_BASE}/messages/{_seg(provider_message_id)}/createForward",
+            {
+                "comment": body,
+                "toRecipients": [{"emailAddress": {"address": to.strip()}}],
+            },
         )
         return WriteResult(ok=True, provider_ref=data.get("id"))
 

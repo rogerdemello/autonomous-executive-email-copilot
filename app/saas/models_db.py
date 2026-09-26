@@ -512,3 +512,38 @@ class LlmUsage(Base):
             "completion_tokens": self.completion_tokens,
             "cost_usd": self.cost_usd,
         }
+
+
+class EscalationContact(Base):
+    """The mailbox an escalation role resolves to, for one workspace.
+
+    A proposed escalation names a *role* — ``legal_team``, ``chief_of_staff``
+    (``app.core.models.ESCALATION_ROLES``) — because that is the judgement the
+    policy and the model are able to make about a piece of mail. Handing it to a
+    person needs an address, and only the workspace knows it.
+
+    Deliberately a table and not a column of defaults: there is no sensible
+    default. An escalation with no contact configured must fail loudly and stay
+    retryable, because the alternative — guessing, or falling back to the
+    original sender — is how an internal hand-off gets sent to the customer.
+    """
+
+    __tablename__ = "saas_escalation_contacts"
+    __table_args__ = (UniqueConstraint("org_id", "role", name="uq_escalation_contact"),)
+
+    id = Column(String(32), primary_key=True, default=_new_id)
+    org_id = Column(String(32), ForeignKey("saas_organizations.id"), nullable=False, index=True)
+    role = Column(String(64), nullable=False)
+    email = Column(String(320), nullable=False)
+    created_at = Column(String(50), nullable=False, default=_now_iso)
+    updated_at = Column(String(50), nullable=False, default=_now_iso, onupdate=_now_iso)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "org_id": self.org_id,
+            "role": self.role,
+            "email": self.email,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }

@@ -20,6 +20,27 @@ AIStatusType = Literal[
 ]
 ApprovalStatus = Literal["pending", "approved", "rejected", "expired"]
 
+# The roles an escalation may name. Roles rather than addresses, because a role
+# is what the policy and the model can reason about — "this is legal risk" is a
+# judgement about the mail, and who holds legal is a fact about the workspace.
+# Each one is mapped to a real mailbox per workspace in Settings; until it is,
+# an approved escalation cannot be executed. Anything outside this tuple is
+# rejected before it reaches a provider.
+#
+# Canonical here because six places used to spell the list out for themselves —
+# the policy, the LLM's tool schema, its validator, and the settings page must
+# agree, or a workspace can configure a role nothing ever emits.
+ESCALATION_ROLES: tuple[str, ...] = ("legal_team", "chief_of_staff")
+
+
+def escalation_role_for(risk_tag: str) -> str:
+    """Which role a piece of risky mail escalates to.
+
+    Legal risk goes to counsel; everything else that warrants a person goes to
+    the chief of staff.
+    """
+    return "legal_team" if risk_tag == "legal" else "chief_of_staff"
+
 
 class ThreadEntry(BaseModel):
     from_address: str

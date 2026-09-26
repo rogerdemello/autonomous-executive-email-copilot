@@ -169,18 +169,29 @@ class TestGmailProvider:
 
         assert str(make_header(decode_header(mime["Subject"]))) == "Re: Présentation budget"
 
-    def test_create_draft_hits_drafts_endpoint(self):
+    def test_escalation_draft_goes_to_the_colleague_not_the_sender(self):
+        """The whole point of the signature.
+
+        This was ``create_draft``, built as a reply: the draft an escalation
+        produced was addressed to the outside party who wrote in, with a body
+        saying "Escalating to legal_team". A draft's entire affordance is that
+        you press Send.
+        """
         transport = RecordingTransport(
             {
                 ("GET", "/messages/g1"): (
                     200,
                     {
                         "threadId": "t-g1",
+                        "snippet": "preview",
                         "payload": {
+                            "mimeType": "text/plain",
                             "headers": [
                                 {"name": "From", "value": "boss@client.example"},
                                 {"name": "Subject", "value": "Budget"},
-                            ]
+                                {"name": "Message-ID", "value": "<orig-9@client.example>"},
+                            ],
+                            "body": {"data": _b64url("Our counsel needs to see this.")},
                         },
                     },
                 ),
@@ -188,10 +199,36 @@ class TestGmailProvider:
             }
         )
         provider = GmailProvider("tok", transport=transport)
-        result = provider.create_draft("g1", "Escalating this.")
+        result = provider.create_escalation_draft(
+            "g1", "Escalating to legal team.", to="counsel@acme.example"
+        )
         assert result.ok
         assert result.provider_ref == "draft-1"
-        assert any(m == "POST" and "/drafts" in u for m, u, _ in transport.calls)
+        # One read of the message, not a metadata fetch for the headers plus a
+        # full fetch for the body — the full response carries both.
+        assert [m for m, _u, _t in transport.calls] == ["GET", "POST"]
+
+        payload = transport.payloads[-1]["message"]
+        mime = _sent_mime(payload["raw"])
+        assert mime["To"] == "counsel@acme.example"
+        assert mime["Subject"] == "Fwd: Budget"
+        # Not threaded into the customer's conversation: an internal hand-off
+        # sitting in their thread is one stray Send away from going outward.
+        assert "threadId" not in payload
+        assert mime["In-Reply-To"] is None
+        # The original travels with it, or the reader has to go and find the
+        # mail themselves — which is most of the work being handed over.
+        body = mime.get_payload()
+        assert "Escalating to legal team." in body
+        assert "Our counsel needs to see this." in body
+        assert "boss@client.example" in body
+
+    def test_escalation_draft_without_a_recipient_writes_nothing(self):
+        transport = RecordingTransport({})
+        provider = GmailProvider("tok", transport=transport)
+        result = provider.create_escalation_draft("g1", "Escalating.", to="  ")
+        assert result.ok is False
+        assert transport.calls == []
 
     def test_archive_removes_inbox_label(self):
         transport = RecordingTransport({("POST", "/messages/g1/modify"): (200, {"id": "g1"})})

@@ -145,6 +145,74 @@
 
 <div class="card card--stacked">
   <div class="card__head">
+    <span class="card__title">Escalation contacts</span>
+    {% set unset = escalation_contacts | rejectattr('email') | list %}
+    {% if unset %}
+      <span class="chip chip--danger">
+        {{ unset | length }} not set
+      </span>
+    {% endif %}
+  </div>
+  <div class="card__body">
+    <p class="muted">
+      When the copilot escalates a message, it names a role — not a person.
+      These are the mailboxes those roles resolve to. An escalation you approve
+      is drafted as a forward to the address below, with the original attached;
+      nothing is sent without you. Until a role has an address, escalations to
+      it cannot be sent, and they wait as failed actions you can retry.
+    </p>
+  </div>
+  <div class="table-scroll">
+    <table class="data">
+      <caption class="visually-hidden">
+        Each escalation role and the mailbox it is handed off to.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Role</th>
+          <th scope="col">Goes to</th>
+          {% if can_manage %}
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for contact in escalation_contacts %}
+          <tr>
+            <td>{{ contact.label }}</td>
+            {% if can_manage %}
+              <td colspan="2">
+                <form method="post" action="/app/settings/escalation" class="actions-row">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                  <input type="hidden" name="role" value="{{ contact.role }}" />
+                  <label class="visually-hidden" for="escalation_{{ contact.role }}">
+                    Mailbox for escalations to {{ contact.label }}
+                  </label>
+                  <input id="escalation_{{ contact.role }}" name="email" type="email"
+                         class="mono escalation-contact" value="{{ contact.email }}"
+                         placeholder="nobody@ — escalations cannot be sent"
+                         autocomplete="off" />
+                  <button class="btn btn--sm" type="submit">Save</button>
+                </form>
+              </td>
+            {% else %}
+              <td>
+                {% if contact.email %}
+                  <span class="mono">{{ contact.email }}</span>
+                {% else %}
+                  <span class="chip chip--danger">not set</span>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card card--stacked">
+  <div class="card__head">
     <span class="card__title">Members</span>
     <span class="chip chip--neutral">{{ members | length }}</span>
   </div>

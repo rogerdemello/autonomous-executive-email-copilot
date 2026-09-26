@@ -80,8 +80,10 @@ class FakeProvider(MailProvider):
         self.sent.append({"message_id": provider_message_id, "body": body})
         return WriteResult(ok=True, provider_ref=f"sent-{provider_message_id}")
 
-    def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
-        self.drafts.append({"message_id": provider_message_id, "body": body})
+    def create_escalation_draft(
+        self, provider_message_id: str, body: str, *, to: str
+    ) -> WriteResult:
+        self.drafts.append({"message_id": provider_message_id, "body": body, "to": to})
         return WriteResult(ok=True, provider_ref=f"draft-{provider_message_id}")
 
     def add_label(self, provider_message_id: str, label: str) -> WriteResult:

@@ -235,12 +235,55 @@ class GmailProvider(MailProvider):
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
     @write_guard
-    def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
-        to, subject, thread_id, message_id, references = self._reply_context(provider_message_id)
-        raw = self._raw_message(to, subject, body, in_reply_to=message_id, references=references)
-        payload = {"message": {"raw": raw, "threadId": thread_id}}
-        data = self._call("POST", f"{_BASE}/drafts", payload)
+    def create_escalation_draft(
+        self, provider_message_id: str, body: str, *, to: str
+    ) -> WriteResult:
+        """Draft a forward of this message to ``to``.
+
+        Gmail has no forward endpoint, so the forward is built: a new draft
+        addressed to the internal recipient, with the original quoted beneath
+        the hand-off note, and deliberately **no** ``threadId``. Threading it
+        would put an internal hand-off inside the customer's own conversation,
+        one careless Send away from telling them they are being escalated.
+        """
+        if not to.strip():
+            # Unreachable via the sync service, which resolves the address
+            # first; a direct caller gets a WriteResult, not a draft addressed
+            # to nobody, which Gmail would happily accept.
+            return WriteResult(ok=False, detail="no escalation recipient was given")
+        # One ``format=full`` read rather than ``_reply_context``'s metadata
+        # fetch plus a second one for the body: a forward needs both, and the
+        # full response already carries the headers.
+        msg = self._call("GET", f"{_BASE}/messages/{_seg(provider_message_id)}?format=full")
+        payload = msg.get("payload", {})
+        headers = payload.get("headers", [])
+        sender, _sender_name = self._split_from(_header(headers, "From"))
+        subject = _header(headers, "Subject")
+        forward_subject = subject if subject.lower().startswith("fwd:") else f"Fwd: {subject}"
+        raw = self._raw_message(
+            to,
+            forward_subject,
+            f"{body}\n\n{self._quoted(payload, msg, sender, subject)}".strip(),
+        )
+        data = self._call("POST", f"{_BASE}/drafts", {"message": {"raw": raw}})
         return WriteResult(ok=True, provider_ref=data.get("id"))
+
+    @staticmethod
+    def _quoted(payload: dict, msg: dict, sender: str, subject: str) -> str:
+        """The original, quoted, so the hand-off carries its own context.
+
+        A forward whose body is only "Escalating to legal_team" asks the reader
+        to go and find the mail themselves — which is most of the work being
+        handed over.
+        """
+        original = _extract_body(payload) or msg.get("snippet", "")
+        quoted = "\n".join(f"> {line}" for line in original.splitlines())
+        return (
+            f"---------- Forwarded message ----------\n"
+            f"From: {sender}\n"
+            f"Subject: {subject}\n\n"
+            f"{quoted}"
+        )
 
     @write_guard
     def add_label(self, provider_message_id: str, label: str) -> WriteResult:

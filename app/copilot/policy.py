@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from app.core.models import Action, LabelType, Observation
+from app.core.models import Action, LabelType, Observation, escalation_role_for
 from app.core.utils import classify_heuristic
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class BaselinePolicy:
 
             if label == "urgent" and email.risk_tag in {"legal", "security"}:
                 self.handled_ids.add(email.id)
-                target = "legal_team" if email.risk_tag == "legal" else "chief_of_staff"
+                target = escalation_role_for(email.risk_tag)
                 return Action(action_type="escalate", email_id=email.id, escalate_to=target)
 
             if label == "urgent":
@@ -104,7 +104,7 @@ class Executor:
     def _execute_escalate_critical(self, observation: Observation) -> Action | None:
         for email in observation.emails:
             if email.risk_tag in {"legal", "security"}:
-                target = "legal_team" if email.risk_tag == "legal" else "chief_of_staff"
+                target = escalation_role_for(email.risk_tag)
                 return Action(action_type="escalate", email_id=email.id, escalate_to=target)
         return self._fallback_to_baseline(observation)
 

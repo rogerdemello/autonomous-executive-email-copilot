@@ -12,12 +12,14 @@ from typing import Any
 from app.core.approval import get_approval_store
 from app.core.config import get_settings
 from app.core.models import (
+    ESCALATION_ROLES,
     Action,
     AIDecisionTrace,
     AIResponse,
     AIStatusType,
     Observation,
     TokenUsage,
+    escalation_role_for,
 )
 
 from .parsing import extract_json_object
@@ -203,8 +205,7 @@ def _validate_action(action_dict: dict[str, Any]) -> Action | None:
         elif action_type == "escalate":
             if not action.email_id or not action.escalate_to:
                 return None
-            valid_targets = ["legal_team", "chief_of_staff"]
-            if action.escalate_to not in valid_targets:
+            if action.escalate_to not in ESCALATION_ROLES:
                 return None
         elif action_type == "prioritize":
             if not action.priority_order:
@@ -245,7 +246,7 @@ def _apply_guardrails(observation: Observation, action: Action, is_first: bool) 
                     break
 
         if target_email and target_email.risk_tag in {"legal", "security"}:
-            target = "legal_team" if target_email.risk_tag == "legal" else "chief_of_staff"
+            target = escalation_role_for(target_email.risk_tag)
             return Action(
                 action_type="escalate",
                 email_id=action.email_id,
@@ -589,7 +590,7 @@ class LLMAgent:
         # Guardrail: Auto-escalate legal/security risk emails
         for email in modified_obs.emails:
             if email.risk_tag in {"legal", "security"}:
-                target = "legal_team" if email.risk_tag == "legal" else "chief_of_staff"
+                target = escalation_role_for(email.risk_tag)
                 self._handled_ids.add(email.id)
                 return (
                     AIResponse(

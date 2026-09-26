@@ -85,8 +85,22 @@ class MailProvider(ABC):
         ...
 
     @abstractmethod
-    def create_draft(self, provider_message_id: str, body: str) -> WriteResult:
-        """Create a draft (e.g. an escalation/forward) tied to the message."""
+    def create_escalation_draft(
+        self, provider_message_id: str, body: str, *, to: str
+    ) -> WriteResult:
+        """Draft a hand-off of this message to ``to``, for a human to send.
+
+        ``to`` is required, and that is the whole point of the signature. This
+        used to be ``create_draft(provider_message_id, body)``, which each
+        provider implemented as a *reply* — so the draft an escalation produced
+        was addressed to the outside party who wrote in, carrying a body that
+        said "Escalating to legal_team". The entire affordance of a draft is
+        that you press Send. Naming the recipient in the signature makes the
+        wrong recipient impossible to reach by accident.
+
+        It is a forward, not a reply: the original travels with it, and it does
+        not sit in the customer's thread where a stray Send would go outward.
+        """
         ...
 
     @abstractmethod

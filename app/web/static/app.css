@@ -1969,6 +1969,16 @@ textarea.draft {
   margin: 0;
 }
 
+/* An escalation contact is an email address, and the default input width cuts
+   one off mid-domain — which is the one part of it you need to read back. It
+   grows to the cell and floors at min(...) rather than a fixed basis, because
+   a flex item's automatic minimum is its content width: pinned at 22ch it
+   would push the table sideways at 320px. */
+.escalation-contact {
+  flex: 1 1 22ch;
+  min-width: min(22ch, 100%);
+}
+
 /* ========================================================================== */
 /* Connect / provider cards                                                   */
 /* ========================================================================== */

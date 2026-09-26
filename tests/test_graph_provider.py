@@ -165,13 +165,31 @@ def test_two_labels_on_one_message_both_survive():
     assert mailbox["categories"] == ["deferred", "contract"]
 
 
-def test_create_draft_hits_create_reply():
-    transport = RecordingTransport({("POST", "/messages/m1/createReply"): (201, {"id": "d1"})})
+def test_escalation_draft_forwards_to_the_colleague():
+    """``createForward``, not ``createReply``.
+
+    createReply addressed the hand-off to the outside party who wrote in.
+    createForward is this operation, and Graph attaches the original itself.
+    """
+    transport = RecordingTransport({("POST", "/messages/m1/createForward"): (201, {"id": "d1"})})
     provider = MicrosoftGraphProvider("tok", transport=transport)
-    result = provider.create_draft("m1", "Escalating.")
+    result = provider.create_escalation_draft("m1", "Escalating.", to="counsel@acme.example")
     assert result.ok
     assert result.provider_ref == "d1"
-    assert any("/messages/m1/createReply" in u for _, u, _, _ in transport.calls)
+
+    method, url, _token, body = transport.calls[-1]
+    assert method == "POST"
+    assert "/messages/m1/createForward" in url
+    assert body["comment"] == "Escalating."
+    assert body["toRecipients"] == [{"emailAddress": {"address": "counsel@acme.example"}}]
+
+
+def test_escalation_draft_without_a_recipient_writes_nothing():
+    transport = RecordingTransport({})
+    provider = MicrosoftGraphProvider("tok", transport=transport)
+    result = provider.create_escalation_draft("m1", "Escalating.", to="")
+    assert result.ok is False
+    assert transport.calls == []
 
 
 def test_archive_moves_message():

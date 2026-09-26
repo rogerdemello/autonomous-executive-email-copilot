@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal, cast, get_args
 
-from app.core.models import Action, ActionType
+from app.core.models import ESCALATION_ROLES, Action, ActionType
 
 ActionTypeStr = Literal["classify", "reply", "defer", "escalate", "prioritize"]
 LabelTypeStr = Literal["spam", "normal", "urgent"]
@@ -89,7 +89,7 @@ def build_tool_definitions() -> list[dict[str, Any]]:
                         },
                         "escalate_to": {
                             "type": "string",
-                            "enum": ["legal_team", "chief_of_staff"],
+                            "enum": list(ESCALATION_ROLES),
                             "description": "Who to escalate to",
                         },
                         "reason": {
