@@ -1,0 +1,69 @@
+app/copilot/providers/graph.py
+  s_17deb20af79b5d::t_ebab4d11aceaf8 123-144
+tests/test_graph_provider.py
+  s_17deb20af79b5d::t_523dae224274e7 99-104,108,113-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "7a4ced2b4558a546fae9eed2b9a8bbcfd6b204a7",
+  "branch": "main",
+  "prompts": {
+    "s_17deb20af79b5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c542fee8-f3d8-42fb-9088-1fa82d561b1d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:d494938671c7ab2bbc860b323650ee171438f71e2ba29a8f5ea521accb6d05db",
+      "total_additions": 197,
+      "total_deletions": 9,
+      "accepted_lines": 842,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_17deb20af79b5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c542fee8-f3d8-42fb-9088-1fa82d561b1d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:d494938671c7ab2bbc860b323650ee171438f71e2ba29a8f5ea521accb6d05db",
+      "stats": {
+        "total_additions": 197,
+        "total_deletions": 9,
+        "accepted_lines": 842,
+        "overriden_lines": 0,
+        "files": {
+          "CHANGELOG.md": {
+            "total_additions": 83,
+            "total_deletions": 0,
+            "accepted_lines": 333,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/graph.py": {
+            "total_additions": 22,
+            "total_deletions": 4,
+            "accepted_lines": 154,
+            "overriden_lines": 0
+          },
+          "continue.md": {
+            "total_additions": 30,
+            "total_deletions": 3,
+            "accepted_lines": 153,
+            "overriden_lines": 0
+          },
+          "tests/test_graph_provider.py": {
+            "total_additions": 62,
+            "total_deletions": 2,
+            "accepted_lines": 202,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
