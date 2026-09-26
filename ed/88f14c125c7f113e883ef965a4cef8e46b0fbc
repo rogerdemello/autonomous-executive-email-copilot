@@ -1,0 +1,244 @@
+app/copilot/providers/base.py
+  s_17deb20af79b5d::t_441131146835be 88-103
+app/saas/models_db.py
+  s_17deb20af79b5d::t_83e22c34ad1645 515-549
+app/web/static/app.css
+  s_17deb20af79b5d::t_4952c944e5a167 1972-1981
+app/saas/demo_seed.py
+  s_17deb20af79b5d::t_af0a6d762e24a6 27-36
+  s_17deb20af79b5d::t_f41161d0aba4ea 55
+  s_17deb20af79b5d::t_75b548115128c0 103-106
+app/copilot/providers/graph.py
+  s_17deb20af79b5d::t_2b274c9d740a6f 115-125,127-132
+app/core/models.py
+  s_17deb20af79b5d::t_c504163ae4aaf3 23-43
+app/llm/agent.py
+  s_17deb20af79b5d::t_9b3f698b5d39bd 249
+  s_17deb20af79b5d::t_d8838a3a7a8fdd 208
+  s_17deb20af79b5d::t_e6be326c7fc904 15,22
+  s_17deb20af79b5d::t_4aeb89971ee426 593
+app/web/templates/approvals.html
+  s_17deb20af79b5d::t_2f053e3f988d49 87-89
+  s_17deb20af79b5d::t_98b2630e5e9b49 173-196
+app/copilot/providers/demo.py
+  s_17deb20af79b5d::t_fd6468f585a0c4 109-112
+tests/test_escalation_contacts.py
+  s_17deb20af79b5d::t_b12b424bdf1298 133-134
+  s_17deb20af79b5d::t_c37bb131cc9894 261,263-264,266-274,276-280,282-288,290-296,298-301
+  s_17deb20af79b5d::t_f986e59e4d1be7 22
+  s_17deb20af79b5d::t_afa5eca56162a8 132
+  s_17deb20af79b5d::t_b461ca640fcb29 78-84,87
+  s_17deb20af79b5d::t_180c83560ee069 1-21,23-77,85-86,88-131,135-260,262,265,275,281,289,297
+tests/test_gmail_provider.py
+  s_17deb20af79b5d::t_c32a37a4ba4346 207-209
+  s_17deb20af79b5d::t_669a6b9e48d1de 172-179,186,188,192-194,202-204,210-231
+app/copilot/policy.py
+  s_17deb20af79b5d::t_6fe4f54e01af29 107
+  s_17deb20af79b5d::t_1a2d9d0fef2fbb 63
+  s_17deb20af79b5d::t_c215f41a0be4c5 6
+app/saas/repository.py
+  s_17deb20af79b5d::t_28321be982068a 1400-1424,1426-1458
+  s_17deb20af79b5d::t_3adf52323e5b84 1425
+  s_17deb20af79b5d::t_c8f2c1bde26dd2 23
+app/copilot/providers/fake.py
+  s_17deb20af79b5d::t_505e8b44c33239 83-86
+tests/test_graph_provider.py
+  s_17deb20af79b5d::t_009bb84a7ab013 168-174,176,179-192
+app/copilot/providers/gmail.py
+  s_17deb20af79b5d::t_b0893cbc76e9ce 238-253,262,268,274-275,278,280-287
+  s_17deb20af79b5d::t_d97c18e003e19e 254-261,263-267,271-273,276-277,279
+app/llm/tools.py
+  s_17deb20af79b5d::t_84a3066973da73 6
+  s_17deb20af79b5d::t_61a3e5a0fd2900 92
+app/saas/sync_service.py
+  s_17deb20af79b5d::t_346c9a11226d86 803-809,817,820-842,844
+  s_17deb20af79b5d::t_3adf52323e5b84 843
+  s_17deb20af79b5d::t_b661b0c8d88b9d 20,26
+  s_17deb20af79b5d::t_10eb2d178931d2 624
+  s_17deb20af79b5d::t_1cf5399c34e787 765-767
+  s_17deb20af79b5d::t_53365031ddbe41 199
+app/web/routes.py
+  s_17deb20af79b5d::t_c2c065436f0631 44,1354-1355
+  s_17deb20af79b5d::t_09bee3fb984dd2 1330-1337,1345
+  s_17deb20af79b5d::t_1a9720ab75acce 1527-1584
+  s_17deb20af79b5d::t_802837abbaf2df 1079-1081,1090-1094
+  s_17deb20af79b5d::t_acf8efd5950f3d 1273-1274,1276
+  s_17deb20af79b5d::t_3adf52323e5b84 1275
+  s_17deb20af79b5d::t_f218501db6d682 1326,1338-1344,1346-1353
+  s_17deb20af79b5d::t_c1dba4be960abf 28
+app/web/templates/settings.html
+  s_17deb20af79b5d::t_72831f6fb548ef 146-191,193-213
+  s_17deb20af79b5d::t_b1a863cb134a9e 192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "ed88f14c125c7f113e883ef965a4cef8e46b0fbc",
+  "branch": "main",
+  "prompts": {
+    "s_17deb20af79b5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c542fee8-f3d8-42fb-9088-1fa82d561b1d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0c8dff7c11d5014b672745271d3c6e56a71eb6c7cfb6afa61285829af3005b59",
+      "total_additions": 962,
+      "total_deletions": 130,
+      "accepted_lines": 11709,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_17deb20af79b5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c542fee8-f3d8-42fb-9088-1fa82d561b1d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:0c8dff7c11d5014b672745271d3c6e56a71eb6c7cfb6afa61285829af3005b59",
+      "stats": {
+        "total_additions": 962,
+        "total_deletions": 130,
+        "accepted_lines": 11709,
+        "overriden_lines": 0,
+        "files": {
+          "CHANGELOG.md": {
+            "total_additions": 27,
+            "total_deletions": 0,
+            "accepted_lines": 360,
+            "overriden_lines": 0
+          },
+          "app/copilot/policy.py": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 175,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/base.py": {
+            "total_additions": 16,
+            "total_deletions": 2,
+            "accepted_lines": 114,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/demo.py": {
+            "total_additions": 4,
+            "total_deletions": 2,
+            "accepted_lines": 121,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/fake.py": {
+            "total_additions": 4,
+            "total_deletions": 2,
+            "accepted_lines": 95,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/gmail.py": {
+            "total_additions": 60,
+            "total_deletions": 17,
+            "accepted_lines": 335,
+            "overriden_lines": 0
+          },
+          "app/copilot/providers/graph.py": {
+            "total_additions": 17,
+            "total_deletions": 2,
+            "accepted_lines": 169,
+            "overriden_lines": 0
+          },
+          "app/core/models.py": {
+            "total_additions": 21,
+            "total_deletions": 0,
+            "accepted_lines": 21,
+            "overriden_lines": 0
+          },
+          "app/llm/agent.py": {
+            "total_additions": 5,
+            "total_deletions": 4,
+            "accepted_lines": 955,
+            "overriden_lines": 0
+          },
+          "app/llm/tools.py": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 223,
+            "overriden_lines": 0
+          },
+          "app/saas/demo_seed.py": {
+            "total_additions": 15,
+            "total_deletions": 0,
+            "accepted_lines": 137,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 35,
+            "total_deletions": 0,
+            "accepted_lines": 549,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 65,
+            "total_deletions": 5,
+            "accepted_lines": 1458,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 43,
+            "total_deletions": 15,
+            "accepted_lines": 844,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 106,
+            "total_deletions": 7,
+            "accepted_lines": 1691,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 10,
+            "total_deletions": 0,
+            "accepted_lines": 2807,
+            "overriden_lines": 0
+          },
+          "app/web/templates/approvals.html": {
+            "total_additions": 27,
+            "total_deletions": 0,
+            "accepted_lines": 229,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 69,
+            "total_deletions": 1,
+            "accepted_lines": 369,
+            "overriden_lines": 0
+          },
+          "continue.md": {
+            "total_additions": 32,
+            "total_deletions": 23,
+            "accepted_lines": 162,
+            "overriden_lines": 0
+          },
+          "tests/test_escalation_contacts.py": {
+            "total_additions": 338,
+            "total_deletions": 37,
+            "accepted_lines": 301,
+            "overriden_lines": 0
+          },
+          "tests/test_gmail_provider.py": {
+            "total_additions": 41,
+            "total_deletions": 4,
+            "accepted_lines": 374,
+            "overriden_lines": 0
+          },
+          "tests/test_graph_provider.py": {
+            "total_additions": 22,
+            "total_deletions": 4,
+            "accepted_lines": 220,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
