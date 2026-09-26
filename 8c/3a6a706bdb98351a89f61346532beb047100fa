@@ -1,0 +1,78 @@
+.github/workflows/release.yml
+  s_17deb20af79b5d::t_1b2e2f8dda0143 27-28,55
+.github/workflows/security-scan.yml
+  s_17deb20af79b5d::t_1df6b3802a231a 81
+  s_17deb20af79b5d::t_dff7a93342ba1e 57,69
+  s_17deb20af79b5d::t_343a0738ccc7ed 4
+  s_17deb20af79b5d::t_33c2c7d3c0f2b0 27-36,38,40,42,45,47,49-50
+.github/workflows/ci.yml
+  s_17deb20af79b5d::t_2c01794dac1ba4 72
+  s_17deb20af79b5d::t_d4ea6b7d95795f 22,42,101,119,135,149,164,184,196
+  s_17deb20af79b5d::t_19fdbe1c77f2d2 23,43,102,120,136,150,185
+.github/workflows/draft-eval.yml
+  s_17deb20af79b5d::t_1b2e2f8dda0143 20-21,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "8c3a6a706bdb98351a89f61346532beb047100fa",
+  "branch": "main",
+  "prompts": {
+    "s_17deb20af79b5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c542fee8-f3d8-42fb-9088-1fa82d561b1d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:79052c147fd5e73c463296ece9f6795956911203129d040e1f8999cb44fa135f",
+      "total_additions": 44,
+      "total_deletions": 33,
+      "accepted_lines": 471,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_17deb20af79b5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c542fee8-f3d8-42fb-9088-1fa82d561b1d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:79052c147fd5e73c463296ece9f6795956911203129d040e1f8999cb44fa135f",
+      "stats": {
+        "total_additions": 44,
+        "total_deletions": 33,
+        "accepted_lines": 471,
+        "overriden_lines": 0,
+        "files": {
+          ".github/workflows/ci.yml": {
+            "total_additions": 17,
+            "total_deletions": 17,
+            "accepted_lines": 224,
+            "overriden_lines": 0
+          },
+          ".github/workflows/draft-eval.yml": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 35,
+            "overriden_lines": 0
+          },
+          ".github/workflows/release.yml": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 128,
+            "overriden_lines": 0
+          },
+          ".github/workflows/security-scan.yml": {
+            "total_additions": 21,
+            "total_deletions": 10,
+            "accepted_lines": 84,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
