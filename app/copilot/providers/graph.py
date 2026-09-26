@@ -120,10 +120,28 @@ class MicrosoftGraphProvider(MailProvider):
 
     @write_guard
     def add_label(self, provider_message_id: str, label: str) -> WriteResult:
-        # Graph has no labels; the nearest concept is a category.
-        data = self._call(
-            "PATCH", f"{_BASE}/messages/{_seg(provider_message_id)}", {"categories": [label]}
-        )
+        """File the message under ``label``, keeping the categories already on it.
+
+        Graph has no labels; the nearest concept is a category — but
+        ``categories`` is a collection, and a PATCH **replaces** it. Sending
+        only ours therefore deleted every category the person had filed that
+        message under, in their own mailbox, as a side effect of triage. It also
+        deleted our own previous one: a message downgraded to ``deferred`` and
+        then classified in the same sweep kept whichever write happened to land
+        second. Gmail's ``addLabelIds`` is additive; this makes Graph match.
+
+        The read that costs — one extra GET per labelled message — is the whole
+        point: there is no add-to-collection verb in Graph, so the current value
+        has to be known before it can be preserved.
+        """
+        seg = _seg(provider_message_id)
+        current = self._call("GET", f"{_BASE}/messages/{seg}?$select=id,categories")
+        existing = [str(c) for c in (current.get("categories") or []) if str(c).strip()]
+        if any(c.casefold() == label.casefold() for c in existing):
+            # Already filed here. Re-PATCHing identical values would bump the
+            # message's changeKey and mark the mailbox changed for nothing.
+            return WriteResult(ok=True, provider_ref=current.get("id") or provider_message_id)
+        data = self._call("PATCH", f"{_BASE}/messages/{seg}", {"categories": [*existing, label]})
         return WriteResult(ok=True, provider_ref=data.get("id"))
 
     @write_guard

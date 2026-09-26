@@ -96,13 +96,73 @@ def test_send_reply_hits_reply_endpoint():
 
 
 def test_add_label_uses_categories():
-    transport = RecordingTransport({("PATCH", "/messages/m1"): (200, {"id": "m1"})})
+    transport = RecordingTransport(
+        {
+            ("GET", "/messages/m1"): (200, {"id": "m1", "categories": []}),
+            ("PATCH", "/messages/m1"): (200, {"id": "m1"}),
+        }
+    )
     provider = MicrosoftGraphProvider("tok", transport=transport)
     result = provider.add_label("m1", "urgent")
     assert result.ok
-    method, url, _token, body = transport.calls[0]
+    method, url, _token, body = transport.calls[-1]
     assert method == "PATCH"
     assert body == {"categories": ["urgent"]}
+
+
+def test_add_label_keeps_the_categories_already_on_the_message():
+    """``categories`` is a collection a PATCH replaces, not appends to.
+
+    Sending only our own category deleted every category the person had filed
+    the message under — in their mailbox, as a side effect of us triaging it.
+    """
+    transport = RecordingTransport(
+        {
+            ("GET", "/messages/m1"): (200, {"id": "m1", "categories": ["Blue category", "Q3"]}),
+            ("PATCH", "/messages/m1"): (200, {"id": "m1"}),
+        }
+    )
+    provider = MicrosoftGraphProvider("tok", transport=transport)
+    assert provider.add_label("m1", "deferred").ok
+
+    method, _url, _token, body = transport.calls[-1]
+    assert method == "PATCH"
+    assert body == {"categories": ["Blue category", "Q3", "deferred"]}
+
+
+def test_add_label_does_not_write_when_the_category_is_already_there():
+    """Re-syncing a mailbox must not rewrite messages it has already filed."""
+    transport = RecordingTransport(
+        {("GET", "/messages/m1"): (200, {"id": "m1", "categories": ["Deferred"]})}
+    )
+    provider = MicrosoftGraphProvider("tok", transport=transport)
+    result = provider.add_label("m1", "deferred")
+
+    assert result.ok
+    assert result.provider_ref == "m1"
+    assert [m for m, _u, _t, _b in transport.calls] == ["GET"]
+
+
+def test_two_labels_on_one_message_both_survive():
+    """The failure this actually caused, against a mailbox that remembers.
+
+    A message can be downgraded to ``deferred`` and classified in the same
+    sweep. With a replacing PATCH, only whichever write landed second existed
+    afterwards — so our own labels did not accumulate either.
+    """
+    mailbox = {"id": "m1", "categories": []}
+
+    def transport(method, url, token, json_body):
+        if method == "GET":
+            return 200, dict(mailbox)
+        mailbox["categories"] = list(json_body["categories"])
+        return 200, {"id": "m1"}
+
+    provider = MicrosoftGraphProvider("tok", transport=transport)
+    assert provider.add_label("m1", "deferred").ok
+    assert provider.add_label("m1", "contract").ok
+
+    assert mailbox["categories"] == ["deferred", "contract"]
 
 
 def test_create_draft_hits_create_reply():
