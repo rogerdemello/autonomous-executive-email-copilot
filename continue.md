@@ -1,11 +1,25 @@
 # Continue here
 
-**Last session:** 2026-09-15. **Branch:** `security-scan-green`.
+**Last session:** 2026-09-26. **Branch:** `main` — work directly on it now.
+`security-scan-green` is spent: PR #7 was *squash*-merged, so that branch reads
+as permanently ahead-and-behind. Do not try to catch it up.
 **Human-gated work:** [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md) — start there.
 
 The 2026-08-31 launch pass (phases 0–6) is **merged to `main`** via PRs #5 and
 #6. On top of it, a pre-launch hardening pass closed the gaps that only appear
-once the thing is deployed with real money and real mailboxes attached.
+once the thing is deployed with real money and real mailboxes attached; it is
+tagged **v1.1.0**.
+
+Everything since v1.1.0 is **unreleased** and is one single theme: *what breaks
+the first time a real mailbox is attached.* See the `[Unreleased]` section of
+`CHANGELOG.md` — HTML bodies, Gmail reply threading, Outlook categories,
+escalations addressed to the wrong person, the first sync leaving the OAuth
+redirect, Graph result ordering, the admin-consent wall. Every one of them was
+green in the test suite, because the demo provider is in memory, its bodies are
+plain text, its drafts are cached, and its mailbox is never actually written
+to. **When you touch a provider, ask what the demo mailbox is hiding.**
+
+Gates are green as of 2026-09-26: 1169 tests, ruff, mypy, landing metrics.
 
 ---
 
@@ -95,6 +109,18 @@ the feature is real.
   whether the row was found. The broken-mailbox notification depends on it: the
   worker re-derives that state every sweep, and 96 mails a day about one dead
   token is how a notification becomes a filter rule.
+- **`escalate_to` is a role, not an address, and it must stay that way.**
+  `legal_team` / `chief_of_staff` (`app.core.models.ESCALATION_ROLES`) is a
+  judgement about the mail; who holds legal is a fact about the workspace, and
+  lives in `saas_escalation_contacts`. Keep the policy and the model naming
+  roles — letting either emit an address would put "who do we tell" inside the
+  model's reach. The provider seam is
+  `create_escalation_draft(message, body, *, to)`: the recipient is a required
+  keyword precisely so the old bug (a "draft" that was a reply to the outside
+  sender) cannot come back by omission. An unset role must keep failing the
+  action rather than falling back to anyone.
+  (`TeamSettings.escalation_targets` in `app/core/db.py` is unrelated and
+  dormant — nothing in the SaaS path reads it.)
 - **The drafter is deliberately org-unaware.** It is a pure prose function; the
   caller knows whose bill it is and writes the ledger row. Don't hand it a
   tenant — that would make it one more place that could leak across one.
@@ -116,9 +142,19 @@ the feature is real.
 - **Helm is not installed either**, but the chart was verified with a
   downloaded `helm 3.16.3`: `lint` passes, a valid config renders, and all four
   unsafe configurations are refused.
-- **`psycopg` is not installed locally**, so anything Postgres-flavoured fails
-  at driver import rather than at connect. CI's `test-postgres` job is the real
-  check.
+- **`psycopg` 3.3.4 *is* installed locally as of 2026-09-26** (it is pinned in
+  `requirements.txt`, despite the "optional dependency" comment at
+  `app/core/config.py:70`). So Postgres-flavoured code now fails at *connect*,
+  not at driver import — a different and much later failure. No test is gated on
+  it (`tests/test_db_engine.py` only asserts URL normalisation), so CI's
+  `test-postgres` job against a real server is still the only real check.
+- **`pip install -r requirements.txt` here installs into the global
+  interpreter**, `AppData\Local\Programs\Python\Python312`, even with `(.venv)`
+  showing in the prompt — that is also the interpreter `python -m pytest` uses,
+  so the suite does test what was installed. The cost is that unrelated
+  projects' packages share the directory: the `supabase`/`postgrest`/`storage3`
+  conflicts pip reports against `httpx==0.28.1` come from those, not from this
+  project, and nothing here imports them.
 - **A long-lived dev database may predate Phase 6.** `create_all` adds columns
   but never drops them, so a `data/*.db` from before the `Organization.status`
   removal will fail inserts with `NOT NULL constraint failed`. Delete it; it is

@@ -7,6 +7,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Everything here is the same class of bug: a thing that works perfectly against
+the demo mailbox and fails the first time a real one is attached. The demo
+provider is in memory, its bodies are plain text, its drafts are cached, and its
+mailbox has no history — so the test suite could be green on all of it.
+
+### Added
+
+- **Escalation contacts, and an escalation that goes to the right person.** An
+  `escalate` action names a *role* — `legal_team`, `chief_of_staff` — because
+  that is the judgement the policy can make about a piece of mail. Both
+  providers implemented the draft it produced as a **reply**, so the artifact
+  that appeared in the mailbox was addressed to the outside party who wrote in,
+  carrying a body that said "Escalating to legal_team". The whole affordance of
+  a draft is that you press Send, and the approvals page showed only the chip
+  "→ legal team", so nothing on screen contradicted it.
+
+  Each workspace now maps every role to a real mailbox in Settings, and the
+  provider seam is `create_escalation_draft(message, body, *, to)` — the
+  recipient is in the signature, so the wrong one is not reachable by accident.
+  It drafts a **forward**, not a reply: Graph uses `createForward`, Gmail builds
+  one (no forward endpoint exists) as a new draft with the original quoted and
+  deliberately no `threadId`, keeping an internal hand-off out of the customer's
+  own conversation. An unconfigured role fails the action with a reason rather
+  than guessing — the approvals page says so before the click, and
+  `retry_failed_sends` finishes the job once an address is filled in, so the
+  approval a human already gave is not thrown away.
+- **A readable body for HTML mail** (`app/copilot/providers/html_text.py`,
+  stdlib only — untrusted HTML from strangers is not a dependency worth taking
+  on). Gmail's extractor took the first `text/plain` part and, finding none,
+  fell through to the raw top-level body; a large share of real mail is
+  HTML-only. Graph was worse — `body.contentType` is *html* by default and the
+  provider took `body.content` whatever the type, so essentially every Outlook
+  message was markup. That body is not a display detail: it is what the reader
+  shows, what the drafter is handed as "the message", and what the verifier
+  checks a draft's claims against.
+- **An admin-consent screen for Microsoft.** `Mail.ReadWrite`/`Mail.Send` need
+  tenant-admin approval in most managed directories, so hitting that wall is the
+  *expected* first outcome of clicking Connect for a corporate customer — and
+  Microsoft reports it as `error=access_denied`, indistinguishable from the
+  person clicking Cancel. The callback now recognises the consent codes
+  (`AADSTS65001`, `AADSTS900941`, `consent_required`) and renders the exact
+  adminconsent URL to hand to their IT, in full, in a readonly field. It targets
+  `organizations` rather than the configured `common`: personal Microsoft
+  accounts have no administrator and cannot grant this. An ordinary refusal
+  still renders an ordinary error.
+- **A third inbox empty state: "reading your mailbox."** A connected-but-unsynced
+  mailbox rendered "nothing matches that filter" — telling someone their inbox
+  is empty while the copilot is still reading it. Self-refreshing, via
+  `meta refresh`, because the app works without scripting.
+
+### Fixed
+
+- **Every approved Gmail reply arrived as a brand-new conversation.** `threadId`
+  threads the *sender's* Gmail; the recipient's client threads by
+  `In-Reply-To`/`References`, which the hand-built raw message never carried —
+  at the exact moment the product is supposed to look like the executive wrote
+  it. Replies also went to `From` even when the sender set `Reply-To`, which
+  ticket systems and no-reply senders do constantly. Built with `EmailMessage`
+  now, so a non-ASCII subject is encoded per RFC 2047 instead of being bare
+  UTF-8 in a header.
+- **Filing an Outlook message deleted the categories already on it.** Graph has
+  no labels, so triage uses categories — but `categories` is a collection a
+  PATCH *replaces*, and the write sent only ours. Every category the customer
+  had filed that message under disappeared, in their own mailbox, as a side
+  effect of us reading it. It also discarded our own: a message downgraded to
+  `deferred` and then classified in the same sweep kept whichever write landed
+  second. Gmail's `addLabelIds` is additive; Graph now matches it, at the cost
+  of one GET per labelled message (Graph has no add-to-collection verb).
+- **The first sync ran inside the OAuth redirect.** At the default
+  `inbox_sync_limit` of 100, Gmail alone is one `messages.list` plus a hundred
+  sequential `messages.get`, and with drafting on every held action adds two
+  model calls — minutes of work inside an HTTP redirect, so the customer's first
+  act after granting consent returned a proxy timeout. Now a `BackgroundTasks`
+  job; the demo path stays inline, because feeling instant is the whole point of
+  it. Nothing needs to recover a dead task: `last_synced_at` is still `NULL` and
+  `BackgroundSyncWorker.is_due()` already treats a never-synced connection as
+  due.
+- **Graph was asked for `$top` with no `$orderby`.** Gmail's list endpoint
+  documents reverse-chronological order; Graph's does not. Since a mailbox is
+  capped per sweep, an oldest-first default would have synced mail from years
+  ago on every pass and never surfaced the message someone was waiting on —
+  while looking like it worked.
+- **The connect page claimed "read-only access to your inbox"** while the app
+  requests `gmail.modify`, which writes labels. Untrue to the customer, and
+  contradicting the scope table on `/privacy` is a documented way to fail an
+  OAuth review.
+- **The release workflow's notes step depended on an unspecified `awk` escape.**
+
+### Changed
+
+- **One canonical list of escalation roles** (`app.core.models.ESCALATION_ROLES`,
+  with `escalation_role_for`). Six places spelled it out for themselves — the
+  baseline policy, the LLM policy, the agent's guardrail and its validator, and
+  the tool schema — and the settings page has to agree with all of them, or a
+  workspace configures a role nothing ever emits.
+- The demo workspace seeds its own escalation contacts. Without them every
+  escalation in the demo queue carried a "no mailbox set" warning: true about an
+  unfinished setup, false about the product.
+- The unavailable-provider card said "An operator must set this server's OAuth
+  client id and secret" — addressed to whoever runs the deployment, shown to
+  whoever is trying to use it. On a self-serve signup those are never the same
+  person, and it reads as a broken product.
+- **`docs/OAUTH_SETUP.md` and `LAUNCH_CHECKLIST.md`: onboard with the consent
+  screen "In production", not "Testing".** Both said "100 test users, each
+  seeing an unverified-app warning" and left it there. In Testing, Google
+  expires refresh tokens after **seven days** — so a client connected that way
+  stops syncing weekly and must reconnect by hand, and "100 users of runway"
+  is really zero. "In production" while still unverified keeps the cap and the
+  warning and removes the clock.
+
 ## [1.1.0] - 2026-09-15
 
 The launch pass — turning the repo into something a stranger could be shown —
