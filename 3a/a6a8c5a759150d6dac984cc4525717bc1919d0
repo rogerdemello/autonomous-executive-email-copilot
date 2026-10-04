@@ -1,0 +1,65 @@
+tests/test_security.py
+  s_bca1af7ce8e965::t_cbe67d0ab3c15e 180-231
+app/saas/routes.py
+  s_bca1af7ce8e965::t_ecc481f213ce32 80-86
+tests/test_demo_sandbox.py
+  s_bca1af7ce8e965::t_c6bfb83e06a10e 171-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "3aa6a8c5a759150d6dac984cc4525717bc1919d0",
+  "branch": "main",
+  "prompts": {
+    "s_bca1af7ce8e965": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "81508951-5fd1-460a-8f80-2b186588a45e",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e118848dfd999fd6c8830ac0e75ac7e215c66578b3fb7090662488e11988df61",
+      "total_additions": 74,
+      "total_deletions": 1,
+      "accepted_lines": 1438,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_bca1af7ce8e965": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "81508951-5fd1-460a-8f80-2b186588a45e",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e118848dfd999fd6c8830ac0e75ac7e215c66578b3fb7090662488e11988df61",
+      "stats": {
+        "total_additions": 74,
+        "total_deletions": 1,
+        "accepted_lines": 1438,
+        "overriden_lines": 0,
+        "files": {
+          "app/saas/routes.py": {
+            "total_additions": 7,
+            "total_deletions": 0,
+            "accepted_lines": 505,
+            "overriden_lines": 0
+          },
+          "tests/test_demo_sandbox.py": {
+            "total_additions": 14,
+            "total_deletions": 0,
+            "accepted_lines": 702,
+            "overriden_lines": 0
+          },
+          "tests/test_security.py": {
+            "total_additions": 53,
+            "total_deletions": 1,
+            "accepted_lines": 231,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
