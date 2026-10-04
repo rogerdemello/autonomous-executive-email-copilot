@@ -1,0 +1,953 @@
+tests/integration/conftest.py
+  s_e75a4eeb7cc8d3::t_12be7f983579c4 157-171,184-185
+  s_e75a4eeb7cc8d3::t_e967b6d33ffd3d 230-231,234-235
+  s_e75a4eeb7cc8d3::t_d0730752b70fbe 172-183
+  s_e75a4eeb7cc8d3::t_a8ea702bd549d5 151,250
+  s_e75a4eeb7cc8d3::t_045921e70acbf9 1-150,152-156,186-229,232-233,236-249,251-350
+app/web/templates/_app.html
+  s_bca1af7ce8e965::t_b8f3fb5384f5f8 15
+  s_bca1af7ce8e965::t_c361caa4594137 16-35
+  s_bca1af7ce8e965::t_716eee8ddc833e 5-9
+tests/test_otel_spans.py
+  s_bca1af7ce8e965::t_690840ad1025d5 114-127
+SECURITY.md
+  s_bca1af7ce8e965::t_b25ad96e67ad91 68-87
+  s_bca1af7ce8e965::t_7fc413b4204182 98
+  s_bca1af7ce8e965::t_872845f9dba734 91-96,99-101
+CONTRIBUTING.md
+  s_bca1af7ce8e965::t_06c8ca26542d25 37-39
+docs/DEMO.md
+  s_bca1af7ce8e965::t_1c8267a01bc964 249-253
+  s_bca1af7ce8e965::t_77a567dbbc25f3 371-379,382-383
+  s_bca1af7ce8e965::t_073c433304b8cb 112-115
+  s_bca1af7ce8e965::t_3f41ba486690b2 9-14,20-29,87
+  s_bca1af7ce8e965::t_1c5343564a14ff 194-200
+  s_bca1af7ce8e965::t_f75bb01df89d4e 56-57
+  s_bca1af7ce8e965::t_b042688671fc90 281-302
+  s_bca1af7ce8e965::t_c19e158b30d9b1 86,88-90,92-93,95-96
+  s_bca1af7ce8e965::t_671e16109bcaff 360-365
+app/web/templates/_tour.html
+  s_bca1af7ce8e965::t_32090eb84670a2 12,51
+  s_bca1af7ce8e965::t_0542b42456085f 1-11,14-32,38-50
+  s_bca1af7ce8e965::t_b8f3fb5384f5f8 13
+  s_bca1af7ce8e965::t_db9cdfb45bdfa2 33-37
+app/core/db.py
+  s_bca1af7ce8e965::t_fc6661dd0a920f 261
+  s_bca1af7ce8e965::t_c46beca5bba64b 124-137
+  s_bca1af7ce8e965::t_85c2de780e8876 7-18
+  s_bca1af7ce8e965::t_e012e76125c14c 382-387
+  s_bca1af7ce8e965::t_aaf5ebdcadf0d5 94-123
+app/saas/models_db.py
+  s_bca1af7ce8e965::t_12033b2fea585c 59-65,74
+scripts/capture_screenshots.py
+  s_bca1af7ce8e965::t_3d78ad9a4f7f2c 56-60,102,121-124,134,149,156-159,168-170,185-190,198
+  s_bca1af7ce8e965::t_d86014770bcf6f 51-55,64-69,163-167
+  s_bca1af7ce8e965::t_85c2de780e8876 160-162
+tests/test_db_migration.py
+  s_bca1af7ce8e965::t_eb8d46ef996dab 38-48
+  s_bca1af7ce8e965::t_6c00aeb46e5460 122-141
+app/saas/repository.py
+  s_bca1af7ce8e965::t_a1f8af842be9fb 74-76,78,83-105
+  s_bca1af7ce8e965::t_126e9c3522659e 476-481,485-489
+  s_bca1af7ce8e965::t_5b4516d2320bdf 122-131,133-136,538-542,546-547
+tests/test_web_a11y.py
+  s_bca1af7ce8e965::t_d3fd32d9e298f7 293-299
+  s_bca1af7ce8e965::t_306c1e231847cb 241,251-273
+.github/ISSUE_TEMPLATE/bug_report.yml
+  s_bca1af7ce8e965::t_73f2707d0fbdc1 70
+.github/ISSUE_TEMPLATE/feature_request.yml
+  s_bca1af7ce8e965::t_73f2707d0fbdc1 53
+app/saas/data_lifecycle.py
+  s_bca1af7ce8e965::t_c6e00061b0f426 81-110
+  s_bca1af7ce8e965::t_c6248dcca376ba 4-12,23,28,30,39-54,60-79,118,122-127,137-141
+app/web/middleware.py
+  s_bca1af7ce8e965::t_ab47c582b53b24 48,53-63
+app/web/templates/approvals.html
+  s_bca1af7ce8e965::t_69333a653593aa 76-77
+.github/workflows/keepalive.yml
+  s_bca1af7ce8e965::t_1f3c0074838bb2 1-55
+tests/test_saas_mailbox.py
+  s_e75a4eeb7cc8d3::t_2586d037750491 200-209
+  s_e75a4eeb7cc8d3::t_039549ffc44793 12,14
+app/core/security.py
+  s_bca1af7ce8e965::t_b1ba80506713bf 137,139-146,148,154-156,161
+  s_bca1af7ce8e965::t_01b2fc31d52f9b 195-208
+app/saas/provisioning.py
+  s_bca1af7ce8e965::t_059cae55244c32 83-87
+  s_bca1af7ce8e965::t_3d7e918f95de5f 47-48,57-61
+app/web/templates/privacy.html
+  s_bca1af7ce8e965::t_6d5deea3c72e2f 38
+  s_bca1af7ce8e965::t_93cbeafdf26b29 109
+  s_bca1af7ce8e965::t_d366fac3eee792 273-274
+  s_bca1af7ce8e965::t_3f53d428bdb738 291
+  s_bca1af7ce8e965::t_0a410a351cf6ee 260
+  s_bca1af7ce8e965::t_e2a9c0fc637c90 67-69
+  s_bca1af7ce8e965::t_def1fee9f58218 7
+tests/test_saas_data_lifecycle.py
+  s_bca1af7ce8e965::t_663b316ecfcc61 137,139-142
+  s_bca1af7ce8e965::t_6810856cc3b272 106,108-111,113-136,138,143-198
+  s_bca1af7ce8e965::t_78b884a2d9fe8d 12
+  s_bca1af7ce8e965::t_ee15142d401610 107,112
+app/saas/marketing.py
+  s_bca1af7ce8e965::t_425c8ea61fa731 67-68
+  s_bca1af7ce8e965::t_036d29183a2c30 112,114-115,117
+  s_bca1af7ce8e965::t_061ec45b23461a 7-9,16-17,38-40,42-52,58,69,79-90,104-111,113,116,118-119
+  s_bca1af7ce8e965::t_6b84ce19f325ea 72
+  s_bca1af7ce8e965::t_24c2dbf778c47c 91-101
+  s_bca1af7ce8e965::t_342c660ed4be85 26,29-35,37,41,102-103
+  s_bca1af7ce8e965::t_293bb0bd841ae9 23-25,28,36
+app/web/templates/error.html
+  s_bca1af7ce8e965::t_1406783dea90e1 15-23,29-33
+app/web/templates/landing.html
+  s_bca1af7ce8e965::t_ddab11e77b1a69 20-32
+  s_bca1af7ce8e965::t_7dd500abd4e35e 489-496
+  s_bca1af7ce8e965::t_93cbeafdf26b29 14-16,79-80,87-88,108-110
+  s_bca1af7ce8e965::t_632387f5c69ead 36
+  s_bca1af7ce8e965::t_e2a9c0fc637c90 227-229,232-235,240-241,243-245,249-250,252-255
+tests/test_api_contract.py
+  s_bca1af7ce8e965::t_85c2de780e8876 151-192
+tests/test_demo_sandbox.py
+  s_bca1af7ce8e965::t_576ea7a9bf1e69 1-629
+  s_bca1af7ce8e965::t_803244523f316c 630-688
+DEPLOYMENT_GUIDE.md
+  s_bca1af7ce8e965::t_0c184ef466141b 57-61
+  s_bca1af7ce8e965::t_af52ae5bc2fc10 95-100,104-129
+  s_bca1af7ce8e965::t_768074a21000bd 49-50
+LAUNCH_CHECKLIST.md
+  s_bca1af7ce8e965::t_8882fba6735df8 12-40
+app/saas/provider_factory.py
+  s_e75a4eeb7cc8d3::t_6dc546e6f65a12 51-63
+  s_e75a4eeb7cc8d3::t_70b44cd6f5773f 76-88,105-110,113-117
+  s_e75a4eeb7cc8d3::t_b4457922e1cb74 89-104
+docs/PROVISIONING_RUNBOOK.md
+  s_bca1af7ce8e965::t_89c5dfb7e760a3 106-109
+tests/integration/test_two_mailboxes.py
+  s_e75a4eeb7cc8d3::t_8bf8ec9d4c1ab8 66-67
+  s_e75a4eeb7cc8d3::t_a8ea702bd549d5 51,78
+  s_e75a4eeb7cc8d3::t_6e8ecc1728f51e 109
+  s_e75a4eeb7cc8d3::t_ad1634675cae86 11,14,16-27
+  s_e75a4eeb7cc8d3::t_3015711cd03c26 41-46
+  s_e75a4eeb7cc8d3::t_168891dfa63e2d 1-10,12-13,15,28-40,47-50,52-65,68-77,79-108,110-120
+tests/integration/wire.py
+  s_e75a4eeb7cc8d3::t_74dddfc376bb99 224-232
+  s_e75a4eeb7cc8d3::t_ad5aad0ab77fb5 1-44,46-205,207-223,233-258,261-352,354-367,372-380,384-785,787-812,814-816,818-869,871-909
+  s_e75a4eeb7cc8d3::t_1b0ab405b4674e 259-260
+  s_e75a4eeb7cc8d3::t_40bbc5e8eddc31 381-383
+  s_e75a4eeb7cc8d3::t_f33766bb4d36df 813,817
+  s_e75a4eeb7cc8d3::t_a8ea702bd549d5 786
+  s_e75a4eeb7cc8d3::t_e9702b0300be75 353
+  s_e75a4eeb7cc8d3::t_746d0aa7578f1b 206
+  s_e75a4eeb7cc8d3::t_23bb4ff6b58efc 368-371
+  s_e75a4eeb7cc8d3::t_e3b24af6bd4108 870
+  s_e75a4eeb7cc8d3::t_9cc77a268963b1 45
+app/web/templates/terms.html
+  s_bca1af7ce8e965::t_b505b590846353 7
+  s_bca1af7ce8e965::t_cb46fb1e3eb9ad 136
+app/saas/sandbox.py
+  s_bca1af7ce8e965::t_14b80759d29b48 1-184
+app/saas/operator_views.py
+  s_bca1af7ce8e965::t_d22cf32f8ca961 70-72
+  s_bca1af7ce8e965::t_5b4516d2320bdf 189-191
+app/web/templates/inbox.html
+  s_055ee7785c3693::t_b8b1b6a3af87f7 385-388,398
+  s_055ee7785c3693::t_30ffaded9d5d21 76
+  s_055ee7785c3693::t_41ceb2d45243ef 126-201
+  s_055ee7785c3693::t_7ebef7339a37cf 3,12-13,37,50-56,59-75,77-125,202-259,318,355-359,363-384,389-397,399-403,405-410,412-416,418-419,425-427
+  s_bca1af7ce8e965::t_da5cc6ce50301e 38
+  s_055ee7785c3693::t_77547cab7a2de2 57-58
+app/web/templates/login.html
+  s_bca1af7ce8e965::t_ce8642cea74195 66-75
+tests/test_web_security.py
+  s_bca1af7ce8e965::t_85c2de780e8876 235-237
+  s_bca1af7ce8e965::t_abe808ca0501e6 223-234,238-289
+tests/test_web_pages.py
+  s_055ee7785c3693::t_6c3299fd886b5a 281,286-290,295-304
+  s_bca1af7ce8e965::t_913b894543c2fa 291-294
+  s_bca1af7ce8e965::t_576ea7a9bf1e69 1202-1259
+  s_055ee7785c3693::t_e37ac5bafd0c73 664-665,667-668,671-673
+  s_bca1af7ce8e965::t_694bcf3022e01f 305
+.github/workflows/ci.yml
+  s_bca1af7ce8e965::t_1a8ad7591988c5 114
+app/saas/email.py
+  s_bca1af7ce8e965::t_5a4fabab2b8d0e 93-103,106-108
+tests/integration/test_token_lifecycle.py
+  s_e75a4eeb7cc8d3::t_daba33fdcac4d5 1-22,24-92,96-98,102-199,201-214,216,218-224
+  s_e75a4eeb7cc8d3::t_8930f07c19bd17 200,217
+  s_e75a4eeb7cc8d3::t_a8ea702bd549d5 93-95,99-101
+  s_e75a4eeb7cc8d3::t_0bd0b082e1554d 215
+  s_e75a4eeb7cc8d3::t_e01d7dde99e6fc 225-268
+  s_e75a4eeb7cc8d3::t_352e31eb94c14d 23
+README.md
+  s_bca1af7ce8e965::t_7502a3680f900d 21-30
+  s_bca1af7ce8e965::t_0a134572ccd9cc 3,12-20,45
+  s_bca1af7ce8e965::t_9483721d9aa2cf 43-44,46,53-55,59-61,63-65,67-71
+  s_bca1af7ce8e965::t_0c38309f183407 136-137
+  s_bca1af7ce8e965::t_ad6c94f789d5b6 165-187
+  s_bca1af7ce8e965::t_78eb4f5ff13f41 600-605
+  s_bca1af7ce8e965::t_08f87766e9ef65 660
+app/web/templates/settings.html
+  s_bca1af7ce8e965::t_d88982aa7f586e 13-24,40,58,93,188,197,287,355
+app/saas/deps.py
+  s_bca1af7ce8e965::t_9f24db16a8b920 60-77,82,84-88
+render.yaml
+  s_bca1af7ce8e965::t_256a9007662944 105-111
+  s_bca1af7ce8e965::t_6dcf9a55a39dac 92-95,98
+  s_bca1af7ce8e965::t_ac277b4d7aebad 46-49,51-54,56,99
+app/saas/sync_service.py
+  s_bca1af7ce8e965::t_edbd59b5914251 270-278
+docs/TECHNICAL_REFERENCE.md
+  s_bca1af7ce8e965::t_73f2707d0fbdc1 645
+  s_bca1af7ce8e965::t_89c5dfb7e760a3 90
+tests/integration/test_graph_mailbox.py
+  s_e75a4eeb7cc8d3::t_a8ea702bd549d5 68-70,228
+  s_e75a4eeb7cc8d3::t_91a0f130371fed 1-67,71-227,229-236
+app/saas/demo_seed.py
+  s_bca1af7ce8e965::t_d0ea45a9991e61 38-79
+  s_bca1af7ce8e965::t_7b19f0bb2cdd68 140
+tests/integration/test_gmail_mailbox.py
+  s_e75a4eeb7cc8d3::t_2ac2b9095cc9f8 1-16,18-294,310-320,322-332
+  s_e75a4eeb7cc8d3::t_c62d6a804053fb 17
+  s_e75a4eeb7cc8d3::t_a8ea702bd549d5 321
+  s_e75a4eeb7cc8d3::t_e8449db726aa39 295-309
+app/web/assets.py
+  s_bca1af7ce8e965::t_0a72ea9f673f5a 1-50
+app/web/templates/demo.html
+  s_bca1af7ce8e965::t_906e0ef2b961cb 1-38
+app/saas/oauth.py
+  s_e75a4eeb7cc8d3::t_4174381b114437 231-234
+  s_e75a4eeb7cc8d3::t_663fc3b7bbe111 264-267
+  s_e75a4eeb7cc8d3::t_e1cf7ad2e30b9c 272-288
+app/web/static/app.css
+  s_bca1af7ce8e965::t_b8f3fb5384f5f8 1053-1056,1096-1109
+  s_bca1af7ce8e965::t_e6662a0ec1e19b 1125-1130
+  s_055ee7785c3693::t_1173bba128453f 1409-1410,1413
+  s_055ee7785c3693::t_9835881b3e9f1e 1561
+  s_055ee7785c3693::t_02f258be8f07d3 1703
+  s_055ee7785c3693::t_3e883b58579b2b 1018,1552-1553,1616-1625,1627-1628,1652-1654,1658-1677,1752-1753,1806
+  s_055ee7785c3693::t_2bb1ee87c26ed4 1535,1541,1545-1551
+  s_055ee7785c3693::t_822b1b71d94daa 1686
+  s_055ee7785c3693::t_03a58f1717cc88 1706-1710,1716-1717,1720,1722-1725,1727-1728,1731-1732,1735-1740,1745-1751,1754-1759,1762,1764,1770-1774,1778-1805,1807-1839,1844-1845,1847
+  s_055ee7785c3693::t_6facee438b8d3c 2205
+  s_bca1af7ce8e965::t_cd1ff211fa123a 358-367
+  s_055ee7785c3693::t_aded8828745a56 1382,1389,1392
+  s_055ee7785c3693::t_a151887c6dce5f 1639-1643,1645-1648
+  s_055ee7785c3693::t_a937edc8898257 1885,1891-1893
+  s_bca1af7ce8e965::t_5c1666ac7bd212 1019-1052,1057-1095,1110-1112,1114-1117,1119-1124,1132,1134-1139,1142-1147,1150-1164,1166-1169
+  s_055ee7785c3693::t_8a74262553b288 1599-1600,1605,1608-1609,1611,1614-1615
+  s_055ee7785c3693::t_e9da0e35c125df 1632-1638
+  s_bca1af7ce8e965::t_0542b42456085f 1113,1118,1131,1133,1140-1141,1148-1149,1165
+  s_055ee7785c3693::t_b81233d4b14e21 1864-1870
+  s_055ee7785c3693::t_22190eec18561f 1904-1908
+requirements.txt
+  s_bca1af7ce8e965::t_9e9eda6baa390d 24
+app/main.py
+  s_bca1af7ce8e965::t_690840ad1025d5 150
+  s_bca1af7ce8e965::t_85c2de780e8876 206-221,223-238
+  s_bca1af7ce8e965::t_320712d4ae56ab 183-205,222,239-240,242,244-245
+  s_bca1af7ce8e965::t_b70fce28204e80 1259-1300
+  s_bca1af7ce8e965::t_837ce6840f5e80 301-304
+.env.example
+  s_bca1af7ce8e965::t_8d4c3cff6080dc 177-186
+tests/integration/__init__.py
+  s_e75a4eeb7cc8d3::t_7d0555fb02a2d7 1-6,11-26
+  s_e75a4eeb7cc8d3::t_5795b9c7400a22 7-10
+app/web/templates/_contact.html
+  s_bca1af7ce8e965::t_5804ed0e75d5dc 1-26
+app/web/templates/_public.html
+  s_bca1af7ce8e965::t_293bb0bd841ae9 77-79
+  s_bca1af7ce8e965::t_cd1ff211fa123a 18,46,51-53
+  s_bca1af7ce8e965::t_db8c53cdad3efb 82-84
+app/web/templates/contact_sales.html
+  s_bca1af7ce8e965::t_b604d41f39fd4c 153-157
+app/web/routes.py
+  s_bca1af7ce8e965::t_78cc545f070d80 30-34,36
+  s_bca1af7ce8e965::t_f2be083941df1b 59
+  s_bca1af7ce8e965::t_8c30164cabf7ee 70
+  s_bca1af7ce8e965::t_293bb0bd841ae9 42,208
+  s_bca1af7ce8e965::t_254355e03e984c 284,288-290
+  s_bca1af7ce8e965::t_82d004bec6095b 959,964-966
+  s_bca1af7ce8e965::t_1406783dea90e1 1808,1824-1829,1834,1836-1837
+  s_bca1af7ce8e965::t_f56bf3ada3a882 968-970,972-978
+  s_055ee7785c3693::t_5c06c1afde241d 711-713,1042-1046,1049-1064
+  s_bca1af7ce8e965::t_061ec45b23461a 209-213
+  s_bca1af7ce8e965::t_cafed64d944a51 214-216
+  s_bca1af7ce8e965::t_ea2dbfde5eee54 481-484
+  s_bca1af7ce8e965::t_9b095fc7e1f346 630-636,642-710
+  s_bca1af7ce8e965::t_9ac1b67a8e0000 1838
+  s_bca1af7ce8e965::t_6476d75398fe0f 561-564
+  s_bca1af7ce8e965::t_ef2e7c333a2296 967,971
+  s_bca1af7ce8e965::t_89889940a98740 200,203-207
+app/saas/sync_worker.py
+  s_bca1af7ce8e965::t_f09af26641db03 105-113
+app/web/templates/base.html
+  s_bca1af7ce8e965::t_b3420fc852c222 78
+  s_bca1af7ce8e965::t_444b136744e286 13-35
+  s_bca1af7ce8e965::t_93cbeafdf26b29 11
+  s_bca1af7ce8e965::t_d08acd2aeba9e0 73
+  s_bca1af7ce8e965::t_1974a4838bcfd9 64-66
+tests/test_web_reflow.py
+  s_bca1af7ce8e965::t_8dc08c8cf38358 44,54-61
+  s_bca1af7ce8e965::t_ee42a3de3355d2 156-192
+app/saas/operator_routes.py
+  s_bca1af7ce8e965::t_5b4516d2320bdf 91
+app/web/templates/operator.html
+  s_bca1af7ce8e965::t_5b4516d2320bdf 26-28
+app/web/static/app.js
+  s_055ee7785c3693::t_576fb243149db9 202-211
+  s_055ee7785c3693::t_b7c681b8e05b99 134-139,141-161
+telemetry/otel.py
+  s_bca1af7ce8e965::t_690840ad1025d5 4-6,8-13,44-55,60,66,77,106
+tests/test_config.py
+  s_bca1af7ce8e965::t_2fc67d6cc612cf 175-216
+app/core/config.py
+  s_bca1af7ce8e965::t_7bc08716dc0ff1 29-51,313
+  s_bca1af7ce8e965::t_d5a5bc102c9848 218-224
+  s_bca1af7ce8e965::t_5310b3000e4b6a 314-331
+docs/ROADMAP.md
+  s_bca1af7ce8e965::t_f51239326ef665 67,137-142,155-158
+tests/test_db_engine.py
+  s_bca1af7ce8e965::t_93e79715307241 113-115,117-129
+  s_bca1af7ce8e965::t_cf58ede4365c77 88-112,116,130-131
+tests/test_saas_marketing.py
+  s_bca1af7ce8e965::t_077341b85676ee 221-228
+  s_bca1af7ce8e965::t_bb11015d21d398 279-319,324-337,341-370,375-376
+  s_bca1af7ce8e965::t_ef02129f0c0839 143-162,173-193,197-210,215-220
+  s_bca1af7ce8e965::t_663b316ecfcc61 163-169
+  s_bca1af7ce8e965::t_a8964b9a35524e 229-278
+  s_bca1af7ce8e965::t_85c2de780e8876 134-142,170-172,194-196,211-214,320-323,338-340,371-374
+CHANGELOG.md
+  s_bca1af7ce8e965::t_1c55303222b2fb 54-60
+  s_bca1af7ce8e965::t_6b4a5ee8141b27 149-169,183-214
+  s_e75a4eeb7cc8d3::t_7b37fb902e3444 12,82,125-138,140-145,215-229
+  s_bca1af7ce8e965::t_f7b76071283fb5 275-292
+  s_bca1af7ce8e965::t_9575012f3740a1 10-11,13-21,25-53,61-81
+  s_e75a4eeb7cc8d3::t_cb84261e4da8a3 230-236
+  s_e75a4eeb7cc8d3::t_0dffa39aa4090c 139
+  s_bca1af7ce8e965::t_233519d92c6dac 170-182
+continue.md
+  s_bca1af7ce8e965::t_3af6d21131aeb8 42-83
+  s_e75a4eeb7cc8d3::t_97479e482c28cc 260-265,272-280
+  s_e75a4eeb7cc8d3::t_dd468a49655005 135
+  s_e75a4eeb7cc8d3::t_152f9dce1b455f 29-34
+  s_bca1af7ce8e965::t_f62cc60508d987 3,6-15
+  s_e75a4eeb7cc8d3::t_7b5e9173b49254 134,136-200
+  s_bca1af7ce8e965::t_08f87766e9ef65 36-38
+  s_e75a4eeb7cc8d3::t_3178fb6e7efbf5 266-271
+  s_bca1af7ce8e965::t_b7adabfb003fb4 84-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "15ff7eb33ed979f6ce33ec54191d5c7bd9e77f51",
+  "branch": "main",
+  "prompts": {
+    "s_055ee7785c3693": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0a069ae-602c-4789-8642-a3faacef4f1f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e7083fd92b2222bb58a51504635bfd56645af8aa166532685483d7aa3d29018a",
+      "total_additions": 628,
+      "total_deletions": 379,
+      "accepted_lines": 6348,
+      "overriden_lines": 0
+    },
+    "s_bca1af7ce8e965": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "81508951-5fd1-460a-8f80-2b186588a45e",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:20612e9a98fae57c5092fae121ddd9fb6dab4b563dcae528dd682c4d756a34d8",
+      "total_additions": 3699,
+      "total_deletions": 462,
+      "accepted_lines": 16168,
+      "overriden_lines": 0
+    },
+    "s_e75a4eeb7cc8d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "914ed4ff-d936-4385-863d-3b1c1117e788",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:23a93719aa546ccc44978fce8958351a658f721d910337eab6312f1aeddc2beb",
+      "total_additions": 2574,
+      "total_deletions": 120,
+      "accepted_lines": 3714,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_055ee7785c3693": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0a069ae-602c-4789-8642-a3faacef4f1f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:e7083fd92b2222bb58a51504635bfd56645af8aa166532685483d7aa3d29018a",
+      "stats": {
+        "total_additions": 628,
+        "total_deletions": 379,
+        "accepted_lines": 6348,
+        "overriden_lines": 0,
+        "files": {
+          "app/web/routes.py": {
+            "total_additions": 21,
+            "total_deletions": 2,
+            "accepted_lines": 1703,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 207,
+            "total_deletions": 73,
+            "accepted_lines": 2941,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.js": {
+            "total_additions": 37,
+            "total_deletions": 11,
+            "accepted_lines": 231,
+            "overriden_lines": 0
+          },
+          "app/web/templates/inbox.html": {
+            "total_additions": 339,
+            "total_deletions": 291,
+            "accepted_lines": 277,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 24,
+            "total_deletions": 2,
+            "accepted_lines": 1196,
+            "overriden_lines": 0
+          }
+        }
+      }
+    },
+    "s_bca1af7ce8e965": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "81508951-5fd1-460a-8f80-2b186588a45e",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:20612e9a98fae57c5092fae121ddd9fb6dab4b563dcae528dd682c4d756a34d8",
+      "stats": {
+        "total_additions": 3699,
+        "total_deletions": 462,
+        "accepted_lines": 16168,
+        "overriden_lines": 0,
+        "files": {
+          ".env.example": {
+            "total_additions": 10,
+            "total_deletions": 3,
+            "accepted_lines": 233,
+            "overriden_lines": 0
+          },
+          ".github/ISSUE_TEMPLATE/bug_report.yml": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 93,
+            "overriden_lines": 0
+          },
+          ".github/ISSUE_TEMPLATE/feature_request.yml": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 73,
+            "overriden_lines": 0
+          },
+          ".github/workflows/ci.yml": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 224,
+            "overriden_lines": 0
+          },
+          ".github/workflows/keepalive.yml": {
+            "total_additions": 55,
+            "total_deletions": 0,
+            "accepted_lines": 55,
+            "overriden_lines": 0
+          },
+          "CHANGELOG.md": {
+            "total_additions": 154,
+            "total_deletions": 4,
+            "accepted_lines": 154,
+            "overriden_lines": 0
+          },
+          "CONTRIBUTING.md": {
+            "total_additions": 3,
+            "total_deletions": 2,
+            "accepted_lines": 53,
+            "overriden_lines": 0
+          },
+          "DEPLOYMENT_GUIDE.md": {
+            "total_additions": 39,
+            "total_deletions": 14,
+            "accepted_lines": 158,
+            "overriden_lines": 0
+          },
+          "LAUNCH_CHECKLIST.md": {
+            "total_additions": 29,
+            "total_deletions": 0,
+            "accepted_lines": 176,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 70,
+            "total_deletions": 23,
+            "accepted_lines": 670,
+            "overriden_lines": 0
+          },
+          "SECURITY.md": {
+            "total_additions": 31,
+            "total_deletions": 6,
+            "accepted_lines": 118,
+            "overriden_lines": 0
+          },
+          "app/core/config.py": {
+            "total_additions": 49,
+            "total_deletions": 1,
+            "accepted_lines": 475,
+            "overriden_lines": 0
+          },
+          "app/core/db.py": {
+            "total_additions": 66,
+            "total_deletions": 5,
+            "accepted_lines": 424,
+            "overriden_lines": 0
+          },
+          "app/core/security.py": {
+            "total_additions": 28,
+            "total_deletions": 5,
+            "accepted_lines": 221,
+            "overriden_lines": 0
+          },
+          "app/main.py": {
+            "total_additions": 119,
+            "total_deletions": 17,
+            "accepted_lines": 110,
+            "overriden_lines": 0
+          },
+          "app/saas/data_lifecycle.py": {
+            "total_additions": 90,
+            "total_deletions": 29,
+            "accepted_lines": 90,
+            "overriden_lines": 0
+          },
+          "app/saas/demo_seed.py": {
+            "total_additions": 43,
+            "total_deletions": 26,
+            "accepted_lines": 154,
+            "overriden_lines": 0
+          },
+          "app/saas/deps.py": {
+            "total_additions": 24,
+            "total_deletions": 9,
+            "accepted_lines": 109,
+            "overriden_lines": 0
+          },
+          "app/saas/email.py": {
+            "total_additions": 14,
+            "total_deletions": 0,
+            "accepted_lines": 109,
+            "overriden_lines": 0
+          },
+          "app/saas/marketing.py": {
+            "total_additions": 113,
+            "total_deletions": 44,
+            "accepted_lines": 119,
+            "overriden_lines": 0
+          },
+          "app/saas/models_db.py": {
+            "total_additions": 8,
+            "total_deletions": 0,
+            "accepted_lines": 557,
+            "overriden_lines": 0
+          },
+          "app/saas/operator_routes.py": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 225,
+            "overriden_lines": 0
+          },
+          "app/saas/operator_views.py": {
+            "total_additions": 6,
+            "total_deletions": 1,
+            "accepted_lines": 276,
+            "overriden_lines": 0
+          },
+          "app/saas/provisioning.py": {
+            "total_additions": 12,
+            "total_deletions": 1,
+            "accepted_lines": 115,
+            "overriden_lines": 0
+          },
+          "app/saas/repository.py": {
+            "total_additions": 59,
+            "total_deletions": 13,
+            "accepted_lines": 1504,
+            "overriden_lines": 0
+          },
+          "app/saas/sandbox.py": {
+            "total_additions": 184,
+            "total_deletions": 0,
+            "accepted_lines": 184,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 9,
+            "total_deletions": 0,
+            "accepted_lines": 853,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_worker.py": {
+            "total_additions": 9,
+            "total_deletions": 0,
+            "accepted_lines": 271,
+            "overriden_lines": 0
+          },
+          "app/web/assets.py": {
+            "total_additions": 50,
+            "total_deletions": 0,
+            "accepted_lines": 50,
+            "overriden_lines": 0
+          },
+          "app/web/middleware.py": {
+            "total_additions": 12,
+            "total_deletions": 0,
+            "accepted_lines": 76,
+            "overriden_lines": 0
+          },
+          "app/web/routes.py": {
+            "total_additions": 154,
+            "total_deletions": 18,
+            "accepted_lines": 143,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 171,
+            "total_deletions": 9,
+            "accepted_lines": 162,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_app.html": {
+            "total_additions": 62,
+            "total_deletions": 37,
+            "accepted_lines": 126,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_contact.html": {
+            "total_additions": 26,
+            "total_deletions": 0,
+            "accepted_lines": 26,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_public.html": {
+            "total_additions": 11,
+            "total_deletions": 1,
+            "accepted_lines": 96,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_tour.html": {
+            "total_additions": 59,
+            "total_deletions": 8,
+            "accepted_lines": 51,
+            "overriden_lines": 0
+          },
+          "app/web/templates/approvals.html": {
+            "total_additions": 2,
+            "total_deletions": 1,
+            "accepted_lines": 230,
+            "overriden_lines": 0
+          },
+          "app/web/templates/base.html": {
+            "total_additions": 29,
+            "total_deletions": 4,
+            "accepted_lines": 80,
+            "overriden_lines": 0
+          },
+          "app/web/templates/contact_sales.html": {
+            "total_additions": 5,
+            "total_deletions": 3,
+            "accepted_lines": 162,
+            "overriden_lines": 0
+          },
+          "app/web/templates/demo.html": {
+            "total_additions": 38,
+            "total_deletions": 0,
+            "accepted_lines": 38,
+            "overriden_lines": 0
+          },
+          "app/web/templates/error.html": {
+            "total_additions": 14,
+            "total_deletions": 3,
+            "accepted_lines": 37,
+            "overriden_lines": 0
+          },
+          "app/web/templates/inbox.html": {
+            "total_additions": 1,
+            "total_deletions": 0,
+            "accepted_lines": 1,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 50,
+            "total_deletions": 28,
+            "accepted_lines": 501,
+            "overriden_lines": 0
+          },
+          "app/web/templates/login.html": {
+            "total_additions": 10,
+            "total_deletions": 0,
+            "accepted_lines": 90,
+            "overriden_lines": 0
+          },
+          "app/web/templates/operator.html": {
+            "total_additions": 3,
+            "total_deletions": 0,
+            "accepted_lines": 240,
+            "overriden_lines": 0
+          },
+          "app/web/templates/privacy.html": {
+            "total_additions": 10,
+            "total_deletions": 8,
+            "accepted_lines": 295,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 19,
+            "total_deletions": 5,
+            "accepted_lines": 383,
+            "overriden_lines": 0
+          },
+          "app/web/templates/terms.html": {
+            "total_additions": 2,
+            "total_deletions": 1,
+            "accepted_lines": 140,
+            "overriden_lines": 0
+          },
+          "continue.md": {
+            "total_additions": 79,
+            "total_deletions": 3,
+            "accepted_lines": 79,
+            "overriden_lines": 0
+          },
+          "docs/DEMO.md": {
+            "total_additions": 82,
+            "total_deletions": 20,
+            "accepted_lines": 383,
+            "overriden_lines": 0
+          },
+          "docs/PROVISIONING_RUNBOOK.md": {
+            "total_additions": 4,
+            "total_deletions": 2,
+            "accepted_lines": 127,
+            "overriden_lines": 0
+          },
+          "docs/ROADMAP.md": {
+            "total_additions": 11,
+            "total_deletions": 7,
+            "accepted_lines": 359,
+            "overriden_lines": 0
+          },
+          "docs/TECHNICAL_REFERENCE.md": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 666,
+            "overriden_lines": 0
+          },
+          "render.yaml": {
+            "total_additions": 22,
+            "total_deletions": 2,
+            "accepted_lines": 161,
+            "overriden_lines": 0
+          },
+          "requirements.txt": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 29,
+            "overriden_lines": 0
+          },
+          "scripts/capture_screenshots.py": {
+            "total_additions": 46,
+            "total_deletions": 7,
+            "accepted_lines": 205,
+            "overriden_lines": 0
+          },
+          "telemetry/otel.py": {
+            "total_additions": 26,
+            "total_deletions": 16,
+            "accepted_lines": 201,
+            "overriden_lines": 0
+          },
+          "tests/test_api_contract.py": {
+            "total_additions": 44,
+            "total_deletions": 2,
+            "accepted_lines": 42,
+            "overriden_lines": 0
+          },
+          "tests/test_config.py": {
+            "total_additions": 42,
+            "total_deletions": 0,
+            "accepted_lines": 209,
+            "overriden_lines": 0
+          },
+          "tests/test_db_engine.py": {
+            "total_additions": 50,
+            "total_deletions": 6,
+            "accepted_lines": 163,
+            "overriden_lines": 0
+          },
+          "tests/test_db_migration.py": {
+            "total_additions": 31,
+            "total_deletions": 0,
+            "accepted_lines": 141,
+            "overriden_lines": 0
+          },
+          "tests/test_demo_sandbox.py": {
+            "total_additions": 709,
+            "total_deletions": 21,
+            "accepted_lines": 688,
+            "overriden_lines": 0
+          },
+          "tests/test_otel_spans.py": {
+            "total_additions": 14,
+            "total_deletions": 0,
+            "accepted_lines": 127,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_data_lifecycle.py": {
+            "total_additions": 113,
+            "total_deletions": 19,
+            "accepted_lines": 273,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_marketing.py": {
+            "total_additions": 259,
+            "total_deletions": 16,
+            "accepted_lines": 518,
+            "overriden_lines": 0
+          },
+          "tests/test_web_a11y.py": {
+            "total_additions": 31,
+            "total_deletions": 2,
+            "accepted_lines": 458,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 63,
+            "total_deletions": 2,
+            "accepted_lines": 63,
+            "overriden_lines": 0
+          },
+          "tests/test_web_reflow.py": {
+            "total_additions": 46,
+            "total_deletions": 0,
+            "accepted_lines": 192,
+            "overriden_lines": 0
+          },
+          "tests/test_web_security.py": {
+            "total_additions": 68,
+            "total_deletions": 1,
+            "accepted_lines": 354,
+            "overriden_lines": 0
+          }
+        }
+      }
+    },
+    "s_e75a4eeb7cc8d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "914ed4ff-d936-4385-863d-3b1c1117e788",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:23a93719aa546ccc44978fce8958351a658f721d910337eab6312f1aeddc2beb",
+      "stats": {
+        "total_additions": 2574,
+        "total_deletions": 120,
+        "accepted_lines": 3714,
+        "overriden_lines": 0,
+        "files": {
+          "CHANGELOG.md": {
+            "total_additions": 47,
+            "total_deletions": 4,
+            "accepted_lines": 399,
+            "overriden_lines": 0
+          },
+          "app/saas/oauth.py": {
+            "total_additions": 25,
+            "total_deletions": 3,
+            "accepted_lines": 288,
+            "overriden_lines": 0
+          },
+          "app/saas/provider_factory.py": {
+            "total_additions": 57,
+            "total_deletions": 13,
+            "accepted_lines": 247,
+            "overriden_lines": 0
+          },
+          "continue.md": {
+            "total_additions": 101,
+            "total_deletions": 8,
+            "accepted_lines": 252,
+            "overriden_lines": 0
+          },
+          "tests/integration/__init__.py": {
+            "total_additions": 27,
+            "total_deletions": 1,
+            "accepted_lines": 26,
+            "overriden_lines": 0
+          },
+          "tests/integration/conftest.py": {
+            "total_additions": 360,
+            "total_deletions": 10,
+            "accepted_lines": 350,
+            "overriden_lines": 0
+          },
+          "tests/integration/test_gmail_mailbox.py": {
+            "total_additions": 333,
+            "total_deletions": 1,
+            "accepted_lines": 332,
+            "overriden_lines": 0
+          },
+          "tests/integration/test_graph_mailbox.py": {
+            "total_additions": 244,
+            "total_deletions": 8,
+            "accepted_lines": 236,
+            "overriden_lines": 0
+          },
+          "tests/integration/test_token_lifecycle.py": {
+            "total_additions": 292,
+            "total_deletions": 24,
+            "accepted_lines": 268,
+            "overriden_lines": 0
+          },
+          "tests/integration/test_two_mailboxes.py": {
+            "total_additions": 149,
+            "total_deletions": 29,
+            "accepted_lines": 120,
+            "overriden_lines": 0
+          },
+          "tests/integration/wire.py": {
+            "total_additions": 927,
+            "total_deletions": 18,
+            "accepted_lines": 909,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_mailbox.py": {
+            "total_additions": 12,
+            "total_deletions": 1,
+            "accepted_lines": 287,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
