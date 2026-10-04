@@ -77,6 +77,13 @@ SAAS_SELF_AUTH_PREFIXES = (
     "/login",
     "/signup",
     "/logout",
+    # The password-reset forms and the public demo button. Each was missing, and
+    # each answered `{"detail":"Missing or invalid API token"}` on a deployment
+    # that sets API_AUTH_TOKEN — i.e. on production. tests/test_security.py
+    # walks the web router so the next form cannot be forgotten the same way.
+    "/forgot-password",
+    "/reset-password",
+    "/demo",
     "/static",
     # Public lead-capture form (CSRF + honeypot + its own throttle).
     "/contact-sales",

@@ -168,6 +168,20 @@ class TestOneClickDemo:
         assert ORGS.count_sandboxes() == 1
 
 
+class TestOnALockedDownDeployment:
+    """The production blueprint sets API_AUTH_TOKEN. The demo button 401'd there."""
+
+    def test_the_button_works_with_the_operator_token_set(self, client, monkeypatch):
+        """Shipped broken: every test ran with the token unset, and the live site
+        answered {"detail":"Missing or invalid API token"} to the first click."""
+        monkeypatch.setenv("API_AUTH_TOKEN", "locked-down-operator-token")
+        response = open_demo(client)
+        assert response.status_code == 303, response.text
+        assert response.headers["location"] == "/app/inbox?tour=1"
+        assert client.get("/app/inbox").status_code == 200
+        assert ORGS.count_sandboxes() == 1
+
+
 class TestWhenTheDemoIsOff:
     @pytest.mark.parametrize("method", ["get", "post"])
     def test_the_route_is_absent(self, client, monkeypatch, method):

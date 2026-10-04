@@ -177,3 +177,55 @@ class TestSimulatorSurfaceIsLocked:
         assert client.get("/login").status_code == 200
         assert client.get("/privacy").status_code == 200
         assert client.get("/health").status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# The web forms on a locked-down deployment
+# --------------------------------------------------------------------------- #
+class TestWebFormsSurviveTheOperatorToken:
+    """`render.yaml` sets API_AUTH_TOKEN, which gates every mutating route that is
+    not on the gateway's allowlist (SAAS_SELF_AUTH_PREFIXES). The server-rendered
+    forms authenticate themselves — a session cookie and a CSRF token — so each
+    one must be on that list, or it answers `{"detail":"Missing or invalid API
+    token"}` on the deployments that are actually locked down.
+
+    This shipped broken: "Try the live demo" 401'd on the live site. It passed
+    every test, because no test set the token while posting a web form, and the
+    same omission had already broken the password-reset forms. So this walks the
+    router instead of listing paths: a new form that forgets the allowlist fails
+    here, not in front of a visitor.
+    """
+
+    @staticmethod
+    def _web_post_paths() -> list[str]:
+        import re
+
+        from app.web.routes import web_router
+
+        return sorted(
+            {
+                re.sub(r"\{[^}]+\}", "x", route.path)
+                for route in web_router.routes
+                if "POST" in getattr(route, "methods", ())
+            }
+        )
+
+    def test_the_router_has_forms_to_check(self):
+        """Guard the guard: an empty walk would pass for the wrong reason."""
+        paths = self._web_post_paths()
+        assert {"/login", "/signup", "/demo", "/forgot-password"} <= set(paths), paths
+
+    def test_no_web_form_is_stopped_by_the_gateway_token(self, monkeypatch):
+        monkeypatch.setenv("API_AUTH_TOKEN", "s3cret")
+        client = TestClient(app, follow_redirects=False)
+        stopped = []
+        for path in self._web_post_paths():
+            response = client.post(
+                path
+            )  # no CSRF, no session: the route may refuse, but not the gateway
+            if response.status_code == 401 and "Missing or invalid API token" in response.text:
+                stopped.append(path)
+        assert not stopped, (
+            f"these web forms are behind API_AUTH_TOKEN and unusable on a locked-down "
+            f"deployment; add them to SAAS_SELF_AUTH_PREFIXES: {stopped}"
+        )
