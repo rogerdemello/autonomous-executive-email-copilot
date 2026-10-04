@@ -48,7 +48,23 @@ SHOTS = [
     # Tall enough to include the editable draft and the Approve / Reject
     # buttons: "edit it before it sends" is the whole claim this shot makes.
     ("product-approve.png", "/app/approvals", (1000, 720), "the approval queue"),
+    # The product's whole argument in one frame: the model wrote "advise by 25
+    # September" for a message whose deadline is the 30th, and the verifier caught
+    # it, showing the sentence and the source line it failed against. Used by the
+    # README, not the landing page.
+    ("product-flagged.png", "/app/approvals", (1000, 720), "the verifier catching an invention"),
+    # The picture a link unfurls to on LinkedIn, Slack and WhatsApp (og:image).
+    # 1200x630 is the box every one of them crops to; JPEG because not all of
+    # them read WebP; and kept small because WhatsApp drops previews whose image
+    # is much over 300 KB.
+    ("og-card.jpg", "/app/inbox", (1200, 630), "the link-preview card"),
 ]
+
+
+# Shots that photograph one element rather than the viewport. The flagged draft
+# is the 3rd-ish card down the approvals page, so a viewport shot of the page
+# would miss it.
+ELEMENT_SHOTS = {"product-flagged.png": ".action-block:has(.chip--warn)"}
 
 
 def _free_port() -> int:
@@ -83,7 +99,7 @@ def _wait_for(url: str, timeout: float = 30.0) -> None:
     raise RuntimeError(f"the app did not come up at {url}")
 
 
-def capture(scale: int = 2) -> list[Path]:
+def capture(scale: int = 2, only: list[str] | None = None) -> list[Path]:
     from playwright.sync_api import sync_playwright
 
     from app.saas.demo_seed import DEMO_OWNER_EMAIL, DEMO_OWNER_PASSWORD, seed_demo
@@ -102,6 +118,10 @@ def capture(scale: int = 2) -> list[Path]:
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
+    shots = [shot for shot in SHOTS if not only or shot[0] in only]
+    if not shots:
+        raise SystemExit(f"--only matched nothing; choose from: {', '.join(n for n, *_ in SHOTS)}")
+
     base = f"http://127.0.0.1:{port}"
     written: list[Path] = []
     try:
@@ -111,7 +131,7 @@ def capture(scale: int = 2) -> list[Path]:
         with sync_playwright() as play:
             browser = play.chromium.launch()
             context = browser.new_context(
-                viewport={"width": SHOTS[0][2][0], "height": SHOTS[0][2][1]},
+                viewport={"width": shots[0][2][0], "height": shots[0][2][1]},
                 device_scale_factor=scale,
                 color_scheme="light",
                 # Freeze the animation layer. Scroll reveals start elements at
@@ -126,16 +146,29 @@ def capture(scale: int = 2) -> list[Path]:
             page.click("button[type=submit]")
             page.wait_for_url(f"{base}/app/**")
 
-            for name, path, (width, height), what in SHOTS:
+            for name, path, (width, height), what in shots:
                 page.set_viewport_size({"width": width, "height": height})
                 page.goto(f"{base}{path}")
                 page.wait_for_load_state("networkidle")
                 # Blur whatever autofocused, so no screenshot ships a focus ring.
                 page.evaluate("document.activeElement && document.activeElement.blur()")
                 target = OUT_DIR / name
-                page.screenshot(path=str(target))
+                if name.endswith(".jpg"):
+                    # scale="css": exactly width x height whatever the device
+                    # pixel ratio is, since a link preview is not retina.
+                    page.screenshot(path=str(target), type="jpeg", quality=82, scale="css")
+                    print(
+                        f"  {name}  {width}x{height}  {what}  ({target.stat().st_size // 1024} KB)"
+                    )
+                elif name in ELEMENT_SHOTS:
+                    card = page.locator(ELEMENT_SHOTS[name]).first
+                    card.wait_for()
+                    card.screenshot(path=str(target))
+                    print(f"  {name}  {what}  (element: {ELEMENT_SHOTS[name]})")
+                else:
+                    page.screenshot(path=str(target))
+                    print(f"  {name}  {width}x{height}@{scale}x  {what}")
                 written.append(target)
-                print(f"  {name}  {width}x{height}@{scale}x  {what}")
 
             browser.close()
     finally:
@@ -149,6 +182,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--scale", type=int, default=2, help="Device pixel ratio (default: %(default)s)."
     )
+    parser.add_argument(
+        "--only",
+        nargs="+",
+        metavar="FILE",
+        help="Capture just these files (e.g. og-card.jpg) instead of all of them.",
+    )
     args = parser.parse_args(argv)
 
     # Set before importing anything that resolves DATA_ROOT or builds the engine.
@@ -156,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("ENVIRONMENT", "development")
     os.environ.setdefault("DEMO_LOGIN_ENABLED", "true")
 
-    written = capture(scale=args.scale)
+    written = capture(scale=args.scale, only=args.only)
     print(f"\nWrote {len(written)} screenshot(s) to {OUT_DIR}")
     print("Now regenerate the WebP variants: python scripts/optimize_images.py")
     return 0

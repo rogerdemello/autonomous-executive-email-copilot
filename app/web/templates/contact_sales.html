@@ -150,9 +150,11 @@
           <button class="btn btn--primary btn--block" type="submit">Request a walkthrough</button>
         </form>
 
-        <p class="auth__alt">
-          Prefer email? <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
-        </p>
+        {% if sales_email %}
+          <p class="auth__alt">
+            Prefer email? <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
+          </p>
+        {% endif %}
       {% endif %}
     </div>
   </div>

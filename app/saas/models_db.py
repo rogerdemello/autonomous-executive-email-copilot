@@ -56,6 +56,13 @@ class Organization(Base):
     # so it described a capability the product did not have.
     created_at = Column(String(50), nullable=False, default=_now_iso)
     updated_at = Column(String(50), nullable=False, default=_now_iso, onupdate=_now_iso)
+    # Set only on a visitor's demo sandbox (app.saas.sandbox): the moment it is
+    # deleted. NULL — the value every real workspace has — means "keep forever".
+    # One nullable column rather than a naming convention on the owner's email,
+    # because three different places must agree on what a sandbox is (the
+    # purge, the background worker, the guard that stops it doing anything
+    # administrative) and none of them should be parsing an address to find out.
+    sandbox_expires_at = Column(String(50), nullable=True)
 
     def to_dict(self) -> dict:
         return {
@@ -64,6 +71,7 @@ class Organization(Base):
             "slug": self.slug,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "sandbox_expires_at": self.sandbox_expires_at,
         }
 
 

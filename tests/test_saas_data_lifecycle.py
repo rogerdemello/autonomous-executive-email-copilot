@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.saas import processing_routes
+from app.saas.data_lifecycle import DataLifecycleService
 from app.saas.repository import MailboxRepository
 
 
@@ -100,6 +101,99 @@ class TestExport:
             "/auth/login", json={"email": member_email, "password": "temppass12"}
         ).json()["access_token"]
         assert client.get("/org/export", headers=_hdr(member_token)).status_code == 403
+
+
+def _rows_left_for(org_id: str) -> dict[str, int]:
+    """Rows still held for ``org_id`` in *every* org-scoped table.
+
+    Read from the live metadata rather than a hand-kept list: the failure this
+    guards against is a table nobody remembered to put on a list.
+    """
+    return DataLifecycleService().remaining_rows(org_id)
+
+
+class TestEveryTenantTableIsCovered:
+    """Erasure that misses a table is a compliance claim that is not true.
+
+    ``saas_llm_usage`` and ``saas_escalation_contacts`` were both added after
+    this service was written, and neither was added to it. The second holds the
+    email addresses of the customer's colleagues and has a foreign key to the
+    organization — so "delete my workspace" left personal data behind on SQLite
+    and raised an IntegrityError on Postgres.
+    """
+
+    def test_no_org_scoped_table_is_missing_from_export_and_delete(self):
+        from app.saas.data_lifecycle import uncovered_tenant_tables
+
+        assert uncovered_tenant_tables() == [], (
+            "A table with an org_id column is not in app.saas.data_lifecycle.TENANT_TABLES. "
+            "Add it, or 'erase my workspace' will leave that customer's data behind."
+        )
+
+    def test_the_guard_notices_a_table_that_is_not_covered(self):
+        """Prove the check is not vacuous: a new org-scoped table must trip it."""
+        from sqlalchemy import Column, String, Table
+
+        from app.saas.data_lifecycle import Base, uncovered_tenant_tables
+
+        # `Base` from the module under test, not from `app.core.db`: the
+        # migration tests importlib.reload() that module, which creates a *new*
+        # declarative base, so after them the two are different objects and a
+        # probe registered on the wrong one is invisible to the function.
+        probe = Table("saas_probe_not_covered", Base.metadata, Column("org_id", String(32)))
+        try:
+            assert uncovered_tenant_tables() == ["saas_probe_not_covered"]
+        finally:
+            Base.metadata.remove(probe)
+        assert uncovered_tenant_tables() == []
+
+    def test_delete_leaves_no_row_behind_in_any_table(self, client, monkeypatch):
+        from app.copilot.providers.fake import FakeProvider
+        from app.saas.repository import EscalationContactRepository, LlmUsageRepository
+
+        monkeypatch.setattr(processing_routes, "build_provider", lambda conn: FakeProvider())
+        owner = _signup(client)
+        token = owner["access_token"]
+        org_id = owner["organization"]["id"]
+        conn = MailboxRepository().upsert_connection(
+            org_id=org_id,
+            provider="fake",
+            account_email="exec@acme.example",
+            connected_by=owner["user"]["id"],
+            access_token_enc=None,
+            refresh_token_enc=None,
+            token_expires_at=None,
+            scopes=None,
+        )
+        client.post("/inbox/sync", headers=_hdr(token), json={"connection_id": conn["id"]})
+        # The two tables the old delete never touched.
+        EscalationContactRepository().set_email(org_id, "legal_team", "counsel@acme.example")
+        LlmUsageRepository().record(org_id=org_id, cost_usd=0.01, model="m", purpose="draft")
+        assert {"saas_escalation_contacts", "saas_llm_usage"} <= set(_rows_left_for(org_id))
+
+        resp = client.request(
+            "DELETE",
+            "/org",
+            headers=_hdr(token),
+            json={"confirm": owner["organization"]["slug"]},
+        )
+        assert resp.status_code == 200, resp.text
+        deleted = resp.json()["deleted"]
+        assert deleted["escalation_contacts"] == 1
+        assert deleted["llm_usage"] == 1
+        assert _rows_left_for(org_id) == {}
+
+    def test_export_carries_the_tables_delete_would_remove(self, client):
+        from app.saas.repository import EscalationContactRepository, LlmUsageRepository
+
+        owner = _signup(client)
+        org_id = owner["organization"]["id"]
+        EscalationContactRepository().set_email(org_id, "legal_team", "counsel@acme.example")
+        LlmUsageRepository().record(org_id=org_id, cost_usd=0.02, model="m", purpose="verify")
+
+        bundle = client.get("/org/export", headers=_hdr(owner["access_token"])).json()
+        assert [c["email"] for c in bundle["escalation_contacts"]] == ["counsel@acme.example"]
+        assert [u["cost_usd"] for u in bundle["llm_usage"]] == [0.02]
 
 
 class TestDeletion:

@@ -88,7 +88,7 @@ def list_orgs(limit: int = 200) -> dict:
                 },
             }
         )
-    return {"organizations": out, "total": len(out)}
+    return {"organizations": out, "total": len(out), "demo_sandboxes_live": _orgs.count_sandboxes()}
 
 
 @operator_router.post("/orgs", dependencies=[Depends(require_operator)])

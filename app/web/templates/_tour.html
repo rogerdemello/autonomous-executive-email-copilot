@@ -1,0 +1,51 @@
+{# The guided path through the demo sandbox.
+
+   A populated inbox is a wall of UI to someone with two minutes. This is the
+   shortest route past it to the thing the product is for: held drafts, a
+   verifier that checks them against their source, and a human who decides.
+
+   Rendered only inside a visitor's sandbox (the route sets `tour`, and ignores
+   it on a real workspace). Every number is read from the workspace rather than
+   typed here, and the step about a flagged draft appears only if one exists —
+   the demo's fixtures can change, and a tour that points at something that is
+   not there is worse than none. #}
+{# A div, not a <section>: app.css gives every <section> 62px of padding and a rule above it. #}
+<div class="card demo-tour" id="demo-tour" role="region" aria-labelledby="tour-title">
+  <div class="card__head">
+    <h2 class="card__title" id="tour-title">Two minutes in the demo</h2>
+    <a class="btn btn--sm" href="/app/inbox">Hide the tour</a>
+  </div>
+  <ol class="demo-tour__steps">
+    <li>
+      <strong>Start with what has already been done.</strong>
+      {{ mailbox_total }} messages were classified and ranked before you arrived. Open any row to
+      see why the copilot called it what it did, or
+      <a href="/app/inbox?label=urgent">filter to the urgent ones</a>.
+    </li>
+    <li>
+      <strong>See what is waiting on you.</strong>
+      <a href="/app/approvals">{{ pending_count }} replies and escalations</a> are held in
+      Approvals. Nothing external is ever sent until a person presses the button.
+    </li>
+    {% if tour_flagged_id %}
+      <li>
+        <strong>Watch the checker earn its keep.</strong>
+        <a href="/app/approvals#action-{{ tour_flagged_id }}">{{ tour_flagged_count }} flagged
+        draft{{ 's' if tour_flagged_count != 1 }}</a>: the verifier found a claim in
+        {{ 'it' if tour_flagged_count == 1 else 'them' }} that the original message does not
+        support. Open {{ 'it' if tour_flagged_count == 1 else 'one' }} to see the exact sentence,
+        and the line it failed against.
+      </li>
+    {% endif %}
+    <li>
+      <strong>Edit a draft, then approve it.</strong>
+      Change a sentence and press Approve. Your edit is what gets sent, and it teaches the copilot
+      your voice.
+    </li>
+    <li>
+      <strong>Follow the trail.</strong>
+      Everything you just did is on the <a href="/app/activity">audit log</a>, and the promises it
+      found in the mail are under <a href="/app/waiting">Waiting on</a>.
+    </li>
+  </ol>
+</div>

@@ -7,12 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Everything here is the same class of bug: a thing that works perfectly against
-the demo mailbox and fails the first time a real one is attached. The demo
-provider is in memory, its bodies are plain text, its drafts are cached, and its
-mailbox has no history — so the test suite could be green on all of it.
+Two themes, and both are the same class of bug — something that works for the
+person who built it and fails for the first stranger who tries it.
+
+**What breaks the first time a real mailbox is attached.** The demo provider is
+in memory, its bodies are plain text, its drafts are cached, and its mailbox has
+no history — so the test suite could be green on all of it.
+
+**What breaks the first time somebody is sent the link.** The live demo, found by
+using the deployed site as a stranger would: "Try the live demo" led to a blank
+sign-in form, the footer of every page published `sales@example.com`, and a
+returning visitor got today's HTML with last month's stylesheet. The entries
+below marked *public demo* are that pass.
 
 ### Added
+
+- **A one-click demo that cannot dead-end** *(public demo)*. "Try the live demo"
+  led to `/login`, which pre-filled a shared account's password — but only if that
+  account existed, and on a host whose database is ever empty it never did. The
+  visitor got a blank form and no way to obtain credentials. It now builds each
+  visitor a **private sandbox workspace** on the click (`app/saas/sandbox.py`): a
+  real organization, owner and trial license, with the demo mailbox attached and
+  triaged by the same pipeline a real mailbox goes through, in about a second.
+  There is no credential to publish (the owner's password is generated and
+  discarded; its address is on `.invalid`), nothing to seed, and nothing shared:
+  the first visitor to approve the queue no longer empties it for the next.
+
+  It is safe to hang off an unauthenticated button because of what bounds it. A
+  per-address rate limit and a hard cap on live sandboxes that *refuses* rather
+  than evicting someone mid-demo; a purge at session expiry, on sign-out, on every
+  creation and on every worker pass, using the same hard delete a customer's
+  erasure uses, and a failed build deletes its own half-made organization; no
+  live model call, ever, even where drafting is on; and the same fence as the
+  shared account around everything administrative, whether or not the demo is
+  currently advertised. The worker never sweeps a sandbox: its mailbox is a
+  fixture, and a sweep is a full re-triage to learn nothing. Gated on
+  `DEMO_LOGIN_ENABLED` exactly as the shared login was, so production still opts
+  in explicitly. `GET /demo` explains it and builds nothing, because crawlers and
+  link unfurlers GET.
+- **A two-minute tour inside the sandbox** *(public demo)*, and a banner on every
+  page saying what it is. Its third step links straight to the draft the verifier
+  flagged — "the source never states 25", beside the line it failed against — which
+  is the product's whole argument. The counts are read from the workspace, not
+  typed: the first draft of that step said "one draft is flagged" while the demo
+  holds two.
+- **The operator console leaves the demo out** *(public demo)*. Every click adds
+  an organization, `/operator` lists workspaces newest-first, and so a week of
+  visitors would have put two hundred identical "Northwind Industries" rows above
+  the customers the page exists to show — and turned "12 mailboxes syncing" into
+  262. Sandboxes are excluded from the workspace list, the member and mailbox
+  counts and `GET /operator/orgs`, and counted separately ("plus N live demo
+  sandboxes") so the operator can still see the demo is in use.
+- **Link previews and crawler files** *(public demo)*. No page carried Open Graph
+  or Twitter tags, a canonical URL, a `robots.txt` or a `sitemap.xml`, so a link
+  pasted into LinkedIn, Slack or WhatsApp unfurled as a bare title with no
+  picture. Now it carries a real 1200×630 screenshot of the inbox (captured by
+  `scripts/capture_screenshots.py`, not composed), and the canonical URL is the
+  origin actually serving the request — not `Settings.resolved_app_public_url`,
+  whose last resort is `http://localhost:8000`. Signed-in pages are `noindex`.
+- **Fingerprinted static assets** *(public demo)*. Starlette serves `/static` with
+  an ETag but no `Cache-Control`, so freshness was the browser's heuristic: ten
+  percent of the file's age. A stylesheet last touched a month earlier stays
+  "fresh" for about three days in the cache of everyone who has been before — the
+  owner checking their own deploy, a recruiter who looked once — while the HTML
+  that references it is new. Found when it happened during this pass. Pages now
+  ask for `/static/app.css?v=<digest>`, cached forever; anything unversioned is
+  told to revalidate.
+- **A keep-alive workflow** (`.github/workflows/keepalive.yml`) for a free-tier
+  host that sleeps after fifteen idle minutes and greets the first visitor with
+  "service waking up". A stop-gap, documented as one; the fix is a paid plan.
+- **A map from each claim to its code and its test** (README, "What to look at"),
+  and a CI badge in place of two hand-typed ones — the test-count badge said 1,097
+  while the suite had 1,224.
 
 - **Escalation contacts, and an escalation that goes to the right person.** An
   `escalate` action names a *role* — `legal_team`, `chief_of_staff` — because
@@ -56,9 +122,118 @@ mailbox has no history — so the test suite could be green on all of it.
   mailbox rendered "nothing matches that filter" — telling someone their inbox
   is empty while the copilot is still reading it. Self-refreshing, via
   `meta refresh`, because the app works without scripting.
+- **An integration layer that runs the product against a real provider API**
+  (`tests/integration/`). Every bug in this release was in production-only code,
+  and every one of them was green — because the suite either exercised a
+  provider alone against canned per-call responses, or exercised the product
+  against `DemoProvider`, which is a dict in memory whose bodies are plain text
+  and whose mailbox is never written to. So there is now a stateful fake of the
+  Gmail API, Microsoft Graph, and both token endpoints, installed by patching
+  `httpx` itself — below `_httpx_transport`, so the provider's own header
+  building and its handling of a body-less 202 are under test too. It is a
+  mailbox, not a stub: writes change what later reads return, a Gmail label has
+  to exist before it can be applied, a `categories` PATCH replaces the
+  collection, a send that omits `In-Reply-To` is recorded as not threaded for
+  the recipient, an `$orderby`-less list answers oldest-first, an expired access
+  token is a 401 until the refresh token is spent, and a URL no wire serves
+  fails the test instead of returning an empty success. On top of it, 55 tests
+  that connect a mailbox through the OAuth callback, let the deferred first sync
+  run, and then assert on what the product wrote and on what arrived at the
+  other end of the wire — including one workspace holding a Gmail account and a
+  Microsoft 365 account, which must route identical mail identically and must
+  not share fate. Each of the seven provider fixes in this release was
+  re-introduced by hand to confirm the layer catches it; all seven fail.
 
 ### Fixed
 
+- **"Erase my workspace" left data behind, and on Postgres failed outright.**
+  `DataLifecycleService` walked a hand-kept list of tables whose docstring said
+  "add it here when you add it". Two tables were added without it:
+  `saas_llm_usage` (the model-spend ledger) and `saas_escalation_contacts`, which
+  holds the email addresses of the customer's colleagues and has a foreign key to
+  the organization. On SQLite — which does not enforce foreign keys — the delete
+  succeeded and the addresses stayed; on Postgres it raised an `IntegrityError`.
+  Export and delete now walk one list, and a test reads the live SQLAlchemy
+  metadata and fails the build if any table with an `org_id` is missing from it,
+  after first proving that it notices one that is. `remaining_rows()` answers
+  "is anything left?" independently of the list that decides what to delete.
+- **`sales@example.com` was published as a live `mailto:` link** in the footer of
+  every public page, and as the address to send privacy complaints and
+  vulnerability reports to. It was the config default and `SALES_CONTACT_EMAIL`
+  was never set on the deployment. Both contact addresses now default to unset,
+  an address on a reserved documentation domain (`example.com`, `.example`,
+  `.invalid`, `.test`) is treated as unset, and pages fall back to the contact
+  form and to GitHub's private vulnerability reporting. `security.txt` also
+  stopped *deriving* `security@` from the sales address — a guess at a mailbox
+  that may not exist — and no longer publishes `http://localhost:8000` as its
+  canonical URL when `APP_PUBLIC_URL` is unset.
+- **The public pages sold capabilities the product does not have** *(public
+  demo)*. The hero said it "summarizes long threads"; the marquee, the Triage card
+  and the privacy policy said the same — and nothing generates a thread summary
+  (threads are grouped and shown). "RAG" and "Semantic search" were chips on the
+  landing page with no embedding, vector store or search behind them. The "typed
+  tools" pillar described the benchmark's LLM agent: the product's own routing is
+  deterministic code, and the model writes prose only, which is what the README
+  has always said. The "retrieves the thread's history" pillar was untrue of the
+  drafter, which is handed one message, the inferred signals, and up to three of
+  the workspace's approved replies as a guide to voice. All rewritten to what the
+  code does — including the meta description, which is what a pasted link
+  unfurls to — and a test now names each retired phrase and why it is off limits
+  *until the thing exists*. Each of the seven phrases was in the committed copy.
+- **`/docs` described a different product.** It called the service "a
+  deterministic, RL-style executive inbox simulation", and listed 46 of its 67
+  endpoints under one untagged heading with the product's five groups lost among
+  them. Product first, benchmark second, every route tagged, and a test that
+  fails on an untagged one. (Routes added through `include_router` are not
+  flattened into `app.routes` in this FastAPI version, so a post-hoc loop cannot
+  see them — six dashboard endpoints stayed untagged until they were tagged at
+  the include site.)
+- **Every SQLite commit was an `fsync`.** The engine ran on SQLite's defaults —
+  rollback journal, `synchronous=FULL` — while the repository layer commits once
+  per call. Building one demo workspace issues about 260 commits, which was 3.7s;
+  with WAL and `synchronous=NORMAL` it is 0.8s, and the background worker's
+  writes no longer lock out request threads. Attached for the SQLite dialect
+  only, and tested to be absent from a Postgres engine.
+- **Traces could not be tied to a build.** OpenTelemetry's `service.version` was a
+  hardcoded `1.0.0` while the service was at 1.1.0, and the module claimed a
+  `MeterProvider` that was never configured. It is tracing only; metrics are
+  Prometheus. Said so, and stamped the real version.
+- **Documentation that contradicted the repo.** `SECURITY.md` said "the frontend
+  runs eslint/prettier/type-check/build" (there is no frontend; the React
+  dashboard was removed), and its CodeQL line, `CONTRIBUTING.md`'s eslint
+  reference, two issue-template options, and a CI-jobs list in
+  `TECHNICAL_REFERENCE.md` said the same. `DEPLOYMENT_GUIDE.md` claimed signup was
+  off and the blueprint's Postgres was free — `render.yaml` says on and paid.
+  `requirements.txt` said `render.yaml` sets the OTLP endpoint; it did not.
+  `ROADMAP.md` listed deleted React work as open and a finished accessibility
+  pass as "still open". The README's hand-typed demo numbers (50 messages, 11
+  actions, one flagged draft) disagreed with the product (51, 12, two).
+- **A test that could never pass.** `test_inbox_lists_the_messages` asserted
+  `"Copilot" not in response.text` on a page whose `<title>` and sidebar logo
+  both say "Copilot", and its pair asserted the word's *presence*, proving
+  nothing. Both now assert the reader panel's own marker.
+- **A revoked mailbox stayed marked healthy, silently, forever.** The pre-launch
+  pass made a broken mailbox impossible to miss — a banner on every page, one
+  email to the admins, an audit row — and then only ever reached that code from
+  the two credential checks in `build_provider`. The common failure is not a
+  missing token, it is a *refused refresh*: the customer removes the app, an
+  administrator revokes it, or a Google consent screen left in "Testing" hits
+  its seven-day expiry. That happens inside a provider call, hours or days after
+  connecting, and `OAuthExchangeError` escaped everything — 500-ing "Sync now",
+  and in the background worker landing in the catch-all that logs a stack trace
+  and backs off. The connection stayed `connected`, so no banner, no email,
+  nothing in the audit log, and the worker re-attempting a dead token every
+  interval forever. The only symptom was an inbox that had stopped filling,
+  which is exactly what a quiet week looks like. The refresher now flags the
+  connection, which everything downstream already knew how to handle: the page
+  says reconnect instead of 500-ing, the admins are told once, and the mailbox
+  drops out of the sweep until a human fixes it. Only on an actual *refusal*,
+  though — `OAuthExchangeError` now carries the provider's status code, and a
+  4xx is the end of the mailbox while an unreachable endpoint or a 5xx is
+  somebody else's thirty-second outage. Flagging that one would email a customer
+  "reconnect your mailbox" over a DNS blip, and stop the worker from picking it
+  back up on its own. Found by the integration layer above, which is the entire
+  reason it exists.
 - **Every approved Gmail reply arrived as a brand-new conversation.** `threadId`
   threads the *sender's* Gmail; the recipient's client threads by
   `In-Reply-To`/`References`, which the hand-built raw message never carried —
@@ -97,6 +272,24 @@ mailbox has no history — so the test suite could be green on all of it.
 
 ### Changed
 
+- **The shared demo account is now optional.** It still exists — `make demo`
+  seeds it, its login still prefills, and it is still fenced from every
+  administrative action — but nothing on the landing page depends on it.
+  `DEMO_SEED_ON_STARTUP` in `render.yaml` is kept and marked optional.
+- **Schema version 9** adds the nullable `saas_organizations.sandbox_expires_at`,
+  which is how the purge, the worker and the guard all agree on what a sandbox
+  is, in place of a naming convention on the owner's address. `NULL` on every
+  existing row, and a migration test proves that a pre-existing customer's
+  organization comes through it as a non-sandbox, because the alternative is the
+  first sweep erasing them.
+- **`FixedWindowRateLimiter` takes its window at construction**, not per call,
+  so the demo limiter can count over ten minutes while every existing caller keeps
+  its one-minute window and the `allow(key, limit)` signature a test fixture
+  monkeypatches.
+- **The accessibility sweep and the 320px reflow test now cover `/demo` and a real
+  sandbox session** — the banner on every page and the tour card — and the reflow
+  test reaches the sandbox by clicking the landing page's button in a real browser
+  at phone width, in both themes.
 - **One canonical list of escalation roles** (`app.core.models.ESCALATION_ROLES`,
   with `escalation_role_for`). Six places spelled it out for themselves — the
   baseline policy, the LLM policy, the agent's guardrail and its validator, and

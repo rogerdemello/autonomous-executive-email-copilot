@@ -4,7 +4,18 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Column, Float, Integer, String, Text, create_engine, func, inspect, text
+from sqlalchemy import (
+    Column,
+    Float,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    event,
+    func,
+    inspect,
+    text,
+)
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -80,6 +91,50 @@ engine = create_engine(DATABASE_URL, **build_engine_kwargs(DATABASE_URL))
 # closed session (get_session commits then closes), so repository callers can
 # safely read/serialize ORM instances after the context manager exits.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
+
+
+def configure_sqlite_connection(dbapi_connection: Any, _record: Any = None) -> None:
+    """Apply the pragmas a *server* needs to every new SQLite connection.
+
+    SQLite's defaults are tuned for a desktop app that writes occasionally, not
+    for a web process that commits once per repository call:
+
+    - ``journal_mode=WAL`` — writers stop blocking readers, which matters here
+      because the background sync worker and the request threads share one file.
+      Without it a long sync produced ``database is locked`` for whoever else
+      touched the database at the same moment.
+    - ``synchronous=NORMAL`` — in WAL mode this keeps the database consistent
+      through a crash and drops the ``fsync`` that ``FULL`` pays on *every*
+      commit. A power cut can lose the last few transactions; it cannot corrupt
+      the file. Building one demo workspace issues ~260 commits, which is the
+      difference between 3.7s and 0.8s for it.
+    - ``busy_timeout`` — wait for a lock instead of failing the request.
+
+    Postgres needs none of this and is never routed here.
+    """
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+    finally:
+        cursor.close()
+
+
+def attach_sqlite_pragmas(target: Any) -> bool:
+    """Register :func:`configure_sqlite_connection` on ``target`` if it is SQLite.
+
+    Returns whether it did. A ``PRAGMA`` sent to Postgres is a syntax error at
+    connect time, so the dialect check is not decoration — it is what keeps the
+    Postgres job from failing on its first query.
+    """
+    if target.dialect.name != "sqlite":
+        return False
+    event.listen(target, "connect", configure_sqlite_connection)
+    return True
+
+
+attach_sqlite_pragmas(engine)
 # Typed as Any so mypy accepts ``class Model(Base)`` subclassing and treats mapped
 # ``Column`` attributes as dynamic (the SQLAlchemy 1.x-style declarative base is not
 # a static type). This is the pragmatic alternative to the sqlalchemy mypy plugin.
@@ -203,7 +258,7 @@ class TeamSettings(Base):
         }
 
 
-_SCHEMA_VERSION = 8
+_SCHEMA_VERSION = 9
 
 
 class SchemaVersion(Base):
@@ -323,6 +378,12 @@ def _run_migration(version: int) -> None:
         # Commitment tracking (saas_commitments). A whole new table, so
         # ``create_all`` above has already built it — this step exists to move
         # the recorded version, not to alter anything.
+        return
+    if version == 9:
+        # Demo sandboxes: one workspace per visitor of the public demo, deleted
+        # when ``sandbox_expires_at`` passes. NULL on every existing row, which
+        # is the point — no real workspace may ever read as expirable.
+        _add_column_if_missing("saas_organizations", "sandbox_expires_at", "VARCHAR(50)")
         return
 
 

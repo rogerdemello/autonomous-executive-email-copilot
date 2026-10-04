@@ -41,6 +41,7 @@ PUBLIC_PAGES = [
     "/privacy",
     "/terms",
     "/contact-sales",
+    "/demo",
 ]
 APP_PAGES = [
     "/app/inbox",
@@ -49,6 +50,14 @@ APP_PAGES = [
     "/app/activity",
     "/app/settings",
     "/app/connect",
+]
+# Inside a demo sandbox every page gains a banner, and the inbox a tour card.
+SANDBOX_PAGES = [
+    "/app/inbox?tour=1",
+    "/app/approvals",
+    "/app/waiting",
+    "/app/activity",
+    "/app/settings",
 ]
 
 # Elements inside a scroll or clip container are *supposed* to exceed the
@@ -144,3 +153,40 @@ def test_no_page_scrolls_sideways_at_320px(live_server, theme):
         browser.close()
 
     assert not failures, "horizontal scrolling at 320px:\n  " + "\n  ".join(failures)
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_the_demo_sandbox_does_not_scroll_sideways_at_320px(live_server, theme):
+    """The recruiter's path, in a real browser at phone width: click the button on
+    the landing page, land in the sandbox, and look at every page with the banner
+    and the tour card on it. Reached by the actual button, not a crafted request,
+    so it also proves the one-click flow works end to end."""
+    from app.core.security import sandbox_rate_limiter
+
+    sandbox_rate_limiter.reset()
+    failures = []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": VIEWPORT_WIDTH, "height": 800}, color_scheme=theme
+        )
+        page = context.new_page()
+        page.goto(live_server + "/")
+        page.click("form[action='/demo'] button[type=submit]")
+        page.wait_for_url("**/app/inbox?tour=1")
+        assert page.locator(".sandbox-bar").count() == 1, "the sandbox banner is missing"
+
+        for path in SANDBOX_PAGES:
+            page.goto(live_server + path)
+            page.wait_for_load_state("networkidle")
+            assert page.locator(".sandbox-bar").count() == 1, f"{path}: no sandbox banner"
+            document_width = page.evaluate("document.documentElement.scrollWidth")
+            viewport_width = page.evaluate("document.documentElement.clientWidth")
+            if document_width > viewport_width + 1:
+                failures.append(
+                    f"{path} [{theme}]: document is {document_width}px wide in a "
+                    f"{viewport_width}px viewport — {page.evaluate(_CULPRITS_JS)}"
+                )
+        browser.close()
+
+    assert not failures, "horizontal scrolling at 320px in the sandbox:\n  " + "\n  ".join(failures)

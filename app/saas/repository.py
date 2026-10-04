@@ -71,12 +71,37 @@ def _escape_like(term: str) -> str:
 
 
 class OrganizationRepository:
-    def create(self, name: str, slug: str) -> dict[str, Any]:
+    def create(
+        self, name: str, slug: str, *, sandbox_expires_at: str | None = None
+    ) -> dict[str, Any]:
         with get_session() as session:
-            org = Organization(name=name, slug=slug)
+            org = Organization(name=name, slug=slug, sandbox_expires_at=sandbox_expires_at)
             session.add(org)
             session.flush()
             return org.to_dict()
+
+    # -- demo sandboxes (see app.saas.sandbox) -------------------------------
+    def expired_sandbox_ids(self, now_iso: str) -> list[str]:
+        """Sandboxes whose deadline has passed. Real workspaces are NULL, never listed."""
+        with get_session() as session:
+            rows = (
+                session.query(Organization.id)
+                .filter(
+                    Organization.sandbox_expires_at.isnot(None),
+                    Organization.sandbox_expires_at <= now_iso,
+                )
+                .all()
+            )
+            return [row[0] for row in rows]
+
+    def count_sandboxes(self) -> int:
+        with get_session() as session:
+            return int(
+                session.query(func.count(Organization.id))
+                .filter(Organization.sandbox_expires_at.isnot(None))
+                .scalar()
+                or 0
+            )
 
     def get(self, org_id: str) -> dict[str, Any] | None:
         with get_session() as session:
@@ -94,15 +119,21 @@ class OrganizationRepository:
                 session.query(Organization.id).filter(Organization.slug == slug).first() is not None
             )
 
-    def list_all(self, limit: int = 200) -> list[dict[str, Any]]:
-        """Every organization, newest first. Operator surface only."""
+    def list_all(
+        self, limit: int = 200, *, include_sandboxes: bool = False
+    ) -> list[dict[str, Any]]:
+        """Every organization, newest first. Operator surface only.
+
+        Demo sandboxes are left out unless asked for. This list is "newest
+        first", and every click on the public demo adds one: after a week of
+        visitors the first two hundred rows would be "Northwind Industries" and
+        the customers the operator opens this page to see would be below the fold.
+        """
         with get_session() as session:
-            rows = (
-                session.query(Organization)
-                .order_by(Organization.created_at.desc())
-                .limit(limit)
-                .all()
-            )
+            query = session.query(Organization)
+            if not include_sandboxes:
+                query = query.filter(Organization.sandbox_expires_at.is_(None))
+            rows = query.order_by(Organization.created_at.desc()).limit(limit).all()
             return [r.to_dict() for r in rows]
 
 
@@ -442,11 +473,20 @@ class MailboxRepository:
         """Every connected mailbox across all orgs — the background worker's
         work list. Deliberately cross-tenant (the worker is a system actor);
         broken connections are excluded because they need a human to
-        reconnect, not retries."""
+        reconnect, not retries.
+
+        Demo sandboxes are excluded too: their mailbox is a fixture that will
+        never receive a new message, so a sweep of them is a full re-triage of
+        fifty-one messages, per visitor, every few minutes, to learn nothing.
+        """
         with get_session() as session:
             rows = (
                 session.query(MailboxConnection)
-                .filter(MailboxConnection.status == "connected")
+                .join(Organization, Organization.id == MailboxConnection.org_id)
+                .filter(
+                    MailboxConnection.status == "connected",
+                    Organization.sandbox_expires_at.is_(None),
+                )
                 .order_by(MailboxConnection.created_at.asc())
                 .all()
             )
@@ -495,10 +535,16 @@ class MailboxRepository:
             )
 
     def count_by_status(self) -> dict[str, int]:
-        """Connections grouped by status, across all orgs — the operator view."""
+        """Connections grouped by status, across all orgs — the operator view.
+
+        Real workspaces only: a demo sandbox's fixture mailbox is not a mailbox
+        anyone is relying on, and would turn "12 mailboxes syncing" into 262.
+        """
         with get_session() as session:
             rows = (
                 session.query(MailboxConnection.status, func.count(MailboxConnection.id))
+                .join(Organization, Organization.id == MailboxConnection.org_id)
+                .filter(Organization.sandbox_expires_at.is_(None))
                 .group_by(MailboxConnection.status)
                 .all()
             )

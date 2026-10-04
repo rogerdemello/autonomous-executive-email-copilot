@@ -4,6 +4,7 @@
 {% block description %}The terms on which Executive Email Copilot is provided: what you get, what you are responsible for, what we do not promise, and how either side ends it.{% endblock %}
 
 {% block main %}
+{% from "_contact.html" import contact_link with context %}
 <article class="wrap legal">
   <p class="eyebrow">Legal</p>
   <h1>Terms of service</h1>
@@ -132,7 +133,7 @@
 
   <h2>Contact</h2>
   <p>
-    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a> ·
+    {{ contact_link() }} ·
     <a href="/privacy">Privacy policy</a>
   </p>
 </article>

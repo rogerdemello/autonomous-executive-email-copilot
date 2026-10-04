@@ -267,6 +267,15 @@ class InboxSyncService:
         settings = get_settings()
         if live_llm is None:
             live_llm = settings.llm_drafting_enabled
+            # A demo sandbox belongs to an anonymous visitor and must never reach
+            # the model on the deployment's account — not on first sync, and not
+            # when "Sync now" re-proposes something they rejected. An *explicit*
+            # live_llm (the seeder's --with-llm) is the operator's own choice
+            # and is left alone.
+            if live_llm:
+                from .sandbox import is_sandbox_org
+
+                live_llm = not is_sandbox_org(self.orgs.get(org_id))
 
         # Explicit: the provider interface's own default is 25, which quietly
         # truncates any mailbox larger than that.

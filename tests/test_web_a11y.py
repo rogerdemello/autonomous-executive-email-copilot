@@ -238,6 +238,7 @@ PUBLIC_PAGES = [
     "/privacy",
     "/terms",
     "/contact-sales",
+    "/demo",
 ]
 APP_PAGES = [
     "/app/inbox",
@@ -247,6 +248,29 @@ APP_PAGES = [
     "/app/settings",
     "/app/connect",
 ]
+# What a visitor sees inside a demo sandbox: the same shell plus the banner on
+# every page, and the two-minute tour card on the inbox.
+SANDBOX_PAGES = [
+    "/app/inbox?tour=1",
+    "/app/approvals",
+    "/app/waiting",
+    "/app/activity",
+    "/app/settings",
+]
+
+
+@pytest.fixture(scope="module")
+def sandbox_member() -> TestClient:
+    """A visitor who clicked "Try the live demo" — no account, no credentials."""
+    from app.core.security import sandbox_rate_limiter
+
+    migrate_db()
+    sandbox_rate_limiter.reset()
+    client = TestClient(app, follow_redirects=False)
+    page = client.get("/").text
+    response = client.post("/demo", data={"csrf_token": CSRF_RE.search(page).group(1)})
+    assert response.status_code == 303, response.text
+    return client
 
 
 def _page(client: TestClient, path: str) -> Page:
@@ -266,8 +290,13 @@ def app_pages(member) -> dict[str, Page]:
 
 
 @pytest.fixture(scope="module")
-def all_pages(public_pages, app_pages) -> dict[str, Page]:
-    return {**public_pages, **app_pages}
+def sandbox_pages(sandbox_member) -> dict[str, Page]:
+    return {f"[sandbox] {path}": _page(sandbox_member, path) for path in SANDBOX_PAGES}
+
+
+@pytest.fixture(scope="module")
+def all_pages(public_pages, app_pages, sandbox_pages) -> dict[str, Page]:
+    return {**public_pages, **app_pages, **sandbox_pages}
 
 
 # --------------------------------------------------------------------------- #

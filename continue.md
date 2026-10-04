@@ -1,9 +1,18 @@
 # Continue here
 
-**Last session:** 2026-09-26. **Branch:** `main` — work directly on it now.
+**Last session:** 2026-10-04. **Branch:** `main` — work directly on it now.
 `security-scan-green` is spent: PR #7 was *squash*-merged, so that branch reads
 as permanently ahead-and-behind. Do not try to catch it up.
-**Human-gated work:** [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md) — start there.
+**Human-gated work:** [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md) — start there;
+section 0 is new and takes ten minutes.
+
+**2026-10-04 was a different kind of pass: use the deployed site as a stranger
+would.** It found what the test suite structurally could not — the live "Try the
+live demo" button led to a blank sign-in form, every public page published
+`sales@example.com`, and the page layout broke for anyone with a cached
+stylesheet. See [the public demo](#the-public-demo) below, and the `[Unreleased]`
+section of `CHANGELOG.md` entries marked *public demo*. **Nothing from that pass
+is committed or deployed yet** — see "State of the tree".
 
 The 2026-08-31 launch pass (phases 0–6) is **merged to `main`** via PRs #5 and
 #6. On top of it, a pre-launch hardening pass closed the gaps that only appear
@@ -17,11 +26,83 @@ escalations addressed to the wrong person, the first sync leaving the OAuth
 redirect, Graph result ordering, the admin-consent wall. Every one of them was
 green in the test suite, because the demo provider is in memory, its bodies are
 plain text, its drafts are cached, and its mailbox is never actually written
-to. **When you touch a provider, ask what the demo mailbox is hiding.**
+to.
 
-Gates are green as of 2026-09-26: 1169 tests, ruff, mypy, landing metrics.
+**That is no longer the only mailbox under test.** `tests/integration/` runs the
+product against a stateful fake of the real provider APIs — see
+[the integration layer](#the-integration-layer) below. It is where a provider
+change belongs now, and it is what found the revoked-token bug described there.
+
+Gates are green as of 2026-10-04: **1362 tests, 84.9% coverage**, ruff check and
+format, mypy, bandit, the landing-metrics check, and the draft-quality gate (10/11).
+The full suite with coverage takes ~15–25 minutes on this machine.
 
 ---
+
+## The public demo
+
+`POST /demo` builds a visitor a **private sandbox workspace** and signs them in —
+`app/saas/sandbox.py`, pinned by `tests/test_demo_sandbox.py` (48 tests). It
+replaced "a login form pre-filled with a shared account's password", which only
+worked if that account had been seeded and which let the first visitor empty the
+approval queue for everyone after.
+
+What to know before touching it:
+
+- **A sandbox is a real organization** with `saas_organizations.sandbox_expires_at`
+  set (schema version 9). That one column is how the purge, the worker's
+  exclusion in `list_all_connected`, the no-live-model rule in
+  `InboxSyncService._sync`, and the guard in `deps.reject_shared_demo_account` all
+  agree on what a sandbox is. Do not replace it with a convention on the owner's
+  email. The `.invalid` address exists only so nothing addressed to it can be
+  delivered (`email.is_undeliverable`).
+- **The safety properties are the point, and one test originally failed to prove
+  one of them.** `test_a_sandbox_never_reaches_the_model` passed with the protection
+  *removed*, because a plain re-sync is idempotent and never reaches the drafting
+  code; it has to reject a draft first so the next sync re-proposes it. Every
+  property in there was checked by removing the code and watching the test fail —
+  do that again if you change the mechanism.
+- **It refuses at the cap; it never evicts.** `MAX_LIVE_SANDBOXES` returns a 503
+  page rather than deleting someone's live demo to make room.
+- **The limit is per-IP and the IP is the client's claim.** Uvicorn is started with
+  `forwarded_allow_ips="*"`, which takes the leftmost `X-Forwarded-For` entry, and
+  a client can prepend to it. The cap bounds the damage; the limit does not.
+  Pre-existing, and the same for the login throttle.
+- **Seeding was 3.7s per workspace, almost entirely SQLite `fsync`s** (264 commits).
+  WAL + `synchronous=NORMAL` in `app/core/db.py` made it 0.8s, which is why
+  there is no template-cloning machinery. Measure before building any.
+- **`.tour`, `.tour__row` and `.tour__text` are the landing page's.** The sandbox's
+  tour card is `.demo-tour`. And app.css gives every `<section>` 62px of padding
+  and a top border, so a card that is a `<section>` looks broken.
+- **Static assets are fingerprinted** (`app/web/assets.py`, `asset_url`). Templates
+  that extend `base.html` need it registered on their Jinja environment — the
+  operator console builds its own, and `register()` is called in both places.
+- **Link previews need absolute URLs from the serving origin**
+  (`marketing.public_base_url`), and `static/img/og-card.jpg` is a real screenshot:
+  `python scripts/capture_screenshots.py --only og-card.jpg`.
+
+## State of the tree
+
+**Nothing from 2026-09-26 or 2026-10-04 is committed, pushed or deployed.** `HEAD` is
+`5039ecf`; `git status` is ~65 modified files plus new ones. Two layers are mixed
+in it, and they overlap in `CHANGELOG.md`, `continue.md`, `app/web/routes.py`,
+`app/web/static/app.css`, `app/web/templates/inbox.html` and
+`tests/test_web_pages.py`, so splitting them into two commits needs `git add -p`:
+
+1. The real-mailbox pass: `oauth.py`, `provider_factory.py`, the inbox reader,
+   `tests/integration/`.
+2. The public-demo pass: everything under "The public demo" above, plus the
+   erasure fix, the placeholder-email fix, fingerprinted assets, link previews,
+   the corrected landing copy, and the docs.
+
+**Pushing to `main` deploys** — `render.yaml` has `autoDeploy: true` — and the live
+service is not the one this blueprint describes (LAUNCH_CHECKLIST section 0). After a
+deploy, press the button from a private window before telling anyone.
+
+New files to remember are untracked: `app/saas/sandbox.py`, `app/web/assets.py`,
+`app/web/templates/{_contact,_tour,demo}.html`, `app/web/static/img/{og-card.jpg,
+product-flagged.png}`, `.github/workflows/keepalive.yml`, `tests/test_demo_sandbox.py`,
+`tests/integration/`.
 
 ## What the hardening pass changed, and why it mattered
 
@@ -49,6 +130,73 @@ python scripts/build_landing_metrics.py --check  # CI's landing-claims check
 
 `tests/test_web_reflow.py` needs Playwright and skips without it, exactly like
 `scripts/capture_screenshots.py`. Run it if you touch `app.css`.
+
+The full suite takes about **12 minutes** on this machine; `tests/integration/`
+is about 2 of them (55 tests, each signing up a workspace and syncing a mailbox
+over HTTP). Run just that package while working on a provider:
+
+```bash
+python -m pytest tests/integration -q
+```
+
+---
+
+## The integration layer
+
+`tests/integration/` is the answer to why seven production-only bugs were all
+green. It runs the shipping path — the OAuth callback, `build_provider`
+decrypting the stored token, the real `GmailProvider`/`MicrosoftGraphProvider`,
+`InboxSyncService`, the signed-in HTML app — against a **stateful fake of each
+provider's HTTP API** in `tests/integration/wire.py`.
+
+The seam is `httpx` itself: `install()` patches `httpx.request` and `httpx.post`,
+so the code under test includes `_httpx_transport`, the `Authorization` header it
+builds, and its handling of a 202 with no body. The providers' own `transport=`
+argument is deliberately *not* used — `tests/test_gmail_provider.py` covers that
+level, and going through httpx is the difference between this and a second unit
+test. (`TestClient` is an `httpx.Client` subclass and calls its own bound
+methods, so the app's own requests are untouched.)
+
+It is a mailbox, not a stub, and each property is there because its absence hid a
+bug:
+
+- writes change what later reads return — which is what makes "a second sync
+  proposes nothing and writes nothing" statable at all;
+- a Gmail label must exist before it can be applied, and a duplicate `POST
+  /labels` is a 409;
+- a Graph `categories` PATCH **replaces** the collection, because it does;
+- a Gmail send carrying a `threadId` but no `In-Reply-To` is accepted and
+  recorded as `threaded=False` — the recipient's client is the thing that has to
+  thread it;
+- a `$orderby`-less Graph list answers **oldest-first**, since Graph documents no
+  default and a capped sweep that takes the wrong end syncs someone's 2019;
+- an expired access token is a 401 until the refresh token is spent; Google keeps
+  its refresh token and Microsoft rotates it, so both branches of the refresher
+  are real;
+- a URL no wire serves is a 404 **and** a recorded failure — the `connect`
+  fixture asserts that log is empty, so a wrong URL can never read as an empty
+  mailbox.
+
+**When you touch a provider, teach the wire the route and assert on the mailbox,
+not on the call.** The fixtures give you a workspace signed up over the signup
+form and a mailbox attached through the app's own connect flow, so a test reads
+as "connect, wait, then look at what arrived":
+
+```python
+def test_something(self, workspace, connect):
+    wire = google_wire()
+    connect(wire, "google")                    # the first sync has already run
+    workspace.approve(workspace.held("reply")["id"])
+    assert wire.sent[0].to == "..."            # what actually left the mailbox
+```
+
+Because `_first_sync` swallows its exception on purpose, a broken sync shows up
+as an empty inbox. The `connect` fixture asserts `last_synced_at` was set and
+says so; to see the traceback, call `InboxSyncService().sync(...)` directly.
+
+The layer was checked by re-introducing each of the seven provider fixes in this
+release by hand. All seven fail — if you change the wire, do that again for
+whatever you are relying on.
 
 ---
 
@@ -109,6 +257,27 @@ the feature is real.
   whether the row was found. The broken-mailbox notification depends on it: the
   worker re-derives that state every sweep, and 96 mails a day about one dead
   token is how a notification becomes a filter rule.
+- **Every way a mailbox can die has to reach `_mark_broken`.** Building the
+  alerting was not the same as wiring it up: for a while it was only reachable
+  from the two credential checks in `build_provider`, and the *common* failure —
+  the provider refusing a refresh — happened later, inside a provider call, and
+  escaped as an `OAuthExchangeError` that 500'd "Sync now" and landed in the
+  worker's catch-all. The connection stayed `connected`, so none of the
+  machinery fired. `_make_refresher` now flags it — but **only on a refusal**:
+  `OAuthExchangeError.is_refusal()` is true for a 4xx and false for an
+  unreachable endpoint or a 5xx, because flagging the second kind emails a
+  customer about a mailbox that is fine and takes it out of the sweep that would
+  have recovered it by itself. If you add another way to authenticate, ask what
+  marks the connection when it stops working — and what must not.
+- **One broken mailbox stops `POST /app/sync` for the others.** The JSON API
+  (`processing_routes.sync`) deliberately reports a broken connection and carries
+  on; the web `sync_all` calls `_sync_connection` per connection and lets its
+  `HTTPException` out, so the first broken mailbox aborts the loop and any
+  mailbox after it is not synced. The background worker is unaffected — it is the
+  path that matters, and `tests/integration/test_two_mailboxes.py` pins that
+  connections do not share fate there — so this is a wrong button, not a broken
+  product. Left as it is because "make the button quiet about a mailbox the
+  banner is already shouting about" is a product call, not a bug fix.
 - **`escalate_to` is a role, not an address, and it must stay that way.**
   `legal_team` / `chief_of_staff` (`app.core.models.ESCALATION_ROLES`) is a
   judgement about the mail; who holds legal is a fact about the workspace, and

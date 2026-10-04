@@ -64,7 +64,7 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 > server-rendered Jinja under `app/web` with no bundler and no Node tooling;
 > its coverage lives in `tests/test_web_pages.py`. The `/ws/dashboard`
 > WebSocket API outlived its frontend and remains tested (`tests/test_dashboard.py`).
-- [ ] Dedicated accessibility & responsive pass on the server-rendered UI — still open.
+- [x] Dedicated accessibility & responsive pass on the server-rendered UI — done. `tests/test_web_a11y.py` sweeps every public, signed-in, sandbox and operator page (one `<h1>`, a `<main>` landmark, accessible names, table captions); `tests/test_web_reflow.py` drives a real browser and asserts no page scrolls sideways at 320px in either theme (WCAG 1.4.10).
 
 ## Phase 5 — Benchmark & simulation rigor ✅ CORE COMPLETE (additive items deferred)
 - [x] Documented `strict_unit_interval` + `atan` reward transform in grader.py; property tests (open-unit + monotonicity sweeps) for both; hard-task weight check. (Used dependency-free sweeps instead of hypothesis.)
@@ -134,11 +134,12 @@ Bar: Async, multi-provider, function-calling LLM integration. The system works w
 
 Bar: LLM observability, evaluation, and prompt management at production quality.
 
-### 9.1 OpenTelemetry distributed tracing
-- [ ] Replace custom `PrometheusMetrics` with OTEL API: `TracerProvider`, `MeterProvider`.
-- [ ] Instrument: gateway middleware, env step, grader, LLM call, DB query — each with a named span + attributes.
-- [ ] OTLP exporter (console + HTTP). Add Tempo datasource to Grafana dashboard.
-- [ ] Dual-write: OTEL + legacy Prometheus during transition. Phase out legacy after verification.
+### 9.1 OpenTelemetry distributed tracing — tracing done, metrics deliberately not
+- [x] `TracerProvider` with the OTLP/HTTP span exporter (and an optional console exporter), `telemetry/otel.py`. OpenTelemetry is a pinned *runtime* dependency, not an extra; spans carry `service.version`.
+- [x] Instrumented: gateway middleware (`gateway.request`), `inbox.sync`, `inbox.approve`, and the drafter's model call — each with a named span and attributes (`tests/test_otel_spans.py`). `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the Helm chart and exposed in `render.yaml`.
+- [ ] Spans for the benchmark's env step and grader, and for DB queries. Open.
+- [ ] A Tempo datasource in the Grafana dashboard. Open.
+- Metrics stay on Prometheus (`/metrics`); there is no OpenTelemetry `MeterProvider`, and replacing the Prometheus path was dropped as not worth the churn.
 
 ### 9.2 A/B evaluation pipeline
 - [ ] `scripts/run_ab_test.py` — compare two agent configs across N seeds, paired t-test, 95% CI, Cohen's d.
@@ -151,7 +152,10 @@ Bar: LLM observability, evaluation, and prompt management at production quality.
 - [ ] `PROMPT_VERSION` config key — select active version at runtime.
 - [ ] Backward compat: default version loads current prompts.
 
-### 9.4 Evaluation dashboard (React)
+### 9.4 Evaluation dashboard (React) — dropped
+> **Dropped.** This was planned as tabs in the React dashboard, which was removed when the product
+> moved to the server-rendered UI. None of it was built; the items below are kept only as a record
+> of what was considered.
 - [ ] API endpoints: `POST /eval/run`, `GET /eval/job/{id}`, `GET /eval/jobs`.
 - [ ] React components: `EvalConfig` (form), `EvalProgress` (progress bar), `EvalResults` (charts + table), `EvalHistory` (list).
 - [ ] Chart types: grouped bar (task × agent), box plot (score distribution), radar (agent strengths).

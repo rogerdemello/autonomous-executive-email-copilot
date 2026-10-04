@@ -11,18 +11,29 @@
     </a>
     <h1>The corner-office inbox that <span class="soft">runs itself.</span></h1>
     <p class="lede">
-      An assistant that understands the whole inbox. It summarizes long threads, filters the spam,
-      surfaces what matters, and drafts context-aware replies, with your sign-off where it counts.
+      An assistant that works the whole inbox. It files the spam, surfaces what matters by
+      deadline and risk, drafts replies in your voice, and checks each draft against the message
+      it answers, with your sign-off where it counts.
     </p>
     <div class="cta cta--center">
       <a class="btn btn--primary" href="/signup">Start free — connect your inbox <span class="arr">→</span></a>
-      {# The demo login is prefilled in production (see routes._demo_credentials)
-         and nothing on this page used to link to it. A stranger who is not
-         ready to hand over a mailbox has somewhere to go. #}
-      <a class="btn" href="/login">Try the live demo</a>
+      {# A stranger who is not ready to hand over a mailbox should be one click
+         from the product — not on a sign-in form asking for a password nobody
+         gave them. This builds them a private sandbox and signs them in
+         (routes.open_demo). Offered only where the demo is enabled, so the page
+         never links to a dead end. #}
+      {% if demo_enabled %}
+        <form method="post" action="/demo">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="btn" type="submit">
+            <span aria-hidden="true">▶</span> Try the live demo
+          </button>
+        </form>
+      {% endif %}
     </div>
     <p class="note">
       No card · <b>Gmail and Microsoft 365</b> · your drafts never send without you
+      {% if demo_enabled %}<br />The demo opens in one click: no sign-up, nothing to type.{% endif %}
     </p>
   </div>
 
@@ -65,16 +76,16 @@
 
 <div class="ticker" aria-hidden="true">
   <div class="ticker__track">
-    <span>Threads summarized in seconds</span><span>·</span>
-    <span>Drafts grounded in context</span><span>·</span>
+    <span>Every message classified and ranked</span><span>·</span>
+    <span>Drafts in your voice</span><span>·</span>
     <span>Fact-checked before you see them</span><span>·</span>
     <span>Approvals held for humans</span><span>·</span>
     <span>Follow-ups tracked in both directions</span><span>·</span>
     <span>Legal &amp; finance auto-routed</span><span>·</span>
     <span>Every action audit-logged</span><span>·</span>
     <span>Benchmarked before it ships</span><span>·</span>
-    <span>Threads summarized in seconds</span><span>·</span>
-    <span>Drafts grounded in context</span><span>·</span>
+    <span>Every message classified and ranked</span><span>·</span>
+    <span>Drafts in your voice</span><span>·</span>
     <span>Fact-checked before you see them</span><span>·</span>
     <span>Approvals held for humans</span><span>·</span>
     <span>Follow-ups tracked in both directions</span><span>·</span>
@@ -94,9 +105,9 @@
       <span class="mark">01 · TRIAGE</span>
       <h3>Reads the room, not just the subject</h3>
       <p>
-        Summarizes long threads, surfaces the messages that actually matter, and drafts across a
-        high-volume mailbox, weighing deadlines, business value, and risk so nothing critical
-        slips.
+        Classifies every message and ranks it by deadline, business value, and risk, groups the
+        thread so the whole conversation sits beside each decision, and surfaces the messages that
+        actually matter so nothing critical slips.
       </p>
     </div>
     <div class="pillar" data-reveal style="--d: 0.12s">
@@ -213,32 +224,35 @@
     <p class="eyebrow">Under the hood</p>
     <h2>An assistant that reads before it writes.</h2>
     <p class="muted sec-head__note">
-      LLMs, retrieval, semantic signals, and tool calling, assembled so every action is grounded
-      in your mailbox, explained to you, and yours to approve.
+      Deterministic routing, model-written prose, and a checker that reads every draft back
+      against its source, assembled so every action is grounded in your mailbox, explained to you,
+      and yours to approve.
     </p>
     <div class="stack-row">
-      <span class="chip chip--accent">LLMs</span>
-      <span class="chip chip--accent">RAG</span>
-      <span class="chip chip--accent">Semantic search</span>
-      <span class="chip chip--accent">Tool calling</span>
+      <span class="chip chip--accent">Deterministic routing</span>
+      <span class="chip chip--accent">Model-drafted prose</span>
+      <span class="chip chip--accent">Draft verification</span>
+      <span class="chip chip--accent">Injection screening</span>
     </div>
   </div>
   <div class="pillars pillars--quad">
     <div class="pillar" data-reveal>
-      <span class="mark">RETRIEVE</span>
-      <h3>Context before content</h3>
+      <span class="mark">SIGNALS</span>
+      <h3>Signals before prose</h3>
       <p>
-        Before it acts, the copilot retrieves the thread's history and the sender's role,
-        deadlines, and risk signals, so a reply answers the conversation, not just the last
-        message.
+        Before anything is drafted, the copilot infers the sender's role, the deadline, and the
+        risk from the message itself, and keeps the whole thread one click away, so every decision
+        is shown beside the conversation it came from.
       </p>
     </div>
     <div class="pillar" data-reveal style="--d: 0.1s">
-      <span class="mark">REASON</span>
-      <h3>Tools, not guesswork</h3>
+      <span class="mark">DECIDE</span>
+      <h3>Code decides, the model writes</h3>
       <p>
-        The model acts through typed tools (classify, prioritize, reply, defer, escalate), each
-        call carrying its reason and confidence, never free-form text parsed on hope.
+        Priority, risk, deadline, and the choice between reply, escalate, defer, and file are
+        computed by deterministic code that behaves identically with no model configured. The model
+        is handed that decision, plus a few of your own approved replies as a guide to your voice,
+        and asked only for words. An outage costs wording, not triage.
       </p>
     </div>
     <div class="pillar" data-reveal style="--d: 0.2s">
@@ -472,6 +486,14 @@
     <p>Connect a mailbox and see your first verified drafts today, or talk to us first.</p>
     <div class="cta cta--center">
       <a class="btn btn--primary" href="/signup">Start free — connect your inbox <span class="arr">→</span></a>
+      {% if demo_enabled %}
+        <form method="post" action="/demo">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="btn" type="submit">
+            <span aria-hidden="true">▶</span> Try the live demo
+          </button>
+        </form>
+      {% endif %}
       <a class="btn" href="/contact-sales">Talk to us</a>
     </div>
   </div>

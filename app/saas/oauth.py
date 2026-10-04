@@ -228,7 +228,10 @@ def exchange_code(
     except httpx.HTTPError as exc:  # pragma: no cover - network failure path
         raise OAuthExchangeError(f"token endpoint unreachable: {exc}") from exc
     if resp.status_code >= 400:
-        raise OAuthExchangeError(f"token exchange failed ({resp.status_code}): {resp.text[:200]}")
+        raise OAuthExchangeError(
+            f"token exchange failed ({resp.status_code}): {resp.text[:200]}",
+            status_code=resp.status_code,
+        )
     return resp.json()
 
 
@@ -258,9 +261,28 @@ def refresh_tokens(
     except httpx.HTTPError as exc:  # pragma: no cover - network failure path
         raise OAuthExchangeError(f"token endpoint unreachable: {exc}") from exc
     if resp.status_code >= 400:
-        raise OAuthExchangeError(f"token refresh failed ({resp.status_code}): {resp.text[:200]}")
+        raise OAuthExchangeError(
+            f"token refresh failed ({resp.status_code}): {resp.text[:200]}",
+            status_code=resp.status_code,
+        )
     return resp.json()
 
 
 class OAuthExchangeError(Exception):
-    """Raised when the provider token exchange fails."""
+    """Raised when the provider token exchange fails.
+
+    ``status_code`` is the provider's HTTP status when there was a response, and
+    ``None`` when the endpoint could not be reached at all. The difference is
+    load-bearing on refresh: a 4xx is a *refusal* (revoked, expired, superseded)
+    that only a human can clear, while an unreachable endpoint or a 5xx is the
+    provider having a bad minute. Telling a customer to reconnect a perfectly
+    good mailbox because of a DNS blip is its own kind of broken.
+    """
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+    def is_refusal(self) -> bool:
+        """Whether the provider answered, and answered no."""
+        return self.status_code is not None and 400 <= self.status_code < 500

@@ -43,10 +43,17 @@ services:
       - key: ALLOWED_HOSTS
         value: exec-email-copilot.onrender.com
       # --- The public demo ----------------------------------------------------
+      # "Try the live demo" builds every visitor a private sandbox workspace on
+      # demand (app/saas/sandbox.py): one click, no password, nothing that has to
+      # have been seeded, and it works on an empty or freshly wiped database.
+      # Production must opt in, which is what this does.
       - key: DEMO_LOGIN_ENABLED
-        value: "true" # prefilled demo login; the shared account is guarded
+        value: "true"
+      # Optional now. Seeds the *shared* demo account (a prefilled sign-in some
+      # sales calls prefer, and what `make demo` gives you locally). The one-click
+      # demo does not depend on it.
       - key: DEMO_SEED_ON_STARTUP
-        value: "true" # boot straight into a presentable demo (no shell needed)
+        value: "true"
       # --- Operator API + benchmark-surface lock ------------------------------
       - key: OPERATOR_TOKEN
         generateValue: true # read it in the dashboard; used for /operator/*
@@ -82,13 +89,26 @@ services:
           name: exec-email-copilot-db
           property: connectionString
       # --- Sales funnel (set in the dashboard) --------------------------------
+      # Leave BOTH blank until there is a real mailbox behind them: unset means
+      # the footer, privacy policy and terms point at the contact form, and
+      # security.txt at GitHub's private vulnerability reporting. (They used to
+      # default to sales@example.com, which was published as a live link.)
       - key: SALES_CONTACT_EMAIL
+        sync: false
+      - key: SECURITY_CONTACT_EMAIL
         sync: false
       - key: SALES_WEBHOOK_URL
         sync: false # optional Slack incoming webhook for new leads
       # --- CORS (pin to the public origin) ------------------------------------
       - key: CORS_ORIGINS
         value: https://exec-email-copilot.onrender.com
+      # --- Tracing (optional) -------------------------------------------------
+      # The code is instrumented with OpenTelemetry spans (gateway.request,
+      # inbox.sync, inbox.approve, the drafter's model call). Set this to an OTLP
+      # HTTP collector — Grafana Cloud, Tempo, Honeycomb — to receive them; blank
+      # leaves them in-process.
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
       # --- LLM provider (optional; the demo replays cached drafts) ------------
       - key: OPENAI_API_KEY
         sync: false

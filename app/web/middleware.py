@@ -45,10 +45,22 @@ class SecurityHeadersMiddleware:
             return
 
         path = scope.get("path", "")
+        fingerprinted = b"v=" in scope.get("query_string", b"")
 
         async def send_with_headers(message):
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
+                if path.startswith("/static/"):
+                    # Starlette sends an ETag but no Cache-Control, which leaves
+                    # freshness to the browser's heuristic (10% of the file's
+                    # age): new HTML next to a month-old stylesheet for days.
+                    # A fingerprinted URL (app.web.assets) changes with the file,
+                    # so it may be cached forever; anything else must revalidate
+                    # — a 304 costs a round trip, not a download.
+                    headers.setdefault(
+                        "Cache-Control",
+                        "public, max-age=31536000, immutable" if fingerprinted else "no-cache",
+                    )
                 headers.setdefault("X-Content-Type-Options", "nosniff")
                 headers.setdefault("X-Frame-Options", "DENY")
                 headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")

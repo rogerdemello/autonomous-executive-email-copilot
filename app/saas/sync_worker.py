@@ -102,6 +102,15 @@ class BackgroundSyncWorker:
         from .sync_service import InboxSyncService, ProcessingError
 
         now = now or datetime.now(timezone.utc)
+        # Housekeeping first, and fenced: expired demo sandboxes are deleted here
+        # as well as when a new one is opened, so a quiet site still cleans up.
+        # It must never be able to stop customers' mailboxes syncing.
+        try:
+            from .sandbox import purge_expired
+
+            purge_expired(now)
+        except Exception:  # noqa: BLE001 - housekeeping, not the job
+            logger.exception("Purging expired demo sandboxes failed")
         service = InboxSyncService()
         summary = {
             "checked": 0,

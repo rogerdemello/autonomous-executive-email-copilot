@@ -27,13 +27,19 @@ from app.copilot.providers.demo import DEMO_PROVIDER_KEY, demo_message_count
 from app.core.config import get_settings
 from app.core.models import ESCALATION_ROLES
 from app.core.paths import DATA_ROOT, TEMPLATES_DIR
-from app.core.security import lead_submission_allowed, login_attempt_allowed
+from app.core.security import (
+    lead_submission_allowed,
+    login_attempt_allowed,
+    sandbox_creation_allowed,
+)
 from app.saas import licensing, oauth, rbac
+from app.saas import sandbox as sandboxes
 from app.saas.auth import AuthError, AuthService
 from app.saas.billing import BillingError, BillingService
 from app.saas.deps import SESSION_COOKIE, reject_shared_demo_account
 from app.saas.email import send_email
 from app.saas.mailbox import MailboxError, MailboxService
+from app.saas.marketing import REPO_URL, SECURITY_ADVISORY_URL, public_base_url
 from app.saas.models_db import ROLE_ADMIN, ROLE_OWNER, ROLES
 from app.saas.org_service import OrgError, OrgService
 from app.saas.provider_factory import BrokenConnectionError, build_provider
@@ -50,6 +56,7 @@ from app.saas.repository import (
 )
 from app.saas.sync_service import InboxSyncService, ProcessingError
 
+from .assets import register as register_assets
 from .session import (
     clear_session_cookie,
     issue_csrf_token,
@@ -60,7 +67,7 @@ from .session import (
 logger = logging.getLogger(__name__)
 
 web_router = APIRouter(include_in_schema=False)
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = register_assets(Jinja2Templates(directory=str(TEMPLATES_DIR)))
 
 _auth = AuthService()
 _billing = BillingService()
@@ -190,9 +197,23 @@ def _render(
     *,
     status_code: int = 200,
 ) -> HTMLResponse:
+    settings = get_settings()
     base: dict[str, Any] = {
         "csrf_token": issue_csrf_token(request),
-        "sales_email": get_settings().sales_contact_email,
+        # None unless a real address is configured: pages fall back to the
+        # contact form rather than publishing `sales@example.com`.
+        "sales_email": settings.public_sales_email,
+        "security_email": settings.public_security_email,
+        "security_advisory_url": SECURITY_ADVISORY_URL,
+        "repo_url": REPO_URL,
+        # For <link rel="canonical"> and the Open Graph tags: absolute, and the
+        # origin actually serving this request, so a pasted link unfurls with a
+        # working image and a canonical nobody has to correct.
+        "public_base_url": public_base_url(request),
+        "page_url": f"{public_base_url(request)}{request.url.path}",
+        # Whether "Try the live demo" is offered at all. When it is not, the
+        # landing page links to sign-up instead of to a page that 404s.
+        "demo_enabled": settings.demo_login_active,
         "current_user": _current_user(request),
         "feature_labels": _FEATURE_LABELS,
         "provider_labels": _PROVIDER_LABELS,
@@ -260,9 +281,13 @@ def _app_context(request: Request, user: dict, active: str) -> dict[str, Any]:
     org = _orgs.get(user["org_id"]) or {"name": "Your workspace", "slug": ""}
     pending = _actions.list_for_org(user["org_id"], status="proposed", limit=100)
     connections = _mailboxes.list_for_org(user["org_id"])
+    sandbox_hours = sandboxes.hours_left(org)
     return {
         "organization": org,
         "active": active,
+        # Set only inside a visitor's demo sandbox: drives the banner that says
+        # what this is, that nothing leaves it, and when it is deleted.
+        "sandbox": {"hours_left": sandbox_hours} if sandbox_hours is not None else None,
         "pending_count": pending.get("total", 0),
         "can_manage": role_at_least(user["role"], ROLE_ADMIN),
         "connections": connections,
@@ -453,7 +478,10 @@ _LOGIN_NOTICES = {
 def login_form(
     request: Request, next: str | None = None, notice: str | None = None
 ) -> HTMLResponse:
-    if _current_user(request):
+    visitor = _current_user(request)
+    # Someone inside a demo sandbox who navigates to Sign in wants a *different*
+    # account, not to be bounced back into the one they are leaving.
+    if visitor and not sandboxes.is_sandbox_user(visitor):
         return RedirectResponse(url=_safe_next(next), status_code=303)  # type: ignore[return-value]
     return _render(
         request,
@@ -530,7 +558,10 @@ def login_submit(
 
 @web_router.get("/signup", response_class=HTMLResponse)
 def signup_form(request: Request) -> HTMLResponse:
-    if _current_user(request):
+    visitor = _current_user(request)
+    # "Start your own workspace" is the sandbox banner's call to action; it must
+    # not bounce a sandbox visitor straight back into the sandbox.
+    if visitor and not sandboxes.is_sandbox_user(visitor):
         return RedirectResponse(url="/app/inbox", status_code=303)  # type: ignore[return-value]
     return _render(
         request,
@@ -596,8 +627,87 @@ def signup_submit(
 @web_router.post("/logout")
 def logout(request: Request, csrf_token: str = Form("")) -> Response:
     verify_csrf(request, csrf_token)
+    visitor = _current_user(request)
+    if visitor and sandboxes.is_sandbox_user(visitor):
+        # Leaving a demo sandbox is the cleanest moment to delete it: the
+        # password is unknown, so once the cookie is gone nothing can reach it.
+        from app.saas.data_lifecycle import DataLifecycleService
+
+        DataLifecycleService().delete_org(visitor["org_id"])
     response = RedirectResponse(url="/", status_code=303)
     clear_session_cookie(response)
+    return response
+
+
+# --------------------------------------------------------------------------- #
+# The public demo: one click, no credentials
+# --------------------------------------------------------------------------- #
+def _demo_page(request: Request, *, error: str | None = None, status_code: int = 200):
+    return _render(
+        request,
+        "demo.html",
+        {"demo_message_count": demo_message_count(), "error": error},
+        status_code=status_code,
+    )
+
+
+@web_router.get("/demo", response_class=HTMLResponse)
+def demo_page(request: Request) -> HTMLResponse:
+    """What the demo is, with one button.
+
+    A page rather than the action itself: link unfurlers, prefetchers and crawlers
+    all issue GETs, and a GET that built a workspace would build one per bot. The
+    landing page's "Try the live demo" is a form that POSTs straight to
+    :func:`open_demo`, so from there it is still one click.
+    """
+    if not get_settings().demo_login_active:
+        raise HTTPException(status_code=404, detail="Not found")
+    return _demo_page(request)
+
+
+@web_router.post("/demo")
+def open_demo(request: Request, csrf_token: str = Form("")) -> Response:
+    """Build the visitor a private demo workspace and sign them straight in.
+
+    See :mod:`app.saas.sandbox` for why it is built per visitor, and for what
+    bounds it. Nothing here is credential-based: the visitor is handed a session
+    for an account whose password nobody knows.
+    """
+    verify_csrf(request, csrf_token)
+    if not get_settings().demo_login_active:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    current = _current_user(request)
+    if current is not None:
+        # Already signed in — to a sandbox of this demo, or as a real customer.
+        # The answer is "take them there", never "replace their session": a
+        # customer who clicked the landing page's demo button must not be signed
+        # out of their own workspace, and a double click must not build two.
+        in_sandbox = sandboxes.is_sandbox_user(current)
+        return RedirectResponse(
+            url="/app/inbox?tour=1" if in_sandbox else "/app/inbox", status_code=303
+        )
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not sandbox_creation_allowed(client_ip):
+        return _demo_page(
+            request,
+            error="You have opened the demo several times in a row. Give it a few minutes and try again.",
+            status_code=429,
+        )
+    try:
+        created = sandboxes.create_sandbox(ip=_client_ip(request))
+    except sandboxes.SandboxUnavailable as exc:
+        return _demo_page(request, error=str(exc), status_code=503)
+    except Exception:  # noqa: BLE001 - say so on the page rather than a JSON 500
+        logger.exception("Opening a demo sandbox failed")
+        return _demo_page(
+            request, error="We couldn't open the demo just now. Please try again.", status_code=500
+        )
+
+    token, _ttl = _auth.issue_token(created["user"])
+    response = RedirectResponse(url="/app/inbox?tour=1", status_code=303)
+    set_session_cookie(response, token)
     return response
 
 
@@ -846,10 +956,26 @@ def inbox(
     label: str | None = None,
     priority: str | None = None,
     page: int = 1,
+    tour: str | None = None,
 ) -> HTMLResponse:
     user = _require_user(request)
     context = _app_context(request, user, "inbox")
     context["notice"] = _REVIEW_NOTICES.get(notice or "")
+    # The guided path is part of the demo sandbox, never of a real workspace —
+    # and `?tour=1` on a real account is simply ignored.
+    context["tour"] = bool(tour) and context["sandbox"] is not None
+    if context["tour"]:
+        # The tour points at the drafts the verifier flagged — how many, and the
+        # first of them — rather than asserting a number that the fixtures could
+        # change (it has: the README said "one", the demo holds two).
+        waiting_for_review = _actions.list_pending_with_messages(user["org_id"], limit=100)
+        flagged = [
+            item["action"]["id"]
+            for item in waiting_for_review["items"]
+            if item["action"].get("verification_status") == "flagged"
+        ]
+        context["tour_flagged_id"] = flagged[0] if flagged else None
+        context["tour_flagged_count"] = len(flagged)
 
     query = (q or "").strip()[:200]
     label = label if label in _INBOX_LABELS else None
@@ -913,9 +1039,28 @@ def inbox(
         # current page: a link from Approvals, or a bookmark, points at a
         # message that a filter or a later page may well have excluded.
         selected = _messages.get(user["org_id"], message)
-    if selected is None and messages:
-        selected = messages[0]
+    # No message means the list, not the first message pre-opened. The inbox is
+    # two screens — a full-width list, and a reader you land on by choosing a
+    # row — because at the laptop widths people actually have (1920x1080 at
+    # 150% scale is a 1280px viewport) a list beside a reader beside the
+    # copilot left the message itself about 256px wide.
     context["selected"] = selected
+
+    # Previous/next within the page you are reading from, so the reader keeps
+    # the j/k navigation the list has. Deliberately empty when the message is
+    # not on this page (opened from Approvals, a bookmark, or an excluding
+    # filter): stepping to a neighbour of a list you are not looking at is a
+    # worse answer than offering no step at all.
+    neighbours: dict[str, str | None] = {"prev": None, "next": None}
+    if selected:
+        page_ids = [m["id"] for m in messages]
+        if selected["id"] in page_ids:
+            position = page_ids.index(selected["id"])
+            if position > 0:
+                neighbours["prev"] = page_ids[position - 1]
+            if position + 1 < len(page_ids):
+                neighbours["next"] = page_ids[position + 1]
+    context["neighbours"] = neighbours
 
     if selected:
         actions = _actions.list_for_message(user["org_id"], selected["id"])
@@ -1660,6 +1805,7 @@ _WEB_PATH_PREFIXES = (
     "/welcome",
     "/privacy",
     "/terms",
+    "/demo",
 )
 
 
@@ -1675,12 +1821,21 @@ async def web_http_error_handler(request: Request, exc: Exception) -> Response:
     A double-clicked Approve, a disconnect race, or a stale form otherwise
     dumps ``{"detail": ...}`` in the browser with no way back. API routes are
     deliberately untouched — machine callers want the JSON.
+
+    One addition for the front door: a URL that matches *nothing* at all (a
+    mistyped path, a capital letter in ``/Demo``) is a 404 from a browser that
+    asked for HTML, and gets the same page instead of a black screen of JSON. It
+    keys on the ``Accept`` header, not the path, because the point is who is
+    asking: ``curl`` and every HTTP library send ``*/*`` and still get JSON.
     """
     from fastapi.exception_handlers import http_exception_handler
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
-    if not isinstance(exc, StarletteHTTPException) or not is_web_path(request.url.path):
+    if not isinstance(exc, StarletteHTTPException):
         return await http_exception_handler(request, exc)  # type: ignore[arg-type]
+    unknown_page = exc.status_code == 404 and "text/html" in request.headers.get("accept", "")
+    if not (is_web_path(request.url.path) or unknown_page):
+        return await http_exception_handler(request, exc)
 
     detail = exc.detail if isinstance(exc.detail, str) else "Something went wrong."
     return _render(

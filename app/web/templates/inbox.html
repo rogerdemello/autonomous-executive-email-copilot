@@ -1,6 +1,6 @@
 {% extends "_app.html" %}
 
-{% block title %}Inbox · Executive Email Copilot{% endblock %}
+{% block title %}{% if selected %}{{ selected.subject }} · Inbox{% else %}Inbox{% endif %} · Executive Email Copilot{% endblock %}
 
 {% block head_extra %}
   {# A meta refresh rather than a poll: the whole app is server-rendered and
@@ -9,8 +9,8 @@
      page that reloads forever would fight anyone trying to read it. #}
   {% if first_sync_pending %}<meta http-equiv="refresh" content="10" />{% endif %}
 {% endblock %}
-{% block heading %}Inbox{% endblock %}
-{% block lede %}What the copilot is working on right now.{% endblock %}
+{% block heading %}{% if selected %}Message{% else %}Inbox{% endif %}{% endblock %}
+{% block lede %}{% if selected %}What the copilot read, and what it wants to do about it.{% else %}What the copilot is working on right now.{% endif %}{% endblock %}
 
 {% block headactions %}
   {% if connections %}
@@ -34,6 +34,8 @@
    "no label chips" rather than a 500. #}
 {% set labels = labels | default({}) %}
 {% set thread_sizes = thread_sizes | default({}) %}
+{% set neighbours = neighbours | default({}) %}
+{% if tour and not selected %}{% include "_tour.html" %}{% endif %}
 {% if not connections %}
   <div class="card">
     <div class="empty">
@@ -45,6 +47,216 @@
       <a class="btn btn--primary" href="/app/connect">Connect a mailbox</a>
     </div>
   </div>
+
+{# ========================================================================= #}
+{# Reader. Reached by choosing a row, so the message and the copilot's        #}
+{# reasoning get the full width instead of a third of it.                     #}
+{# ========================================================================= #}
+{% elif selected %}
+  <nav class="reader-nav" aria-label="Message navigation">
+    <a class="btn btn--sm" href="/app/inbox{% if page.query %}?{{ page.query }}{% endif %}"
+       data-reader-back>← Inbox</a>
+    <span class="reader-nav__step">
+      {% if neighbours.prev %}
+        <a class="btn btn--sm" href="/app/inbox?message={{ neighbours.prev }}{% if page.query %}&amp;{{ page.query }}{% endif %}"
+           data-reader-prev title="Previous message (k)">↑ Newer</a>
+      {% else %}
+        <span class="btn btn--sm" aria-disabled="true">↑ Newer</span>
+      {% endif %}
+      {% if neighbours.next %}
+        <a class="btn btn--sm" href="/app/inbox?message={{ neighbours.next }}{% if page.query %}&amp;{{ page.query }}{% endif %}"
+           data-reader-next title="Next message (j)">↓ Older</a>
+      {% else %}
+        <span class="btn btn--sm" aria-disabled="true">↓ Older</span>
+      {% endif %}
+    </span>
+  </nav>
+
+  <div class="reader">
+   <div class="reader__main">
+    {# ---- The message itself ---- #}
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">Message</span>
+        <span class="chiprow">
+          {% if selected_label == 'spam' %}
+            <span class="chip chip--danger" title="Classified as spam. The copilot will never engage it">spam</span>
+          {% elif selected_label == 'urgent' %}
+            <span class="chip chip--crit">urgent</span>
+          {% endif %}
+          <span class="chip chip--neutral">{{ role_labels.get(selected.sender_role, selected.sender_role or "External") }}</span>
+        </span>
+      </div>
+      <div class="card__body">
+        <h2 class="reader__subject">{{ selected.subject }}</h2>
+        <div class="reader__meta">
+          <span><strong>{{ selected.sender_name or selected.sender }}</strong></span>
+          <span class="mono">{{ selected.sender }}</span>
+          <span>{{ selected.received_at | short_time }}</span>
+        </div>
+        {# The whole message, not the 500-character preview. Falls back to the
+           preview for rows synced before the body column existed. #}
+        <div class="reader__body">{{ selected.body or selected.body_preview }}</div>
+      </div>
+
+      {% if thread | length > 1 %}
+        {# thread_id has been stored since this table existed and was never
+           read, while the landing page sold "summarizes long threads". #}
+        <div class="card__body card__body--divided">
+          <details class="thread" open>
+            <summary class="card__title">
+              Thread · {{ thread | length }} messages
+            </summary>
+            <ol class="thread__list">
+              {% for item in thread %}
+                <li class="thread__item{% if item.id == selected.id %} thread__item--current{% endif %}">
+                  <a href="/app/inbox?message={{ item.id }}{% if page.query %}&amp;{{ page.query }}{% endif %}">
+                    <span class="thread__who">{{ item.sender_name or item.sender }}</span>
+                    <span class="thread__when mono muted">{{ item.received_at | short_time }}</span>
+                    <span class="thread__peek muted">{{ (item.body_preview or "") | truncate(120) }}</span>
+                  </a>
+                </li>
+              {% endfor %}
+            </ol>
+          </details>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ---- What the copilot wants to send ----
+       Under the message rather than in the copilot column: this is the one
+       thing on the screen you edit, and a reply box belongs beneath the mail
+       it answers. In the narrow column it was a 300px box for a paragraph you
+       are being asked to take responsibility for. #}
+    {% if selected_actions %}
+      <div class="card">
+        <div class="card__head">
+          <span class="card__title">Proposed</span>
+          {% if can_manage %}
+            <span class="muted head-note">You decide. Nothing sends on its own.</span>
+          {% endif %}
+        </div>
+        {% for action in selected_actions %}
+          <div class="action-block">
+            <div class="action-block__head">
+              <span class="action-block__what">{{ action_labels.get(action.action_type, action.action_type) }}</span>
+              <span class="chip chip--{{ action.status }}">{{ status_labels.get(action.status, action.status) }}</span>
+              {% if action.escalate_to %}
+                <span class="chip chip--brass">→ {{ action.escalate_to | replace('_', ' ') }}</span>
+              {% endif %}
+              {% if action.draft_source == 'llm' %}
+                <span class="chip chip--accent" title="Wording written by the model. The decision itself is the deterministic policy's.">
+                  model-drafted{% if action.draft_confidence %} · {{ '%.0f' % (action.draft_confidence * 100) }}%{% endif %}
+                </span>
+              {% endif %}
+              {% if action.verification_status == 'verified' %}
+                <span class="chip chip--good" title="A second pass checked this draft against the source message.">verified</span>
+              {% elif action.verification_status == 'flagged' %}
+                <span class="chip chip--warn" title="{{ action.verification_notes | join(' · ') }}">check flagged</span>
+              {% endif %}
+            </div>
+
+            {% if action.status == 'proposed' and can_manage %}
+              {# Editable here, exactly as in Approvals: what you send is what
+                 you wrote, and the edit teaches the drafter this workspace's
+                 voice. Reading a draft you cannot fix is a dead end. #}
+              <form method="post" action="/app/actions/{{ action.id }}/approve"
+                    id="approve-{{ action.id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <input type="hidden" name="message" value="{{ selected.id }}" />
+                {% if action.content %}
+                  <textarea class="draft" name="content" rows="7" data-shortcut-draft
+                            aria-label="Draft to send. You can edit it before approving">{{ action.content }}</textarea>
+                {% endif %}
+              </form>
+              <div class="actions-row">
+                <button class="btn btn--primary btn--sm" type="submit"
+                        form="approve-{{ action.id }}" data-shortcut-approve>
+                  {% if action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
+                </button>
+                <form method="post" action="/app/actions/{{ action.id }}/reject">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                  <input type="hidden" name="message" value="{{ selected.id }}" />
+                  <button class="btn btn--sm btn--danger" type="submit">Reject</button>
+                </form>
+              </div>
+            {% else %}
+              {% if action.content %}
+                <div class="draft">{{ action.content }}</div>
+              {% endif %}
+              {% if action.status == 'proposed' %}
+                <p class="muted note-tight">Waiting on an admin to approve.</p>
+              {% elif action.decided_at %}
+                <p class="muted mono note-stamp">
+                  {{ action.outcome or action.status }} · {{ action.decided_at | short_time }}
+                </p>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+   </div>
+
+    {# ---- What the copilot concluded ---- #}
+    <div class="card inbox__copilot">
+      <div class="card__head">
+        <span class="card__title">Copilot</span>
+        <span class="pulse" aria-hidden="true"></span>
+      </div>
+
+      <div class="copilot__signals">
+        <div class="signal">
+          <div class="k">Priority</div>
+          <div class="v">{{ selected.priority_hint | title }}</div>
+        </div>
+        <div class="signal">
+          <div class="k">Risk</div>
+          <div class="v">
+            {% if selected.risk_tag and selected.risk_tag != 'none' %}
+              {{ selected.risk_tag | title }}
+            {% else %}
+              None detected
+            {% endif %}
+          </div>
+        </div>
+        <div class="signal">
+          <div class="k">Respond within</div>
+          <div class="v">{{ selected.deadline_minutes }} min</div>
+        </div>
+        <div class="signal">
+          <div class="k">Business value</div>
+          <div class="v">{{ "%.2f" | format(selected.business_value or 0) }}</div>
+        </div>
+      </div>
+
+      <div class="card__body">
+        {% if selected_rationale %}
+          <ul class="rationale">
+            {% for point in selected_rationale %}<li>{{ point }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if not selected_actions %}
+          <p class="muted note-tight">
+            The copilot read this message and decided no action was warranted.
+          </p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <p class="muted shortcut-hint">
+    <span class="kbd">j</span> / <span class="kbd">k</span> next and previous ·
+    <span class="kbd">e</span> edit the draft ·
+    <span class="kbd">a</span> jump to Approve ·
+    <span class="kbd">Esc</span> back to the inbox
+  </p>
+
+{# ========================================================================= #}
+{# List. The whole width, one line per message.                               #}
+{# ========================================================================= #}
 {% else %}
   {# The point of the product in one line: most of this never reached a human. #}
   <div class="card triage-summary">
@@ -103,10 +315,7 @@
     {% endif %}
   </form>
 
-  {# `selected` is looked up directly rather than taken from the current page,
-     so a link from Approvals still opens even when the active filter excludes
-     it. That is why the panes are keyed on `selected`, not on `messages`. #}
-  {% if not messages and not selected %}
+  {% if not messages %}
     <div class="card">
       <div class="empty">
         {% if filters.q or filters.label or filters.priority %}
@@ -143,239 +352,79 @@
       </div>
     </div>
   {% else %}
-    <div class="inbox">
-      {# ---- Pane 1: the message list, ranked the way the copilot ranked it ---- #}
-      <div class="card">
-        <div class="card__head">
-          <span class="card__title">
-            {% if messages %}{{ page.first }}–{{ page.last }} of {{ page.total }}{% else %}No matches{% endif %}
-          </span>
-          {% if pending_count %}
-            <span class="chip chip--proposed">{{ pending_count }} awaiting you</span>
-          {% endif %}
-        </div>
-        {% if not messages %}
-          <div class="empty">
-            <h3>Nothing matches that filter</h3>
-            <p>The message on the right is still open. Clear the filter to see the rest.</p>
-            <a class="btn" href="/app/inbox?message={{ selected.id }}">Clear filters</a>
-          </div>
-        {% endif %}
-        <ul class="msglist" data-msglist>
-          {% for message in messages %}
-            {% set thread_size = thread_sizes.get(message.thread_id, 1) %}
-            <li>
-              <a
-                href="/app/inbox?message={{ message.id }}{% if page.query %}&amp;{{ page.query }}{% endif %}"
-                {% if selected and message.id == selected.id %}aria-current="true"{% endif %}
-                data-msg
-              >
-                <span class="row">
-                  <span class="from">{{ message.sender_name or message.sender }}</span>
-                  {% if labels.get(message.id) == 'spam' %}
-                    <span class="chip chip--danger">spam</span>
-                  {% else %}
-                    <span class="chip chip--{{ message.priority_hint }}">{{ message.priority_hint }}</span>
-                  {% endif %}
-                </span>
-                <span class="subj">{{ message.subject }}</span>
-                <span class="row">
-                  <span class="mono muted msglist__when">
-                    {{ message.received_at | short_time }}
-                  </span>
-                  <span class="msglist__tags">
-                    {% if thread_size > 1 %}
-                      <span class="chip chip--neutral" title="{{ thread_size }} messages in this thread">{{ thread_size }} in thread</span>
-                    {% endif %}
-                    {% if message.risk_tag and message.risk_tag != 'none' %}
-                      <span class="chip chip--brass">{{ message.risk_tag }}</span>
-                    {% endif %}
-                  </span>
-                </span>
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-        {% if page.has_prev or page.has_next %}
-          <nav class="pager" aria-label="Message pages">
-            {% if page.has_prev %}
-              <a class="btn btn--sm" href="/app/inbox?page={{ page.number - 1 }}{% if page.query %}&amp;{{ page.query }}{% endif %}">← Newer</a>
-            {% else %}
-              <span class="btn btn--sm" aria-disabled="true">← Newer</span>
-            {% endif %}
-            <span class="muted pager__count">Page {{ page.number }}</span>
-            {% if page.has_next %}
-              <a class="btn btn--sm" href="/app/inbox?page={{ page.number + 1 }}{% if page.query %}&amp;{{ page.query }}{% endif %}">Older →</a>
-            {% else %}
-              <span class="btn btn--sm" aria-disabled="true">Older →</span>
-            {% endif %}
-          </nav>
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">{{ page.first }}–{{ page.last }} of {{ page.total }}</span>
+        {% if pending_count %}
+          <span class="chip chip--proposed">{{ pending_count }} awaiting you</span>
         {% endif %}
       </div>
 
-      {# ---- Pane 2: the message itself ---- #}
-      <div class="card">
-        <div class="card__head">
-          <span class="card__title">Message</span>
-          <span>
-            {% if selected_label == 'spam' %}
-              <span class="chip chip--danger" title="Classified as spam. The copilot will never engage it">spam</span>
-            {% elif selected_label == 'urgent' %}
-              <span class="chip chip--crit">urgent</span>
-            {% endif %}
-            <span class="chip chip--neutral">{{ role_labels.get(selected.sender_role, selected.sender_role or "External") }}</span>
-          </span>
-        </div>
-        <div class="card__body">
-          <h2 class="reader__subject">{{ selected.subject }}</h2>
-          <div class="reader__meta">
-            <span><strong>{{ selected.sender_name or selected.sender }}</strong></span>
-            <span class="mono">{{ selected.sender }}</span>
-            <span>{{ selected.received_at | short_time }}</span>
-          </div>
-          {# The whole message, not the 500-character preview. Falls back to the
-             preview for rows synced before the body column existed. #}
-          <div class="reader__body">{{ selected.body or selected.body_preview }}</div>
-        </div>
-
-        {% if thread | length > 1 %}
-          {# thread_id has been stored since this table existed and was never
-             read, while the landing page sold "summarizes long threads". #}
-          <div class="card__body card__body--divided">
-            <details class="thread" open>
-              <summary class="card__title">
-                Thread · {{ thread | length }} messages
-              </summary>
-              <ol class="thread__list">
-                {% for item in thread %}
-                  <li class="thread__item{% if item.id == selected.id %} thread__item--current{% endif %}">
-                    <a href="/app/inbox?message={{ item.id }}{% if page.query %}&amp;{{ page.query }}{% endif %}">
-                      <span class="thread__who">{{ item.sender_name or item.sender }}</span>
-                      <span class="thread__when mono muted">{{ item.received_at | short_time }}</span>
-                      <span class="thread__peek muted">{{ (item.body_preview or "") | truncate(120) }}</span>
-                    </a>
-                  </li>
-                {% endfor %}
-              </ol>
-            </details>
-          </div>
-        {% endif %}
-      </div>
-
-      {# ---- Pane 3: what the copilot concluded, and what it wants to do ---- #}
-      <div class="card inbox__copilot">
-        <div class="card__head">
-          <span class="card__title">Copilot</span>
-          <span class="pulse" aria-hidden="true"></span>
-        </div>
-
-        <div class="copilot__signals">
-          <div class="signal">
-            <div class="k">Priority</div>
-            <div class="v">{{ selected.priority_hint | title }}</div>
-          </div>
-          <div class="signal">
-            <div class="k">Risk</div>
-            <div class="v">
-              {% if selected.risk_tag and selected.risk_tag != 'none' %}
-                {{ selected.risk_tag | title }}
-              {% else %}
-                None detected
-              {% endif %}
-            </div>
-          </div>
-          <div class="signal">
-            <div class="k">Respond within</div>
-            <div class="v">{{ selected.deadline_minutes }} min</div>
-          </div>
-          <div class="signal">
-            <div class="k">Business value</div>
-            <div class="v">{{ "%.2f" | format(selected.business_value or 0) }}</div>
-          </div>
-        </div>
-
-        <div class="card__body">
-          {% if selected_rationale %}
-            <ul class="rationale">
-              {% for point in selected_rationale %}<li>{{ point }}</li>{% endfor %}
-            </ul>
-          {% endif %}
-
-          {% if not selected_actions %}
-            <p class="muted note-tight">
-              The copilot read this message and decided no action was warranted.
-            </p>
-          {% endif %}
-        </div>
-
-        {% for action in selected_actions %}
-          <div class="action-block">
-            <div class="action-block__head">
-              <span class="action-block__what">{{ action_labels.get(action.action_type, action.action_type) }}</span>
-              <span class="chip chip--{{ action.status }}">{{ status_labels.get(action.status, action.status) }}</span>
-              {% if action.escalate_to %}
-                <span class="chip chip--brass">→ {{ action.escalate_to | replace('_', ' ') }}</span>
-              {% endif %}
-              {% if action.draft_source == 'llm' %}
-                <span class="chip chip--accent" title="Wording written by the model. The decision itself is the deterministic policy's.">
-                  model-drafted{% if action.draft_confidence %} · {{ '%.0f' % (action.draft_confidence * 100) }}%{% endif %}
-                </span>
-              {% endif %}
-              {% if action.verification_status == 'verified' %}
-                <span class="chip chip--good" title="A second pass checked this draft against the source message.">verified</span>
-              {% elif action.verification_status == 'flagged' %}
-                <span class="chip chip--warn" title="{{ action.verification_notes | join(' · ') }}">check flagged</span>
-              {% endif %}
-            </div>
-
-            {% if action.status == 'proposed' and can_manage %}
-              {# Editable here, exactly as in Approvals: what you send is what
-                 you wrote, and the edit teaches the drafter this workspace's
-                 voice. Reading a draft you cannot fix is a dead end. #}
-              <form method="post" action="/app/actions/{{ action.id }}/approve"
-                    id="approve-{{ action.id }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-                <input type="hidden" name="message" value="{{ selected.id }}" />
-                {% if action.content %}
-                  <textarea class="draft" name="content" rows="6" data-shortcut-draft
-                            aria-label="Draft to send. You can edit it before approving">{{ action.content }}</textarea>
+      <ul class="maillist" data-msglist>
+        {% for message in messages %}
+          {% set thread_size = thread_sizes.get(message.thread_id, 1) %}
+          {% set label = labels.get(message.id) %}
+          <li>
+            <a
+              class="maillist__row"
+              href="/app/inbox?message={{ message.id }}{% if page.query %}&amp;{{ page.query }}{% endif %}"
+              data-msg
+            >
+              {# The dot carries priority without spending a chip's width on
+                 every row — the thing Gmail uses bold-vs-regular for. #}
+              <span class="maillist__dot maillist__dot--{{ message.priority_hint or 'low' }}"
+                    title="{{ message.priority_hint | default('normal', true) | title }} priority"
+                    aria-hidden="true"></span>
+              <span class="maillist__from">{{ message.sender_name or message.sender }}</span>
+              <span class="maillist__text">
+                <span class="maillist__subj">{{ message.subject }}</span>
+                {% if message.body_preview %}
+                  <span class="maillist__peek"> — {{ message.body_preview }}</span>
                 {% endif %}
-              </form>
-              <div class="actions-row">
-                <button class="btn btn--primary btn--sm" type="submit"
-                        form="approve-{{ action.id }}" data-shortcut-approve>
-                  {% if action.action_type == 'reply' %}Approve &amp; send{% else %}Approve{% endif %}
-                </button>
-                <form method="post" action="/app/actions/{{ action.id }}/reject">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-                  <input type="hidden" name="message" value="{{ selected.id }}" />
-                  <button class="btn btn--sm btn--danger" type="submit">Reject</button>
-                </form>
-              </div>
-            {% else %}
-              {% if action.content %}
-                <div class="draft">{{ action.content }}</div>
-              {% endif %}
-              {% if action.status == 'proposed' %}
-                <p class="muted note-tight">Waiting on an admin to approve.</p>
-              {% elif action.decided_at %}
-                <p class="muted mono note-stamp">
-                  {{ action.outcome or action.status }} · {{ action.decided_at | short_time }}
-                </p>
-              {% endif %}
-            {% endif %}
-          </div>
+              </span>
+              {# Marks and time share one grid track: an empty marks span would
+                 otherwise leave its column gap behind on every unremarkable
+                 row, which is most of them. #}
+              <span class="maillist__end">
+                {% if thread_size > 1 %}
+                  <span class="maillist__thread" title="{{ thread_size }} messages in this thread">{{ thread_size }}</span>
+                {% endif %}
+                {% if label == 'spam' %}
+                  <span class="chip chip--danger chip--xs">spam</span>
+                {% endif %}
+                {% if message.risk_tag and message.risk_tag != 'none' %}
+                  <span class="chip chip--brass chip--xs">{{ message.risk_tag }}</span>
+                {% endif %}
+                <span class="maillist__when mono muted">{{ message.received_at | short_time }}</span>
+              </span>
+            </a>
+          </li>
         {% endfor %}
-      </div>
+      </ul>
+
+      {% if page.has_prev or page.has_next %}
+        <nav class="pager" aria-label="Message pages">
+          {% if page.has_prev %}
+            <a class="btn btn--sm" href="/app/inbox?page={{ page.number - 1 }}{% if page.query %}&amp;{{ page.query }}{% endif %}">← Newer</a>
+          {% else %}
+            <span class="btn btn--sm" aria-disabled="true">← Newer</span>
+          {% endif %}
+          <span class="muted pager__count">Page {{ page.number }}</span>
+          {% if page.has_next %}
+            <a class="btn btn--sm" href="/app/inbox?page={{ page.number + 1 }}{% if page.query %}&amp;{{ page.query }}{% endif %}">Older →</a>
+          {% else %}
+            <span class="btn btn--sm" aria-disabled="true">Older →</span>
+          {% endif %}
+        </nav>
+      {% endif %}
     </div>
 
     {# Discoverability is the whole problem with keyboard shortcuts: an
        undiscoverable one may as well not exist. #}
     <p class="muted shortcut-hint">
-      <span class="kbd">j</span> / <span class="kbd">k</span> next and previous ·
-      <span class="kbd">/</span> search ·
-      <span class="kbd">e</span> edit the draft ·
-      <span class="kbd">a</span> jump to Approve
+      <span class="kbd">j</span> / <span class="kbd">k</span> move down and up ·
+      <span class="kbd">Enter</span> open ·
+      <span class="kbd">/</span> search
     </p>
   {% endif %}
 {% endif %}

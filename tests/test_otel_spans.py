@@ -111,3 +111,17 @@ def test_drafting_opens_a_span(monkeypatch):
         action_type="reply",
     )
     assert "llm.draft" in recorded
+
+
+def test_spans_carry_the_release_they_came_from():
+    """A trace must be traceable to a build. `service.version` was hardcoded 1.0.0."""
+    import pytest
+
+    pytest.importorskip("opentelemetry.sdk")
+    from app import __version__
+    from telemetry.otel import build_resource
+
+    attributes = build_resource("exec-email-copilot", __version__).attributes
+    assert attributes["service.name"] == "exec-email-copilot"
+    assert attributes["service.version"] == __version__
+    assert attributes["service.version"] != "1.0.0" or __version__ == "1.0.0"

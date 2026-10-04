@@ -73,7 +73,8 @@
       <span class="card__title">{{ actions | length }} awaiting approval{% if pending_total and pending_total > actions | length %} (of {{ pending_total }}){% endif %}</span>
     </div>
     {% for item in actions %}
-      <div class="action-block">
+      {# The id is what the demo tour's "flagged" step links to. #}
+      <div class="action-block" id="action-{{ item.action.id }}">
         <div class="action-block__head">
           <span class="action-block__what">
             {{ action_labels.get(item.action.action_type, item.action.action_type) }}

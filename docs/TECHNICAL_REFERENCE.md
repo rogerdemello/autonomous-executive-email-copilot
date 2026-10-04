@@ -87,7 +87,7 @@ Runs `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (8000 by default).
 ### Web UI
 
 Served by the same process — there is nothing to build or start separately.
-Open <http://localhost:8000>. Seed a demo workspace first with `make demo`.
+Open <http://localhost:8000> and press **Try the live demo**: it builds a private, fully triaged sandbox workspace on the spot, so there is nothing to seed. (`make demo` also seeds a *shared* demo account with a prefilled sign-in.)
 
 ### Baseline runner CLI
 
@@ -642,7 +642,7 @@ Container healthcheck probes `http://localhost:8000/health`.
 
 ## 18) CI and Deployment Files
 
-- `.github/workflows/ci.yml` defines lint/test/typecheck/security/frontend/docker/inference jobs
+- `.github/workflows/ci.yml` defines lint, test (coverage gate), test-postgres, invariant-harness, typecheck, security, docker, inference-smoke and helm jobs; there is no frontend job
 - `DEPLOYMENT_GUIDE.md` covers container and cloud deployment
 
 ## 19) Operational Notes and Current Constraints

@@ -8,8 +8,31 @@
     <title>{% block title %}Executive Email Copilot{% endblock %}</title>
     <meta
       name="description"
-      content="{% block description %}An AI email copilot that understands inbox context. It summarizes long threads, surfaces what matters, drafts context-aware replies, and escalates high-stakes mail with your sign-off where it matters.{% endblock %}"
+      content="{% block description %}An email copilot that triages the whole inbox by deadline and risk, drafts replies in your voice, checks each draft against the message it answers, and holds every outbound action for your sign-off.{% endblock %}"
     />
+    {# What a pasted link unfurls to on LinkedIn, Slack and WhatsApp, and the
+       canonical URL for search. Without these the preview is a bare title with
+       no picture — the first impression a recruiter gets of a link they were
+       sent. Absolute URLs, because a crawler has no page to resolve them against.
+       Guarded: the operator console renders from a separate template
+       environment that does not supply `page_url`. #}
+    {% if page_url %}
+      <link rel="canonical" href="{{ page_url }}" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="Executive Email Copilot" />
+      <meta property="og:title" content="{{ self.title() | striptags | trim }}" />
+      <meta property="og:description" content="{{ self.description() | trim }}" />
+      <meta property="og:url" content="{{ page_url }}" />
+      <meta property="og:image" content="{{ public_base_url }}/static/img/og-card.jpg" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta
+        property="og:image:alt"
+        content="The Executive Email Copilot inbox: every message triaged by deadline and risk, with replies held for approval."
+      />
+      <meta name="twitter:card" content="summary_large_image" />
+    {% endif %}
+    {% block robots %}{% endblock %}
     {# Preload before the stylesheet, not after: an @font-face inside app.css is
        only discovered once the CSS has parsed AND something needs the family,
        so the 4.4rem Fraunces headline visibly reflowed on every first paint.
@@ -38,18 +61,20 @@
       href="/static/fonts/inter-latin-wght-normal.woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/static/app.css" />
+    {# Fingerprinted (app/web/assets.py): the URL changes when the file does, so a
+       returning visitor never pairs today's markup with last month's CSS. #}
+    <link rel="stylesheet" href="{{ asset_url('app.css') }}" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230e6e62'/><text x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%2306110f' text-anchor='middle'>EC</text></svg>"
     />
     {# No defer: the saved theme must apply before first paint. Kept in a file
        rather than inline so the CSP needs no inline-script allowance. #}
-    <script src="/static/theme-init.js"></script>
+    <script src="{{ asset_url('theme-init.js') }}"></script>
     {% block head_extra %}{% endblock %}
   </head>
   <body>
     {% block body %}{% endblock %}
-    <script src="/static/app.js" defer></script>
+    <script src="{{ asset_url('app.js') }}" defer></script>
   </body>
 </html>

@@ -147,6 +147,7 @@ async def lifespan(_app: FastAPI):
             service_name="exec-email-copilot",
             otlp_endpoint=otlp_endpoint,
             enable_console=False,
+            service_version=API_VERSION,
         )
         _OTEL_CONFIGURED = True
     if get_settings().demo_seed_on_startup:
@@ -179,15 +180,69 @@ async def lifespan(_app: FastAPI):
 # pyproject's version) so /version and the OpenAPI version never drift.
 from app import __version__ as API_VERSION  # noqa: E402
 
+_API_DESCRIPTION = """\
+**Executive Email Copilot** reads a Gmail or Microsoft 365 mailbox, triages it by
+deadline and risk, drafts the replies worth sending, and **holds every outbound
+action for a human**. Routing is deterministic; the model only writes prose, so an
+outage costs wording rather than triage.
+
+Two surfaces share this server:
+
+- **The product** (`auth`, `organization`, `billing`, `mailbox`, `inbox`) —
+  multi-tenant accounts, roles, mailbox sync and the approval queue. Authenticate
+  with `POST /auth/login` and send the token as `Authorization: Bearer <token>`.
+- **The benchmark** it grew out of (`benchmark`, `approval-simulator`, `learning`)
+  — a Gym-style `reset`/`step`/`state` environment and graders, kept intact under
+  `research/`. Open the live app with one click at `/demo`.
+
+Endpoints are stable within a major version; breaking changes will be introduced
+under a versioned path.
+"""
+
+# What each tag means, in the order /docs lists them: the product first, because
+# that is what a person opening this page is evaluating, then the benchmark it
+# was built from, then operations.
+_OPENAPI_TAGS = [
+    {
+        "name": "auth",
+        "description": "Sign up, sign in, SSO, password reset. Issues the session token.",
+    },
+    {
+        "name": "organization",
+        "description": "Workspaces, members and roles; data export and erasure.",
+    },
+    {
+        "name": "mailbox",
+        "description": "Connect Gmail or Microsoft 365 over OAuth, or the demo mailbox.",
+    },
+    {
+        "name": "inbox",
+        "description": "Sync a mailbox; list triaged messages; approve or reject held actions.",
+    },
+    {"name": "billing", "description": "Entitlements and the contact-sales funnel."},
+    {
+        "name": "benchmark",
+        "description": "The deterministic simulator and its graders: `reset`, `step`, `state`, `grader`, `baseline`, `leaderboard`, `replay`.",
+    },
+    {
+        "name": "approval-simulator",
+        "description": "The benchmark agent's in-memory approval store. The product's own approval gate is `/inbox`.",
+    },
+    {
+        "name": "learning",
+        "description": "Episode history, preferences and feedback captured from benchmark runs.",
+    },
+    {
+        "name": "operations",
+        "description": "Liveness and readiness probes, version, Prometheus metrics, alert rules.",
+    },
+]
+
 app = FastAPI(
-    title="Autonomous Executive Email Copilot",
+    title="Executive Email Copilot API",
     version=API_VERSION,
-    description=(
-        "Deterministic, RL-style executive inbox simulation for evaluating "
-        "agents that triage and manage high-stakes email. Endpoints are stable "
-        "within a major version; breaking changes will be introduced under a "
-        "versioned path. See /docs for the full schema."
-    ),
+    description=_API_DESCRIPTION,
+    openapi_tags=_OPENAPI_TAGS,
     license_info={"name": "MIT"},
     lifespan=lifespan,
 )
@@ -243,7 +298,10 @@ if _allowed_hosts != ["*"]:
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
 
-app.include_router(dashboard_router)
+# Tagged here, not by _tag_untagged_routes below: routes pulled in through
+# include_router are not flattened into app.routes, so a loop over it never sees
+# them (which is how six dashboard endpoints stayed untagged).
+app.include_router(dashboard_router, tags=["benchmark"])
 
 # Commercial SaaS layer: accounts, organizations (tenants), RBAC, sales-led
 # licensing. Additive — it does not touch the benchmark/scoring routes.
@@ -1196,6 +1254,50 @@ def parse_metrics_text(output: str) -> dict[str, float]:
 
 def _parse_metrics_to_dict() -> dict:
     return parse_metrics_text(get_metrics_output())
+
+
+# Which tag a route gets when it declares none. Most benchmark routes were
+# written before the product existed and carry no tag, so /docs listed 46 of 67
+# endpoints under a single undifferentiated heading, with the product's own five
+# groups lost among them. Assigned here, after every route exists, rather than
+# edited into forty decorators.
+_TAG_BY_PREFIX = (
+    ("/approval", "approval-simulator"),
+    ("/episodes", "learning"),
+    ("/preferences", "learning"),
+    ("/feedback", "learning"),
+    ("/learning", "learning"),
+    ("/health", "operations"),
+    ("/version", "operations"),
+    ("/metrics", "operations"),
+    ("/alerts", "operations"),
+    ("/dashboard", "benchmark"),
+    ("/tasks", "benchmark"),
+    ("/reset", "benchmark"),
+    ("/step", "benchmark"),
+    ("/state", "benchmark"),
+    ("/grader", "benchmark"),
+    ("/baseline", "benchmark"),
+    ("/leaderboard", "benchmark"),
+    ("/replay", "benchmark"),
+    ("/benchmark", "benchmark"),
+    ("/reports", "benchmark"),
+)
+
+
+def _tag_untagged_routes() -> None:
+    from fastapi.routing import APIRoute
+
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or route.tags:
+            continue
+        for prefix, tag in _TAG_BY_PREFIX:
+            if route.path == prefix or route.path.startswith(prefix + "/"):
+                route.tags = [tag]
+                break
+
+
+_tag_untagged_routes()
 
 
 def main() -> None:

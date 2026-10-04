@@ -90,6 +90,20 @@ def get_email_sender() -> EmailSender:
     return ConsoleEmailSender()
 
 
+def is_undeliverable(address: str) -> bool:
+    """True for an address on ``.invalid`` — RFC 6761 guarantees it never resolves.
+
+    The owners of demo sandboxes live there. Sending to one would only hand the
+    SMTP relay a message certain to bounce (and let an anonymous visitor make the
+    deployment try), so it is refused here rather than at every call site.
+    """
+    domain = (address or "").rsplit("@", 1)[-1].strip().strip(".").lower()
+    return domain == "invalid" or domain.endswith(".invalid")
+
+
 def send_email(to: str, subject: str, body: str) -> None:
     """Convenience: build + send in one call via the configured sender."""
+    if is_undeliverable(to):
+        logger.info("Not sending %r to %s: the address can never be delivered", subject, to)
+        return
     get_email_sender().send(EmailMessage(to=to, subject=subject, body=body))

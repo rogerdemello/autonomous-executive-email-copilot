@@ -9,8 +9,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
+from app.copilot.providers.fake import FakeProvider
 from app.main import app
-from app.saas import oauth
+from app.saas import oauth, provider_factory
 from app.saas.crypto import DecryptionError, TokenVault
 
 
@@ -196,6 +197,16 @@ class TestConnectFlow:
             }
 
         monkeypatch.setattr(oauth, "exchange_code", fake_exchange)
+        # The callback schedules a first sync, which TestClient runs before it
+        # hands back the response. Left alone, that sync builds a real
+        # GmailProvider from the fixture token above and calls Google over the
+        # network — reaching Gmail with a made-up token, then the token endpoint
+        # with a made-up client id. It used to "pass" because the failure was
+        # swallowed; now a refused refresh correctly flags the mailbox, so the
+        # status assertion below would fail on whatever the network did. This
+        # test is about what the callback persisted; the first sync itself is
+        # tests/test_first_sync.py's subject.
+        monkeypatch.setattr(provider_factory, "build_provider", lambda connection: FakeProvider())
 
         state = oauth.sign_state(org_id=org_id, user_id=user_id, provider="google")
         resp = client.get(

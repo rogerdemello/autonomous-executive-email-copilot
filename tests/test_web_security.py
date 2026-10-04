@@ -221,6 +221,73 @@ class TestSecurityHeaders:
 
 
 # --------------------------------------------------------------------------- #
+# Static asset caching
+# --------------------------------------------------------------------------- #
+class TestStaticAssetCaching:
+    """New markup must never be paired with an old stylesheet.
+
+    Starlette serves ``/static`` with an ETag and no ``Cache-Control``, so the
+    browser decides freshness itself — 10% of the file's age. After a deploy that
+    meant today's HTML with a month-old CSS file in the cache of everyone who had
+    been there before, which is the owner and the one recruiter who already looked.
+    """
+
+    ASSET = re.compile(
+        r'(?:href|src)="(/static/(?:app\.css|app\.js|theme-init\.js)\?v=[0-9a-f]{12})"'
+    )
+
+    def test_pages_reference_fingerprinted_urls(self, client):
+        for path in ("/", "/login", "/privacy"):
+            found = self.ASSET.findall(client.get(path).text)
+            assert len(found) == 3, f"{path} does not fingerprint all three assets: {found}"
+
+    def test_a_fingerprinted_url_is_cached_forever(self, client):
+        url = self.ASSET.findall(client.get("/").text)[0]
+        response = client.get(url)
+        assert response.status_code == 200
+        cache = response.headers["Cache-Control"]
+        assert "max-age=31536000" in cache and "immutable" in cache
+
+    def test_an_unversioned_static_request_must_revalidate(self, client):
+        """Fonts, images, and any old bookmark of /static/app.css."""
+        for path in ("/static/app.css", "/static/img/product-inbox.png"):
+            response = client.get(path)
+            assert response.status_code == 200, path
+            assert response.headers["Cache-Control"] == "no-cache", path
+
+    def test_revalidation_is_cheap(self, client):
+        """no-cache means 'ask first', and the answer must be a 304, not a download."""
+        first = client.get("/static/app.css")
+        again = client.get("/static/app.css", headers={"If-None-Match": first.headers["ETag"]})
+        assert again.status_code == 304
+        assert not again.content
+
+    def test_pages_and_the_api_are_not_given_static_caching(self, client):
+        for path in ("/", "/login", "/health"):
+            assert "immutable" not in client.get(path).headers.get("Cache-Control", ""), path
+
+    def test_the_fingerprint_follows_the_content(self, tmp_path, monkeypatch):
+        """Same URL while the file is unchanged; a new one the moment it is edited."""
+        import app.web.assets as assets
+
+        monkeypatch.setattr(assets, "STATIC_DIR", tmp_path)
+        (tmp_path / "x.css").write_text("a{color:red}", encoding="utf-8")
+        first = assets.asset_url("x.css")
+        assert assets.asset_url("x.css") == first
+
+        (tmp_path / "x.css").write_text("a{color:blue}", encoding="utf-8")
+        second = assets.asset_url("x.css")
+        assert second != first
+        assert second.startswith("/static/x.css?v=")
+
+    def test_a_missing_file_still_renders_a_page(self, tmp_path, monkeypatch):
+        import app.web.assets as assets
+
+        monkeypatch.setattr(assets, "STATIC_DIR", tmp_path)
+        assert assets.asset_url("gone.css") == "/static/gone.css"
+
+
+# --------------------------------------------------------------------------- #
 # Login throttle
 # --------------------------------------------------------------------------- #
 class TestLoginThrottle:

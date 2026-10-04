@@ -26,6 +26,29 @@ DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
 # zero config. Production MUST set AUTH_SECRET_KEY (see Settings.auth_secret_is_dev).
 DEV_AUTH_SECRET = "dev-insecure-secret-do-not-use-in-production"
 
+# Domains and TLDs that RFC 2606 / RFC 6761 reserve for documentation and tests.
+# Nothing sent there is ever delivered, and nothing published there is ever read.
+_RESERVED_DOMAINS = frozenset({"example.com", "example.org", "example.net"})
+_RESERVED_TLDS = frozenset({"example", "invalid", "test", "localhost"})
+
+
+def is_placeholder_address(address: str | None) -> bool:
+    """True for an unset address or one on a reserved documentation domain.
+
+    ``sales@example.com`` shipped as the default contact and was rendered, as a
+    live ``mailto:`` link, in the footer of every public page and in the privacy
+    policy's "send complaints here" line. A placeholder is fine in a config
+    template; published as the contact address of a product it tells a reader
+    that nobody is there.
+    """
+    value = (address or "").strip().lower()
+    if "@" not in value:
+        return True
+    domain = value.rsplit("@", 1)[1].strip(". ")
+    if not domain:
+        return True
+    return domain in _RESERVED_DOMAINS or domain.rsplit(".", 1)[-1] in _RESERVED_TLDS
+
 
 class Settings(BaseSettings):
     """Typed view over the process environment (and an optional .env file)."""
@@ -192,7 +215,13 @@ class Settings(BaseSettings):
     # webhook, e.g. Slack incoming webhook). When unset, leads are persisted +
     # logged only.
     sales_webhook_url: str | None = None
-    sales_contact_email: str = "sales@example.com"
+    # Public contact addresses. Both default to *unset*, and an address on a
+    # reserved documentation domain (the old `sales@example.com` default, or a
+    # copied `.env.example`) is treated as unset — see public_sales_email. When
+    # unset, pages point at the contact form and at GitHub's private security
+    # advisories instead of publishing an address nobody reads.
+    sales_contact_email: str | None = None
+    security_contact_email: str | None = None
 
     # --- Mailbox OAuth (connect real Gmail / Microsoft 365 inboxes) ---
     # Base URL of the deployed app, used to build the OAuth redirect URI
@@ -280,6 +309,25 @@ class Settings(BaseSettings):
         if self.demo_login_enabled is not None:
             return self.demo_login_enabled
         return not self.is_production
+
+    @property
+    def public_sales_email(self) -> str | None:
+        """The sales address safe to publish, or ``None`` if none is configured."""
+        if is_placeholder_address(self.sales_contact_email):
+            return None
+        return (self.sales_contact_email or "").strip()
+
+    @property
+    def public_security_email(self) -> str | None:
+        """The vulnerability-reporting address safe to publish, or ``None``.
+
+        Never derived from the sales address: ``security@`` on the same domain is
+        a guess, and a security contact that bounces is worse than one that
+        points at the GitHub advisory form.
+        """
+        if is_placeholder_address(self.security_contact_email):
+            return None
+        return (self.security_contact_email or "").strip()
 
     @property
     def sso_enabled(self) -> bool:

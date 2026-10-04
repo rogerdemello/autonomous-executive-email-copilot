@@ -148,3 +148,45 @@ def test_static_subroutes_not_shadowed_by_path_params() -> None:
     stats = client.get("/episodes/stats")
     assert stats.status_code == 200
     assert isinstance(stats.json(), dict)
+
+
+# --------------------------------------------------------------------------- #
+# What /docs shows an engineer who opens it
+# --------------------------------------------------------------------------- #
+def _operations() -> list[tuple[str, str, dict]]:
+    spec = app.openapi()
+    return [(m.upper(), p, op) for p, ops in spec["paths"].items() for m, op in ops.items()]
+
+
+def test_every_documented_endpoint_is_grouped() -> None:
+    """46 of 67 endpoints used to sit under one undifferentiated heading.
+
+    The product's own five groups were lost among the benchmark's routes, so the
+    first thing /docs showed an evaluator was a flat wall of simulator calls.
+    """
+    untagged = [f"{method} {path}" for method, path, op in _operations() if not op.get("tags")]
+    assert untagged == [], (
+        f"endpoints with no tag (add a prefix to app.main._TAG_BY_PREFIX): {untagged}"
+    )
+
+
+def test_every_tag_in_use_is_described() -> None:
+    spec = app.openapi()
+    described = {tag["name"] for tag in spec["tags"]}
+    used = {tag for _m, _p, op in _operations() for tag in op.get("tags", [])}
+    assert used <= described, (
+        f"tags with no description in _OPENAPI_TAGS: {sorted(used - described)}"
+    )
+
+
+def test_the_product_is_listed_before_the_benchmark() -> None:
+    names = [tag["name"] for tag in app.openapi()["tags"]]
+    assert names.index("inbox") < names.index("benchmark")
+    assert names.index("auth") < names.index("benchmark")
+
+
+def test_the_api_describes_the_product_not_only_the_simulator() -> None:
+    info = app.openapi()["info"]
+    assert "holds every outbound" in info["description"]
+    assert "RL-style" not in info["description"]
+    assert info["title"] == "Executive Email Copilot API"

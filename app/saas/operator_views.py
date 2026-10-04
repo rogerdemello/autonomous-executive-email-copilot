@@ -67,7 +67,9 @@ _billing = BillingService()
 def _templates():
     from fastapi.templating import Jinja2Templates
 
-    return Jinja2Templates(directory=str(TEMPLATES_DIR))
+    from app.web.assets import register
+
+    return register(Jinja2Templates(directory=str(TEMPLATES_DIR)))
 
 
 # --------------------------------------------------------------------------- #
@@ -184,6 +186,9 @@ def build_health(request: Request, now: datetime | None = None) -> dict:
             "spend_usd": round(sum(spend_by_org.values()), 2),
         },
         "connections": _safe(_mailboxes.count_by_status, {}),
+        # Counted, not listed: how many visitors of the public demo are inside a
+        # sandbox right now. Kept out of every figure above on purpose.
+        "sandboxes": _safe(_orgs.count_sandboxes, 0),
         "worker": _worker(request),
         "failed_sends": _failed_sends(),
         "leads": _safe(lambda: [lead for lead in _leads.list(limit=25)], []),

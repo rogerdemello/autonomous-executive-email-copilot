@@ -103,8 +103,10 @@ audit log.
 
 ## 5. Reset the demo between sales calls
 
-The public login page advertises the shared Northwind demo. Anything a
-visitor did with it is undone by:
+"Try the live demo" gives every visitor a private sandbox, so there is nothing
+to undo between visitors. Only the *shared* Northwind demo account (the
+prefilled sign-in, seeded by `make demo` or `DEMO_SEED_ON_STARTUP`) is shared;
+anything a visitor did with that one is undone by:
 
 ```bash
 curl -s -X POST $APP/operator/demo/reseed -H "Authorization: Bearer $OPERATOR_TOKEN"

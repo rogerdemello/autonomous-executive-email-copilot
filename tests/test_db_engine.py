@@ -85,6 +85,50 @@ def test_engine_kwargs_for_postgres_has_pool_tuning(url):
     assert "connect_args" not in kwargs
 
 
+@pytest.mark.skipif(
+    "sqlite" not in db.DATABASE_URL, reason="SQLite pragmas only apply to the SQLite backend"
+)
+def test_sqlite_connections_run_in_wal_mode():
+    """A web process commits once per repository call; SQLite's defaults fsync each.
+
+    Measured on the demo workspace (~260 commits): 3.7s on the defaults, 0.8s
+    with WAL + synchronous=NORMAL. WAL also stops the background sync worker's
+    writes from locking out request threads. Asserted on a *new* connection
+    because the pragmas are per-connection, not stored in the file's header
+    (except the journal mode, which is why that one is also safe to read back).
+    """
+    with db.engine.connect() as connection:
+        journal = connection.exec_driver_sql("PRAGMA journal_mode").scalar()
+        synchronous = connection.exec_driver_sql("PRAGMA synchronous").scalar()
+        busy = connection.exec_driver_sql("PRAGMA busy_timeout").scalar()
+    assert str(journal).lower() == "wal"
+    assert synchronous == 1  # NORMAL
+    assert busy == 5000
+
+
+def test_sqlite_pragmas_are_not_applied_to_postgres():
+    """The listener is attached only for the SQLite dialect.
+
+    A ``PRAGMA`` sent to Postgres is a syntax error at connect time, so this is
+    what keeps the CI Postgres job from failing on its first query. Neither
+    engine is connected to: ``create_engine`` is lazy, and the question is only
+    whether the listener got registered.
+    """
+    from sqlalchemy import create_engine, event
+
+    postgres = create_engine(POSTGRES_URL)
+    sqlite = create_engine(SQLITE_MEMORY_URL)
+    try:
+        assert db.attach_sqlite_pragmas(postgres) is False
+        assert not event.contains(postgres, "connect", db.configure_sqlite_connection)
+
+        assert db.attach_sqlite_pragmas(sqlite) is True
+        assert event.contains(sqlite, "connect", db.configure_sqlite_connection)
+    finally:
+        postgres.dispose()
+        sqlite.dispose()
+
+
 def test_default_engine_is_sqlite_and_crud_works():
     """The module-level engine defaults to SQLite and existing CRUD still works.
 

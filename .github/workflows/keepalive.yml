@@ -1,0 +1,55 @@
+# Keeps the public demo from sleeping.
+#
+# Render's free web services spin down after ~15 minutes without traffic, and the
+# next request waits 30-60 seconds on Render's "service waking up" screen — which
+# is what the first person to click a link you sent them would see, instead of
+# the product. A request every ten minutes keeps the instance warm.
+#
+# This is a stop-gap, not a fix. The fix is a paid plan (render.yaml provisions
+# one); see "If the service is on Render's free plan" in DEPLOYMENT_GUIDE.md.
+#
+# Notes:
+#   - Scheduled workflows run on the default branch only, and GitHub disables
+#     them after 60 days without repository activity (re-enable in the Actions
+#     tab). Cron timing is best-effort and can slip by several minutes.
+#   - The target is the `KEEPALIVE_URL` repository variable (Settings -> Secrets
+#     and variables -> Actions -> Variables), falling back to the URL in
+#     render.yaml. Set it if the service is served from a different address.
+#   - It asks `/health/live`, which has no dependencies: it wakes the process and
+#     touches nothing else. No third-party actions are used.
+name: Keep demo awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    # A fork has no deployment of its own to wake, and must not ping this one.
+    if: github.repository == 'rogerdemello/autonomous-executive-email-copilot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Ping /health/live
+        env:
+          URL: ${{ vars.KEEPALIVE_URL || 'https://exec-email-copilot.onrender.com' }}
+        run: |
+          # A cold start can take a minute, so allow it and try a few times.
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "${URL%/}/health/live" || true)
+            echo "attempt ${attempt}: HTTP ${code:-000}"
+            if [ "${code}" = "200" ]; then
+              exit 0
+            fi
+            sleep 15
+          done
+          # Deliberately not a failure: a red run every ten minutes during an
+          # outage would be noise. The annotation shows in the Actions tab.
+          echo "::warning title=Demo did not answer::${URL} returned no 200 after 3 attempts"

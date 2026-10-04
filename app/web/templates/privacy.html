@@ -4,6 +4,7 @@
 {% block description %}What mailbox data Executive Email Copilot accesses, why, where it is stored, how long it is kept, who it is shared with, and how to get it out or erase it.{% endblock %}
 
 {% block main %}
+{% from "_contact.html" import contact_link, security_link with context %}
 {# This page is two things at once: a contract with the user, and a submission
    to Google. The scope table below MUST stay in sync with the scopes actually
    requested in app/saas/oauth.py — requesting a scope the policy does not
@@ -34,7 +35,7 @@
   <p>
     Executive Email Copilot ("we", "the service") operates this application and
     is the controller of the personal data described here. Questions, requests,
-    and complaints: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>.
+    and complaints: {{ contact_link() }}.
   </p>
 
   <h2>What we access, and why</h2>
@@ -63,8 +64,9 @@
           <td class="mono">gmail.modify</td>
           <td>Read messages, and apply or remove labels</td>
           <td>
-            Reading the message is the product: triage, thread summary, risk
-            and deadline signals, and the draft itself are all derived from it.
+            Reading the message is the product: triage, risk and deadline
+            signals, the promises it contains, and the draft itself are all
+            derived from it.
             Labels are how a decision is recorded back in your mailbox
             (spam filed, deferred, escalated).
           </td>
@@ -104,7 +106,7 @@
         <tr>
           <td class="mono">Mail.Read</td>
           <td>Read messages in your mailbox</td>
-          <td>The same triage, summarization, and drafting as above.</td>
+          <td>The same triage and drafting as above.</td>
         </tr>
         <tr>
           <td class="mono">Mail.ReadWrite</td>
@@ -255,7 +257,7 @@
     you have the right to access, correct, export, restrict, or erase your
     personal data, and to object to its processing. The controls above deliver
     most of that immediately; for anything they do not cover, write to
-    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>.
+    {{ contact_link() }}.
   </p>
 
   <h2>Security</h2>
@@ -268,8 +270,8 @@
   </ul>
   <p>
     No service can promise perfect security, and we will not pretend
-    otherwise. If you find a vulnerability, please report it to
-    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>.
+    otherwise. If you find a vulnerability, please report it privately through
+    {{ security_link() }}.
   </p>
 
   <h2>Children</h2>
@@ -286,7 +288,7 @@
   </p>
 
   <p class="legal__updated">
-    Questions: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a> ·
+    Questions: {{ contact_link() }} ·
     <a href="/terms">Terms of service</a>
   </p>
 </article>

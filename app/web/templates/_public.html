@@ -15,6 +15,7 @@
       <a class="hide" href="/#how">How it works</a>
       <a class="hide" href="/#tour">See it work</a>
       <a class="hide" href="/#proof">Proof</a>
+      {% if demo_enabled %}<a class="hide" href="/demo">Live demo</a>{% endif %}
       <button
         class="theme-toggle"
         type="button"
@@ -42,10 +43,14 @@
           <a href="/#how">How it works</a>
           <a href="/#tour">See it work</a>
           <a href="/#proof">Proof</a>
+          {% if demo_enabled %}<a href="/demo">Live demo</a>{% endif %}
           {% if current_user %}
             <a href="/app/inbox">Open app</a>
           {% else %}
             <a href="/login">Sign in</a>
+            {# The header button is hidden on phones (app.css), where the hero has
+               the same call to action on screen, so it lives in the menu there. #}
+            <a href="/signup">Start free</a>
           {% endif %}
           <a href="/contact-sales">Talk to us</a>
         </div>
@@ -69,9 +74,14 @@
       <a href="/#day">A working day</a>
       <a href="/#proof">Proof</a>
       <a href="/contact-sales">Talk to us</a>
+      {# Open source, MIT: for this audience the repository is the strongest proof
+         on the page, and it was nowhere on it. #}
+      {% if repo_url %}<a href="{{ repo_url }}" rel="noopener">Source code</a>{% endif %}
     </nav>
     <div class="foot__meta">
-      <span class="mono">Sales: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a></span>
+      {% if sales_email %}
+        <span class="mono">Sales: <a href="mailto:{{ sales_email }}">{{ sales_email }}</a></span>
+      {% endif %}
       {# Legal sits on its own line, visually apart from product nav. Google
          requires a published privacy policy on the app's own domain before
          OAuth verification will even begin, and it must be reachable from

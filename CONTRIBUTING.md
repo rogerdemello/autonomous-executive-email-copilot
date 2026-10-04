@@ -34,8 +34,9 @@ make demo    # then open http://localhost:8000
 
 ## Conventions
 
-- Match the style of the surrounding code; the pre-commit config (ruff for Python,
-  eslint/prettier for TypeScript) is the source of truth.
+- Match the style of the surrounding code; the pre-commit config (ruff for lint and
+  format, plus whitespace and YAML/TOML checks) is the source of truth. There is no
+  frontend toolchain: the UI is server-rendered Jinja under `app/web`.
 - Keep public API response shapes stable; breaking changes need API versioning.
 - Preserve the score/log contract: the `inference.py` log format
   (`[START]/[STEP]/[END]`) and the open-interval `(0,1)` score contract.

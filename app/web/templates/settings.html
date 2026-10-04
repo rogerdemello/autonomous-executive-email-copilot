@@ -10,6 +10,18 @@
    one-time invite password, which is exactly the notice you least want
    duplicated down the page. #}
 
+{# A sandbox is an anonymous stranger's: the controls below that change who can
+   sign in, what is sent, or whether the workspace exists are refused by the
+   server (deps.reject_shared_demo_account). They are hidden here as well,
+   because a button that can only ever answer 403 is a worse demo than no button. #}
+{% set can_edit = can_manage and not sandbox %}
+{% if sandbox %}
+  <div class="banner" role="note">
+    This is a demo sandbox, so password, access-key, escalation, member and data controls
+    are switched off. <a href="/signup">Start your own workspace</a> to use them for real.
+  </div>
+{% endif %}
+
 <div class="grid-2">
   <div class="card">
     <div class="card__head"><span class="card__title">Workspace</span></div>
@@ -25,6 +37,7 @@
         <dd><span class="chip chip--accent">{{ current_user.role }}</span></dd>
       </dl>
 
+      {% if not sandbox %}
       <details class="disclosure">
         <summary class="muted">Change password</summary>
         <form method="post" action="/app/settings/password" class="disclosure__body">
@@ -42,6 +55,7 @@
           <button class="btn btn--sm" type="submit">Update password</button>
         </form>
       </details>
+      {% endif %}
     </div>
   </div>
 
@@ -76,7 +90,7 @@
         </a>
       {% endif %}
 
-      {% if is_owner %}
+      {% if is_owner and not sandbox %}
         <details class="disclosure">
           <summary class="muted">Have an access key?</summary>
           <form method="post" action="/app/settings/license" class="disclosure__body">
@@ -171,7 +185,7 @@
         <tr>
           <th scope="col">Role</th>
           <th scope="col">Goes to</th>
-          {% if can_manage %}
+          {% if can_edit %}
             <th scope="col"><span class="visually-hidden">Actions</span></th>
           {% endif %}
         </tr>
@@ -180,7 +194,7 @@
         {% for contact in escalation_contacts %}
           <tr>
             <td>{{ contact.label }}</td>
-            {% if can_manage %}
+            {% if can_edit %}
               <td colspan="2">
                 <form method="post" action="/app/settings/escalation" class="actions-row">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
@@ -270,7 +284,7 @@
     </table>
   </div>
 
-  {% if can_manage %}
+  {% if can_edit %}
     <div class="card__body card__body--divided">
       <form method="post" action="/app/members/invite">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
@@ -338,7 +352,7 @@
   {% endif %}
 </div>
 
-{% if is_owner %}
+{% if is_owner and not sandbox %}
   <div class="card card--stacked">
     <div class="card__head"><span class="card__title">Data &amp; danger zone</span></div>
     <div class="card__body">

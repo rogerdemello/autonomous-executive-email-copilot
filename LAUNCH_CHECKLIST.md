@@ -9,6 +9,35 @@ controls, so start it early and then forget about it.
 
 ---
 
+## 0. Before you send anyone the link (ten minutes, no waiting)
+
+Found by opening the deployed site as a stranger would. All of it is dashboard
+or repository-settings work, so none of it is in a commit.
+
+1. **Check what Render is actually running.** On 2026-10-04 the live instance
+   woke from sleep behind Render's "service waking up" screen, answered
+   `/health/ready` with `"worker": {"enabled": false}`, returned 404 from
+   `/operator`, and sent no HSTS header — i.e. it was **not** running this
+   repository's `render.yaml` (which is production mode, paid, with the worker
+   on). Re-create it from the Blueprint, or set those variables by hand and move
+   off the free plan. Until then `.github/workflows/keepalive.yml` pings it every
+   ten minutes, which narrows the sleep problem and fixes nothing else. Set the
+   `KEEPALIVE_URL` repository variable if the address is not the one in
+   `render.yaml`.
+2. **Set `SALES_CONTACT_EMAIL` and `SECURITY_CONTACT_EMAIL`** once there is a real
+   mailbox behind each. Blank is the right value until then: pages point at the
+   contact form, and `security.txt` at GitHub's private vulnerability reporting.
+3. **Turn on GitHub's private vulnerability reporting** (repository → Settings →
+   Code security → *Private vulnerability reporting*). `SECURITY.md` and
+   `/.well-known/security.txt` both send reporters there, and as of 2026-10-04 it
+   is disabled, so the link fails for anyone who is not a collaborator.
+4. **Update the repository description and topics.** It still reads "a
+   deterministic executive inbox simulation and benchmarking platform" — the
+   benchmark the product grew out of, and the first line a recruiter sees.
+5. **Press the button from a private window**, on a phone as well as a laptop:
+   landing → **Try the live demo** → the tour → the flagged draft. If the host
+   was asleep, note how long the wake took.
+
 ## 1. Register the Microsoft 365 app — **do this first**
 
 It has no review queue. You can have a real mailbox connected today.

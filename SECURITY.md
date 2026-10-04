@@ -65,15 +65,40 @@ request it.
 - Organization owners can **export** a complete, secret-free copy of their data
   and **permanently delete** the organization and every tenant-scoped record
   (right to erasure), gated behind an explicit confirmation.
+- "Every tenant-scoped record" is enforced, not asserted: export and delete walk
+  one list (`app/saas/data_lifecycle.py::TENANT_TABLES`), and a test reads the
+  live schema and fails the build if any table carrying an `org_id` is missing
+  from it. (Two tables once were: erasing a workspace left behind the model-spend
+  ledger and the colleague addresses in its escalation contacts, and on Postgres
+  the foreign key made the delete itself fail. Both are fixed and pinned.)
+
+### The public demo
+- "Try the live demo" builds each visitor a **private, auto-deleted sandbox**
+  (`app/saas/sandbox.py`), not a shared account with a published password. There
+  is no credential to leak: the owner's password is generated and discarded, and
+  its address is on `.invalid`, which can never be delivered.
+- It is bounded (per-IP rate limit, a hard cap on live sandboxes that refuses
+  rather than evicting a visitor), cleans up after itself (deleted at session
+  expiry, on sign-out, or when a build fails), cannot spend the deployment's
+  model budget, cannot attach a real mailbox, invite anyone, or change what the
+  deployment sends, and is never swept by the background worker. In production it
+  must be enabled explicitly (`DEMO_LOGIN_ENABLED=true`).
+- One honest limit: the per-IP limit trusts the proxy's `X-Forwarded-For`, which
+  a client can prepend to. The cap, not the limit, is what bounds the damage.
 
 ## Supply-chain & code security
 
-- CI runs **ruff**, **mypy**, **bandit** (SAST), and **pip-audit** (dependency
-  CVEs) on every change; the frontend runs eslint/prettier/type-check/build.
+- CI runs **ruff** (lint and format), **mypy**, **bandit** (SAST) and
+  **pip-audit** (dependency CVEs) on every change, plus the test suite with a
+  coverage gate, the same suite's database-touching half against a real
+  **Postgres**, a **Helm** lint/render job that must refuse unsafe
+  configurations, and a Docker build with a smoke test. There is no frontend
+  build: the UI is server-rendered Jinja with no Node toolchain.
 - A dedicated [Security Scan workflow](.github/workflows/security-scan.yml) runs
-  **CodeQL** (Python + JS/TS), **gitleaks** (secret scanning over full history),
-  and **Trivy** (container image CVE + misconfiguration scan); findings surface
-  in the repo Security tab.
+  **CodeQL** (Python, the two small scripts under `app/web/static`, and the
+  workflow files), **gitleaks** (secret scanning over full history), and
+  **Trivy** (container image CVE + misconfiguration scan); findings surface in
+  the repo Security tab.
 - Runtime dependencies are pinned in both `pyproject.toml` and `requirements.txt`.
 
 ## Production hardening checklist

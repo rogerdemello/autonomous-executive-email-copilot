@@ -63,6 +63,16 @@
       <a class="btn btn--block" href="/auth/sso/login">Sign in with SSO</a>
     {% endif %}
 
+    {# The way in for someone with no account. Before this, "Try the live demo"
+       led to this form, blank, with no credentials and no way to get any. #}
+    {% if demo_enabled %}
+      <div class="auth__rule">or</div>
+      <form method="post" action="/demo">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <button class="btn btn--block" type="submit">Open the live demo — no sign-up</button>
+      </form>
+    {% endif %}
+
     <p class="auth__alt">
       No account yet? <a href="/signup">Start a free trial</a>
     </p>

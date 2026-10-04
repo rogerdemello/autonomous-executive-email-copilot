@@ -35,6 +35,17 @@ CREATE TABLE saas_processed_messages (
 INSERT INTO saas_processed_messages (id, org_id, subject)
 VALUES ('m1', 'o1', 'a message from before the upgrade');
 
+-- A real customer's workspace from before sandboxes existed.
+CREATE TABLE saas_organizations (
+  id VARCHAR(32) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) NOT NULL UNIQUE,
+  created_at VARCHAR(50) NOT NULL,
+  updated_at VARCHAR(50) NOT NULL
+);
+INSERT INTO saas_organizations
+VALUES ('o1', 'Acme', 'acme', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00');
+
 CREATE TABLE schema_version (version INTEGER PRIMARY KEY, applied_at VARCHAR(50));
 INSERT INTO schema_version VALUES (1, '2026-01-01T00:00:00+00:00');
 """
@@ -108,3 +119,23 @@ def test_migration_is_idempotent(legacy_db):
 
     columns = {c["name"] for c in inspect(db_module.engine).get_columns("saas_processed_messages")}
     assert "received_at" in columns
+
+
+def test_migration_adds_the_sandbox_column_without_marking_real_orgs(legacy_db):
+    """A customer's workspace must come through the upgrade as a non-sandbox.
+
+    The column is what the purge deletes by. If an existing organization read as
+    expirable after this migration, the first sweep would erase a customer.
+    """
+    path, db_module = legacy_db
+    db_module.migrate_db()
+
+    columns = {c["name"] for c in inspect(db_module.engine).get_columns("saas_organizations")}
+    assert "sandbox_expires_at" in columns
+
+    connection = sqlite3.connect(path)
+    row = connection.execute(
+        "SELECT name, sandbox_expires_at FROM saas_organizations WHERE id = 'o1'"
+    ).fetchone()
+    connection.close()
+    assert row == ("Acme", None)

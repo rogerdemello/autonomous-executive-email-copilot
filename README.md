@@ -1,15 +1,32 @@
 # Executive Email Copilot
 
-![Tests](https://img.shields.io/badge/tests-1097%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-83%25-green)
+[![CI](https://github.com/rogerdemello/autonomous-executive-email-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/rogerdemello/autonomous-executive-email-copilot/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Build](https://img.shields.io/badge/docker-single--stage-2496ED)
 
 > **An email copilot for people whose inbox can't wait.** It reads a real mailbox,
 > triages by deadline and risk, drafts the replies worth sending, routes legal and
 > security matters to the right owner — and holds every outbound action for a human.
+
+## ▶ [Try the live demo](https://exec-email-copilot.onrender.com) — one click, no sign-up
+
+Press **Try the live demo** on the landing page and you are inside a private,
+fully triaged executive inbox: 51 messages already classified, 12 replies and
+escalations held for your approval, and the draft the verifier caught inventing
+a deadline. Nothing is sent anywhere, and the sandbox is deleted when you sign
+out. (The hosted instance can take up to a minute to wake if nobody has used it
+recently.)
+
+<p align="center">
+  <img src="app/web/static/img/product-inbox.png" width="49%" alt="The triaged inbox: 51 messages classified and ranked, 82 actions applied automatically, 12 waiting for a human" />
+  <img src="app/web/static/img/product-flagged.png" width="49%" alt="The verifier catching a draft that invents a 25 September deadline: 'The source never states 25', beside the source line it failed against" />
+</p>
+
+<sub>Real screenshots of the running app, captured by
+[`scripts/capture_screenshots.py`](scripts/capture_screenshots.py) — not mockups.
+Right: the model wrote "advise by 25 September" for a message whose deadline is
+30 September. The checker caught it and shows its evidence.</sub>
 
 Connect Gmail or Microsoft 365 and the copilot works the inbox: it classifies each
 message, infers priority, deadline, business value, and risk, then proposes an
@@ -23,29 +40,35 @@ mailbox tokens, a per-organization audit log, data export, and hard delete.
 
 ## See it in 60 seconds
 
-No API key, no OAuth credentials, no network:
+**Hosted:** open the [live demo](https://exec-email-copilot.onrender.com) and press
+**Try the live demo**.
+
+**Locally** — no API key, no OAuth credentials, no network, and no seeding step:
 
 ```bash
 pip install -r requirements.txt
-make demo                                  # seed the demo workspace
 uvicorn app.main:app --port 8000
 ```
 
-Open **http://localhost:8000** and walk:
+Open **http://localhost:8000** and press **Try the live demo**. That builds you a
+private sandbox workspace on the spot (about a second) and signs you in. There is
+nothing to seed and no password to find, so it works on an empty database too.
 
 | Step | What you see |
 |---|---|
-| `/` | The landing page — what the product is |
-| `/contact-sales` | The lead form. Self-serve is the default path; there is no pricing page |
-| `/login` | Pre-filled with the demo account — just press **Sign in** |
-| `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
-| `/app/inbox` | 50 triaged messages, with the copilot's reasoning and its drafts |
-| `/app/approvals` | The 11 actions waiting on a human |
+| `/` → **Try the live demo** | One click into a populated inbox, with a two-minute tour on top |
+| `/app/inbox` | 51 triaged messages, with the copilot's reasoning and its drafts |
+| `/app/approvals` | The 12 actions waiting on a human: 10 drafts verified against their source, 2 the verifier flagged |
 | `/app/waiting` | Promises found in the mail, in both directions, with dates |
-| `/app/activity` | The audit trail of everything that just happened |
+| `/app/activity` | The audit trail of everything you just did |
+| `/app/connect` | Gmail · Microsoft 365 · **Demo mailbox** |
+| `/contact-sales` | The lead form. Self-serve is the default path; there is no pricing page |
 
-[docs/DEMO.md](docs/DEMO.md) is a walkthrough script, including what is real and
-what is simulated.
+Every visitor gets a workspace of their own, so what one person approves never
+empties the queue for the next. [docs/DEMO.md](docs/DEMO.md) is a walkthrough
+script, including how the sandbox is bounded and what is real versus simulated.
+`make demo` still seeds a *shared* demo account with a prefilled sign-in, which
+some sales calls prefer.
 
 **The demo mailbox is content, not theatre.** Its routing is computed by the same
 `BaselinePolicy` that runs against a real Gmail account, from the same inferred
@@ -110,8 +133,8 @@ network), plus a model fact-check pass when live drafting is on. The verdict
 rides on the action as a "verified" or "check flagged" chip with the exact
 notes, so the reviewer knows where to look first. A flagged draft still
 queues: the human is the gate, verification is the flashlight. In the demo
-queue this is visible immediately — ten drafts verify, and one is flagged for
-that invented "25 September" deadline.
+queue this is visible immediately: ten drafts verify, and two are flagged — one
+for that invented "25 September" deadline.
 
 **Learning from the approval queue.** Every approve / amend-then-approve /
 reject is a labeled example, and the copilot uses all three
@@ -138,6 +161,29 @@ Inbound messages are scanned for prompt injection *before* they reach a provider
 and a message that tries to rewrite the instructions is never sent to one — it
 falls back to fixture prose and still reaches a human. Generated drafts are
 scanned again on the way out.
+
+## What to look at
+
+If you have ten minutes, these are the decisions worth reading, each with the code
+and the test that pins it:
+
+| Decision | Code | Pinned by |
+|---|---|---|
+| **Routing is deterministic; the model writes prose only** | [`app/copilot/policy.py`](app/copilot/policy.py), [`app/llm/drafter.py`](app/llm/drafter.py) | [`test_copilot_policy.py`](tests/test_copilot_policy.py); the drafter is tested for how it *fails* ([`test_llm_drafter.py`](tests/test_llm_drafter.py)) |
+| **Every draft is checked against its source** before it queues | [`app/llm/verifier.py`](app/llm/verifier.py), [`scripts/eval_drafts.py`](scripts/eval_drafts.py) | [`test_draft_verify.py`](tests/test_draft_verify.py), [`test_draft_eval.py`](tests/test_draft_eval.py), a CI gate and a [nightly job](.github/workflows/draft-eval.yml) |
+| **Inbound mail is screened for prompt injection** (pattern-based) before any model sees it | [`app/llm/safety/guardrails.py`](app/llm/safety/guardrails.py) | [`test_safety.py`](tests/test_safety.py) |
+| **Nothing outbound sends without a human**; no setting turns that off | [`app/saas/sync_service.py`](app/saas/sync_service.py) | [`test_inbox_pipeline.py`](tests/test_inbox_pipeline.py) |
+| **Tenant isolation and three ranked roles** | [`app/saas/repository.py`](app/saas/repository.py), [`rbac.py`](app/saas/rbac.py) | [`test_multitenant.py`](tests/test_multitenant.py), [`test_product_isolation.py`](tests/test_product_isolation.py) |
+| **OIDC single sign-on**, `id_token` verified RS256 against the issuer's JWKS | [`app/saas/oidc.py`](app/saas/oidc.py) | [`test_saas_sso.py`](tests/test_saas_sso.py) |
+| **Mailbox tokens encrypted at rest**, decrypted in exactly one module | [`app/saas/crypto.py`](app/saas/crypto.py) | [`test_saas_mailbox.py`](tests/test_saas_mailbox.py) |
+| **Erasure that provably covers every tenant table** — a test reads the live schema and fails on any `org_id` table it misses | [`app/saas/data_lifecycle.py`](app/saas/data_lifecycle.py) | [`test_saas_data_lifecycle.py`](tests/test_saas_data_lifecycle.py) |
+| **A model-spend ceiling per workspace**; at the cap, prose degrades and triage does not | [`app/saas/llm_budget.py`](app/saas/llm_budget.py) | [`test_llm_budget.py`](tests/test_llm_budget.py) |
+| **A public demo that cannot be abused**: private per-visitor sandbox, rate-limited, capped, auto-deleted, no model spend | [`app/saas/sandbox.py`](app/saas/sandbox.py) | [`test_demo_sandbox.py`](tests/test_demo_sandbox.py) |
+| **Providers tested against a stateful fake of Gmail's and Graph's HTTP APIs**, not a stub | [`tests/integration/`](tests/integration) | the suite itself — it found a revoked-token bug the unit tests could not |
+| **Observability**: OpenTelemetry traces (`gateway.request`, `inbox.sync`, `inbox.approve`, the model call), Prometheus metrics, a one-page operator console | [`telemetry/`](telemetry), [`app/saas/operator_views.py`](app/saas/operator_views.py) | [`test_otel_spans.py`](tests/test_otel_spans.py), [`test_observability.py`](tests/test_observability.py), [`test_operator_view.py`](tests/test_operator_view.py) |
+| **A benchmark with honest results**, including the ones that went against the design | [`research/`](research), [`docs/BENCHMARK.md`](docs/BENCHMARK.md) | CI re-runs the deterministic columns on every build |
+| **Episode replay** that survives a restart | `GET /replay/{episode_id}` in [`app/main.py`](app/main.py) | [`test_phase0_wiring.py`](tests/test_phase0_wiring.py) |
+| **Postgres and Kubernetes** | `psycopg`; [`helm/`](helm/exec-email-copilot) | a CI job runs the database suites on real Postgres; another lints and renders the chart and checks that unsafe configurations refuse to render |
 
 ## Project layout
 
@@ -551,11 +597,12 @@ WebSocket pong frame:
 ## UI
 
 Server-rendered from [app/web](app/web): Jinja templates plus one stylesheet, with
-no bundler and no build step. Pages: landing, login, signup, contact sales,
-privacy, terms, connect a mailbox, inbox, approvals, waiting on, activity,
-settings. Every
-action works as a plain form POST, so the app functions with JavaScript
-disabled.
+no bundler and no build step. Pages: landing, the live demo, login, signup, contact
+sales, privacy, terms, connect a mailbox, inbox, approvals, waiting on, activity,
+settings. Every action works as a plain form POST, so the app functions with
+JavaScript disabled. Static assets are fingerprinted (`?v=<digest>`) so a returning
+visitor never pairs new markup with an old stylesheet, and every page is checked
+for accessibility and for sideways scroll at 320px in both themes.
 
 ## Deployment Notes
 
@@ -610,7 +657,7 @@ provisioning under [telemetry/](telemetry/), and an ops [runbook](docs/RUNBOOK.m
 
 ## Testing Coverage
 
-**1097 tests pass at 83% coverage.** Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
+**1,362 tests pass at 85% coverage** (measured 2026-10-04; CI's gate is 78%, and the full run takes about fifteen minutes). Tests under [tests/](tests/) cover the web UI end to end (session gate, CSRF, the demo mailbox, the per-visitor demo sandbox, approvals), API contracts, determinism, grading bounds, the copilot's routing rules, schema migrations, LLM tool-call parsing, benchmark and report generation, and telemetry — plus a Hypothesis-driven property/invariant harness ([tests/harness/](tests/harness/)). Run the full CI gate locally with `make cov`.
 
 The drafter is tested for how it *fails* rather than how it writes ([tests/test_llm_drafter.py](tests/test_llm_drafter.py)): a missing key, a dead provider, a non-JSON answer, an injected message and a risky generation must each degrade to the fallback prose without raising, because all of them happen inside a request that is syncing someone's mailbox.
 

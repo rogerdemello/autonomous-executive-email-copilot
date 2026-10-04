@@ -35,6 +35,48 @@ DEMO_ESCALATION_CONTACTS = {
 }
 
 
+def populate_demo_workspace(owner: dict, *, live_llm: bool = False) -> dict:
+    """Give a workspace the demo mailbox, its escalation contacts, and triage it.
+
+    The one place the demo mailbox is attached and read. The seeded demo account
+    and every per-visitor sandbox (:mod:`app.saas.sandbox`) go through here, so
+    "what the demo shows" cannot drift between them. It is the same path a real
+    mailbox takes — a connection row, a provider from the factory, then
+    :meth:`InboxSyncService.sync` — and the mailbox's own identity stays
+    ``DEMO_OWNER_EMAIL`` whoever owns the workspace, because the routing
+    decides internal-versus-external senders from that domain.
+
+    ``live_llm`` is explicit and defaults off: the demo must show cached model
+    prose with no key and no network, and a sandbox must never be able to spend
+    the deployment's money. Returns the sync result.
+    """
+    from app.saas.provider_factory import build_provider
+    from app.saas.repository import EscalationContactRepository, MailboxRepository
+    from app.saas.sync_service import InboxSyncService
+
+    contacts = EscalationContactRepository()
+    for role, address in DEMO_ESCALATION_CONTACTS.items():
+        contacts.set_email(owner["org_id"], role, address)
+
+    connection = MailboxRepository().upsert_connection(
+        org_id=owner["org_id"],
+        provider=DEMO_PROVIDER_KEY,
+        account_email=DEMO_OWNER_EMAIL,
+        connected_by=owner["id"],
+        access_token_enc=None,
+        refresh_token_enc=None,
+        token_expires_at=None,
+        scopes=None,
+    )
+    return InboxSyncService().sync(
+        org_id=owner["org_id"],
+        user_id=owner["id"],
+        connection_id=connection["id"],
+        provider=build_provider(connection),
+        live_llm=live_llm,
+    )
+
+
 def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
     """Create or reset the demo workspace; idempotent and cheap when current.
 
@@ -49,22 +91,17 @@ def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
     from app.saas.billing import BillingService
     from app.saas.data_lifecycle import DataLifecycleService
     from app.saas.models_db import ProcessedMessage, ProposedAction
-    from app.saas.provider_factory import build_provider
     from app.saas.provisioning import provision_org
     from app.saas.repository import (
-        EscalationContactRepository,
-        MailboxRepository,
         OrganizationRepository,
         ProposedActionRepository,
         UserRepository,
     )
-    from app.saas.sync_service import InboxSyncService
 
     migrate_db()
 
     users = UserRepository()
     orgs = OrganizationRepository()
-    mailboxes = MailboxRepository()
     actions = ProposedActionRepository()
 
     existing = users.get_by_email_global(DEMO_OWNER_EMAIL)
@@ -100,27 +137,7 @@ def seed_demo(*, fresh: bool = False, live_llm: bool = False) -> dict:
         owner, org = result["owner"], result["organization"]
         logger.info("Created %s with owner %s", org["name"], owner["email"])
 
-    contacts = EscalationContactRepository()
-    for role, address in DEMO_ESCALATION_CONTACTS.items():
-        contacts.set_email(owner["org_id"], role, address)
-
-    connection = mailboxes.upsert_connection(
-        org_id=owner["org_id"],
-        provider=DEMO_PROVIDER_KEY,
-        account_email=DEMO_OWNER_EMAIL,
-        connected_by=owner["id"],
-        access_token_enc=None,
-        refresh_token_enc=None,
-        token_expires_at=None,
-        scopes=None,
-    )
-    sync_result = InboxSyncService().sync(
-        org_id=owner["org_id"],
-        user_id=owner["id"],
-        connection_id=connection["id"],
-        provider=build_provider(connection),
-        live_llm=live_llm,
-    )
+    sync_result = populate_demo_workspace(owner, live_llm=live_llm)
     pending = actions.list_for_org(owner["org_id"], status="proposed", limit=200)
     summary = {
         "created": created,

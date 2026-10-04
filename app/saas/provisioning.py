@@ -44,6 +44,8 @@ def provision_org(
     plan: str = "trial",
     seats: int | None = None,
     valid_days: int | None = None,
+    slug: str | None = None,
+    sandbox_expires_at: str | None = None,
 ) -> dict:
     """Create an org + owner + persisted starting license.
 
@@ -52,6 +54,11 @@ def provision_org(
     credential the operator hands to the customer — it appears exactly once,
     in this return value). Raises :class:`AuthError` on a taken email or an
     unknown plan.
+
+    ``slug`` skips the "first free ``name-N``" search — which is a query per
+    existing workspace with that name, so it is linear in how many there are —
+    for callers that already hold a unique one. ``sandbox_expires_at`` marks the
+    organization as a demo sandbox to be deleted at that instant.
     """
     orgs = OrganizationRepository()
     users = UserRepository()
@@ -73,7 +80,11 @@ def provision_org(
         temp_password = secrets.token_urlsafe(12)
         password = temp_password
 
-    org = orgs.create(name=org_name.strip() or "Workspace", slug=unique_slug(orgs, org_name))
+    org = orgs.create(
+        name=org_name.strip() or "Workspace",
+        slug=slug or unique_slug(orgs, org_name),
+        sandbox_expires_at=sandbox_expires_at,
+    )
     user = users.create(
         org_id=org["id"],
         email=email,

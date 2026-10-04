@@ -12,14 +12,25 @@
       {%- elif status_code == 409 %}Already handled
       {%- else %}Something went wrong{% endif -%}
     </h1>
-    <p class="auth__sub">{{ message }}</p>
+    {# FastAPI's own "Not Found" says nothing a person can act on; a specific
+       message ("That follow-up no longer exists") is kept as it is. #}
+    <p class="auth__sub">
+      {%- if status_code == 404 and message | lower == "not found" -%}
+        That page does not exist. Check the address, or start again from the home page.
+      {%- else -%}
+        {{ message }}
+      {%- endif -%}
+    </p>
 
     {% if current_user %}
       <a class="btn btn--primary btn--block" href="/app/inbox">Back to the inbox</a>
       <p class="auth__alt"><a href="/app/approvals">Approvals</a> · <a href="/app/connect">Mailboxes</a></p>
     {% else %}
-      <a class="btn btn--primary btn--block" href="/login">Sign in</a>
-      <p class="auth__alt"><a href="/">Home</a></p>
+      <a class="btn btn--primary btn--block" href="/">Back to the home page</a>
+      <p class="auth__alt">
+        {% if demo_enabled %}<a href="/demo">Try the live demo</a> · {% endif %}
+        <a href="/login">Sign in</a>
+      </p>
     {% endif %}
   </div>
 </div>

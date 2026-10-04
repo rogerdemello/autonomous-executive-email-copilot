@@ -50,7 +50,7 @@ body:
         - "reports"
         - "telemetry"
         - "server"
-        - "dashboard (frontend)"
+        - "web UI (server-rendered)"
         - "inference / CLI runner"
         - "docs"
         - "other"

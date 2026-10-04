@@ -57,20 +57,35 @@ def get_current_user(request: Request) -> dict:
 
 
 def reject_shared_demo_account(user: dict) -> None:
-    """Block the shared demo login from destructive/administrative actions.
+    """Block a demo login from destructive/administrative actions.
 
-    When the login page advertises the demo credential (``demo_login_active``),
-    anyone on the internet holds that session — so the demo owner must not be
-    able to change the password (locking out the next sales call), delete or
-    export the workspace, manage members, activate licenses, or disconnect the
-    mailbox. Triage itself (approve / reject / sync) stays allowed: that IS the
-    demo. Inert when the demo login is not advertised, so a private deployment
-    that happens to reuse the demo email is unaffected.
+    Two kinds of demo session are fenced here, for the same reason: whoever holds
+    one is an anonymous stranger.
+
+    - **A visitor's sandbox** (:mod:`app.saas.sandbox`) is always fenced, whether
+      or not the demo is currently advertised — a sandbox outlives a config
+      change until it expires, and it must not become a way to invite arbitrary
+      addresses, attach a real mailbox, or change what the deployment sends.
+    - **The shared demo account**, when the login page advertises its credential
+      (``demo_login_active``): anyone on the internet holds that session, so the
+      owner must not be able to change the password (locking out the next sales
+      call), delete or export the workspace, manage members, activate licenses,
+      or disconnect the mailbox. Inert when the demo login is not advertised, so
+      a private deployment that happens to reuse the demo email is unaffected.
+
+    Triage itself (approve / reject / sync) stays allowed for both: that IS the
+    demo.
     """
     from app.core.config import get_settings
 
     from .demo_seed import DEMO_OWNER_EMAIL
+    from .sandbox import is_sandbox_user
 
+    if is_sandbox_user(user):
+        raise HTTPException(
+            status_code=403,
+            detail="This demo sandbox can't do that. Start your own workspace to try it for real.",
+        )
     if not get_settings().demo_login_active:
         return
     if (user.get("email") or "").lower() == DEMO_OWNER_EMAIL.lower():

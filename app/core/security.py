@@ -134,22 +134,31 @@ def resolve_auth(
 
 
 class FixedWindowRateLimiter:
-    """Simple thread-safe fixed-window per-key rate limiter."""
+    """Simple thread-safe fixed-window per-key rate limiter.
 
-    def __init__(self) -> None:
+    ``window_seconds`` is a property of the *limiter*, not of each call, so a
+    limiter that guards something expensive (a whole demo workspace) can count
+    over ten minutes while every existing caller keeps its one-minute window and
+    the ``allow(key, limit)`` signature they already use.
+    """
+
+    def __init__(self, window_seconds: int = 60) -> None:
+        self.window_seconds = max(1, int(window_seconds))
         self._lock = threading.Lock()
-        # key -> (window_start_epoch_seconds, count)
+        # key -> (window_index, count)
         self._hits: dict[str, tuple[float, int]] = {}
 
     def allow(self, key: str, limit_per_minute: int, now: float | None = None) -> bool:
         """Return True if a request for ``key`` is allowed under the limit.
 
-        A non-positive limit disables rate limiting (always allowed).
+        The limit is per *window* (a minute unless the limiter was built with a
+        different ``window_seconds``; the parameter name predates that). A
+        non-positive limit disables rate limiting (always allowed).
         """
         if limit_per_minute <= 0:
             return True
         now = time.time() if now is None else now
-        window = int(now // 60)
+        window = int(now // self.window_seconds)
         with self._lock:
             start, count = self._hits.get(key, (window, 0))
             if start != window:
@@ -181,6 +190,20 @@ LEAD_SUBMISSIONS_PER_MINUTE = 5
 
 def lead_submission_allowed(ip: str) -> bool:
     return lead_rate_limiter.allow(f"lead:{ip}", LEAD_SUBMISSIONS_PER_MINUTE)
+
+
+# Opening the public demo provisions a whole workspace — an organization, an
+# owner, a license, a mailbox and ~150 triaged rows — from an unauthenticated
+# request. Ten minutes, not one: a minute-wide window lets one host fill the
+# sandbox quota in under an hour, and a recruiter behind an office NAT who opens
+# the demo twice should never notice the limit exists.
+SANDBOX_WINDOW_SECONDS = 600
+SANDBOXES_PER_WINDOW = 8
+sandbox_rate_limiter = FixedWindowRateLimiter(window_seconds=SANDBOX_WINDOW_SECONDS)
+
+
+def sandbox_creation_allowed(ip: str) -> bool:
+    return sandbox_rate_limiter.allow(f"sandbox:{ip}", SANDBOXES_PER_WINDOW)
 
 
 def login_attempt_allowed(ip: str, email: str, limit_per_minute: int) -> bool:

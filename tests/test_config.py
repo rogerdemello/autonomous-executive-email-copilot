@@ -172,3 +172,45 @@ def test_production_startup_accepts_real_auth_secret(monkeypatch):
             pass
 
     anyio.run(_boot)  # must not raise
+
+
+@pytest.mark.parametrize(
+    "address, placeholder",
+    [
+        (None, True),
+        ("", True),
+        ("   ", True),
+        ("not-an-address", True),
+        ("sales@", True),
+        ("sales@example.com", True),  # the old default, and what .env.example used to ship
+        ("Sales@Example.COM", True),
+        ("a@example.org", True),
+        ("a@example.net", True),
+        ("a@acme.example", True),  # reserved TLDs (RFC 2606)
+        ("a@sandbox.invalid", True),
+        ("a@corp.test", True),
+        ("a@dev.localhost", True),
+        ("hello@northwindlabs.io", False),
+        ("sales@example.co.uk", False),  # similar-looking, but not a reserved name
+        ("a@notexample.com", False),
+        ("a@my-example.com", False),
+    ],
+)
+def test_is_placeholder_address(address, placeholder):
+    from app.core.config import is_placeholder_address
+
+    assert is_placeholder_address(address) is placeholder
+
+
+def test_contact_addresses_default_to_unset(monkeypatch):
+    """Nothing is published about a deployment nobody configured."""
+    monkeypatch.delenv("SALES_CONTACT_EMAIL", raising=False)
+    monkeypatch.delenv("SECURITY_CONTACT_EMAIL", raising=False)
+    settings = get_settings()
+    assert settings.public_sales_email is None
+    assert settings.public_security_email is None
+
+
+def test_a_real_contact_address_is_published_trimmed(monkeypatch):
+    monkeypatch.setenv("SALES_CONTACT_EMAIL", "  hello@northwindlabs.io ")
+    assert get_settings().public_sales_email == "hello@northwindlabs.io"

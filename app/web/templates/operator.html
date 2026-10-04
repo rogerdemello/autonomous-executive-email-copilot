@@ -23,6 +23,9 @@
       <span class="n">{{ totals.workspaces }}</span>
       <span class="l">workspace{{ 's' if totals.workspaces != 1 }}</span>
       <span class="muted">{{ totals.members }} member{{ 's' if totals.members != 1 }}</span>
+      {% if sandboxes %}
+        <span class="muted">plus {{ sandboxes }} live demo sandbox{{ 'es' if sandboxes != 1 }}</span>
+      {% endif %}
     </div>
   </div>
 

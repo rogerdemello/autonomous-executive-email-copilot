@@ -131,6 +131,249 @@ def test_security_txt_served(client):
     assert "Expires:" in resp.text
 
 
+PUBLIC_PAGES = [
+    "/",
+    "/login",
+    "/signup",
+    "/contact-sales",
+    "/privacy",
+    "/terms",
+    "/forgot-password",
+]
+
+
+class TestNoPlaceholderContact:
+    """A placeholder address is a statement that nobody is there.
+
+    The deployed site rendered ``sales@example.com`` as a live mailto link in the
+    footer of every public page, and told readers of the privacy policy to send
+    their complaints and vulnerability reports to it. ``SALES_CONTACT_EMAIL`` was
+    never set on the deployment, and the default was the placeholder.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _unconfigured(self, monkeypatch):
+        monkeypatch.delenv("SALES_CONTACT_EMAIL", raising=False)
+        monkeypatch.delenv("SECURITY_CONTACT_EMAIL", raising=False)
+
+    @pytest.mark.parametrize("path", PUBLIC_PAGES)
+    def test_no_public_page_publishes_a_reserved_address(self, client, path):
+        import re
+
+        from app.saas.demo_seed import DEMO_OWNER_EMAIL
+
+        # The sign-in page deliberately shows the shared demo account's address
+        # (and prefills its password) whenever that account exists, and an
+        # earlier test in a full run will have seeded it. That is a credential on
+        # purpose, not a contact address, so it is not what this test is about.
+        body = client.get(path).text.replace(DEMO_OWNER_EMAIL, "")
+        offenders = re.findall(
+            r"[\w.+-]+@(?:[\w-]+\.)*(?:example\.(?:com|org|net)|\w+\.example)", body
+        )
+        assert not offenders, f"{path} publishes a placeholder address: {offenders}"
+        assert "mailto:" not in body, f"{path} links an address nobody configured"
+
+    def test_footer_points_at_the_contact_form_instead(self, client):
+        body = client.get("/").text
+        assert "Sales:" not in body
+        assert 'href="/contact-sales"' in body
+
+    def test_the_privacy_policy_still_tells_people_where_to_write(self, client):
+        """Hiding the address must not leave the policy with a hole in it."""
+        body = client.get("/privacy").text
+        assert 'href="/contact-sales"' in body
+        assert "GitHub&#39;s private vulnerability reporting" in body or (
+            "GitHub's private vulnerability reporting" in body
+        )
+
+    def test_a_configured_address_is_published_everywhere_it_belongs(self, client, monkeypatch):
+        monkeypatch.setenv("SALES_CONTACT_EMAIL", "hello@northwindlabs.io")
+        for path in ("/", "/privacy", "/terms", "/contact-sales"):
+            assert "mailto:hello@northwindlabs.io" in client.get(path).text, path
+
+    @pytest.mark.parametrize(
+        "copied", ["sales@example.com", "sales@acme.example", "x@sandbox.invalid"]
+    )
+    def test_a_copied_placeholder_is_treated_as_unset(self, client, monkeypatch, copied):
+        """`.env.example` used to ship `sales@example.com`; copying it must not publish it."""
+        monkeypatch.setenv("SALES_CONTACT_EMAIL", copied)
+        assert "mailto:" not in client.get("/").text
+
+    def test_security_txt_does_not_invent_a_security_mailbox(self, client):
+        """It used to rewrite `sales@` to `security@` — a guess at a mailbox that may not exist."""
+        body = client.get("/.well-known/security.txt").text
+        assert "example" not in body.lower().split("policy:")[0]
+        assert "Contact: https://github.com/" in body
+        assert "/security/advisories/new" in body
+
+    def test_security_txt_uses_a_configured_security_address(self, client, monkeypatch):
+        monkeypatch.setenv("SECURITY_CONTACT_EMAIL", "security@northwindlabs.io")
+        assert (
+            "Contact: mailto:security@northwindlabs.io"
+            in client.get("/.well-known/security.txt").text
+        )
+
+    def test_a_sales_address_is_never_promoted_to_a_security_one(self, client, monkeypatch):
+        monkeypatch.setenv("SALES_CONTACT_EMAIL", "hello@northwindlabs.io")
+        assert "security@northwindlabs.io" not in client.get("/.well-known/security.txt").text
+
+
+@pytest.mark.parametrize("path", ["/", "/login", "/privacy", "/demo"])
+def test_the_footer_links_to_the_source(client, path):
+    """The project is open source and the code is the strongest proof on offer."""
+    body = client.get(path).text
+    assert 'href="https://github.com/rogerdemello/autonomous-executive-email-copilot"' in body
+    assert "Source code" in body
+
+
+class TestPublicCopyMatchesTheProduct:
+    """Copy that sells a capability nobody built is a bug an engineer will find.
+
+    The hero said the product "summarizes long threads", the marquee said
+    "Threads summarized in seconds", and the privacy policy listed "thread
+    summary" among the things it does with your mail. Nothing generates a thread
+    summary: threads are grouped and shown, never summarized. "RAG" and "Semantic
+    search" were chips on the landing page with no embedding, vector store or
+    search behind them, and the "typed tools" pillar described the benchmark's LLM
+    agent — the product's own routing is deterministic code and the model writes
+    prose only.
+
+    Each phrase below is off-limits *until the thing exists*. If you build it,
+    delete the phrase here in the same change; that is the point of the friction.
+    """
+
+    NOT_BUILT = {
+        "summarizes long threads": "no thread summarizer exists",
+        "threads summarized": "no thread summarizer exists",
+        "thread summary": "no thread summarizer exists",
+        "semantic search": "no embeddings, vector store or search",
+        ">rag<": "no retrieval index; the drafter gets one message, signals and style examples",
+        "typed tools": "the product routes with BaselinePolicy; tool calling is the benchmark agent",
+        "retrieves the thread": "the drafter is not given the thread's earlier messages",
+    }
+
+    @pytest.mark.parametrize("path", ["/", "/privacy", "/terms", "/contact-sales", "/demo"])
+    def test_no_page_claims_what_is_not_built(self, client, path):
+        body = client.get(path).text.lower()
+        for phrase, why in self.NOT_BUILT.items():
+            assert phrase not in body, f"{path} claims {phrase!r}, but {why}"
+
+    def test_the_share_preview_does_not_either(self, client):
+        """The meta description is what a link unfurls to, so it is public copy too."""
+        import re
+
+        html = client.get("/").text
+        og = re.search(r'property="og:description"\s+content="([^"]*)"', html).group(1).lower()
+        assert "summariz" not in og and "context-aware" not in og
+
+    def test_what_the_page_says_instead_is_true(self, client):
+        """The replacements name things with code behind them."""
+        body = client.get("/").text
+        assert (
+            "Code decides, the model writes" in body
+        )  # app/copilot/policy.py + app/llm/drafter.py
+        assert "Draft verification" in body  # app/llm/verifier.py
+        assert "Injection screening" in body  # app/llm/safety/guardrails.py
+
+
+class TestLinkPreviewAndCrawlers:
+    """A link someone pastes to a recruiter is read by a crawler before it is read
+    by a person. Without Open Graph tags it unfurls as a bare title; without a
+    canonical and a sitemap, a search engine guesses."""
+
+    def _meta(self, html: str, key: str, attr: str = "property") -> str:
+        import re
+
+        match = re.search(rf'<meta\s+{attr}="{re.escape(key)}"\s+content="([^"]*)"', html)
+        assert match, f"no <meta {attr}={key!r}> on the page"
+        return match.group(1)
+
+    def test_the_landing_page_unfurls_with_a_picture(self, client):
+        html = client.get("/").text
+        assert self._meta(html, "og:title").startswith("Executive Email Copilot")
+        assert len(self._meta(html, "og:description")) > 60
+        assert self._meta(html, "og:type") == "website"
+        assert self._meta(html, "twitter:card", "name") == "summary_large_image"
+        assert (self._meta(html, "og:image:width"), self._meta(html, "og:image:height")) == (
+            "1200",
+            "630",
+        )
+
+    def test_the_preview_image_is_absolute_and_actually_there(self, client):
+        """A crawler has no page to resolve a relative URL against."""
+        image = self._meta(client.get("/").text, "og:image")
+        assert image.startswith("http://testserver/"), image
+        response = client.get(image.removeprefix("http://testserver"))
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "image/jpeg"
+        # WhatsApp drops previews whose image is much past ~300 KB.
+        assert 10_000 < len(response.content) < 300_000
+
+    def test_the_canonical_url_is_this_page_without_the_query(self, client):
+        html = client.get("/privacy?utm_source=linkedin").text
+        assert '<link rel="canonical" href="http://testserver/privacy" />' in html
+        assert self._meta(html, "og:url") == "http://testserver/privacy"
+
+    def test_a_configured_public_url_wins(self, client, monkeypatch):
+        monkeypatch.setenv("APP_PUBLIC_URL", "https://copilot.northwindlabs.io/")
+        html = client.get("/").text
+        assert (
+            self._meta(html, "og:image")
+            == "https://copilot.northwindlabs.io/static/img/og-card.jpg"
+        )
+        assert "https://copilot.northwindlabs.io/sitemap.xml" in client.get("/robots.txt").text
+
+    def test_nothing_publishes_localhost_when_unconfigured(self, client, monkeypatch):
+        """`resolved_app_public_url` falls back to http://localhost:8000."""
+        monkeypatch.delenv("APP_PUBLIC_URL", raising=False)
+        monkeypatch.delenv("OAUTH_REDIRECT_BASE_URL", raising=False)
+        for path in ("/", "/robots.txt", "/sitemap.xml", "/.well-known/security.txt"):
+            assert "localhost" not in client.get(path).text, path
+
+    def test_private_pages_are_not_indexable_and_public_ones_are(self, client):
+        public = client.get("/").text
+        assert 'name="robots"' not in public
+
+        signed_in = TestClient(app, follow_redirects=False)
+        signed_in.post("/demo", data={"csrf_token": _csrf(signed_in.get("/").text)})
+        assert (
+            '<meta name="robots" content="noindex, nofollow" />' in signed_in.get("/app/inbox").text
+        )
+
+    def test_robots_txt_hides_the_product_and_points_at_the_sitemap(self, client):
+        response = client.get("/robots.txt")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/plain")
+        body = response.text
+        assert "User-agent: *" in body
+        for private in ("/app/", "/auth/", "/org/", "/mailbox/", "/inbox/", "/operator"):
+            assert f"Disallow: {private}" in body, private
+        assert "Sitemap: http://testserver/sitemap.xml" in body
+
+    def test_every_sitemap_url_is_a_real_public_page(self, client):
+        import xml.etree.ElementTree as ET
+
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/xml")
+        ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        locs = [el.text for el in ET.fromstring(response.text).findall("s:url/s:loc", ns)]
+        assert locs and all(loc.startswith("http://testserver/") for loc in locs)
+        for loc in locs:
+            assert client.get(loc.removeprefix("http://testserver")).status_code == 200, loc
+        assert "http://testserver/demo" in locs
+
+    def test_the_sitemap_does_not_list_a_demo_that_is_off(self, client, monkeypatch):
+        monkeypatch.setenv("DEMO_LOGIN_ENABLED", "false")
+        assert "/demo" not in client.get("/sitemap.xml").text
+
+    def test_security_txt_names_the_real_origin(self, client):
+        assert (
+            "Canonical: http://testserver/.well-known/security.txt"
+            in client.get("/.well-known/security.txt").text
+        )
+
+
 def test_pricing_page_redirects_home(client):
     # There is no public pricing page; old links land home rather than on a 404.
     resp = client.get("/pricing", follow_redirects=False)

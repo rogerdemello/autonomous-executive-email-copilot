@@ -6,15 +6,27 @@ the follow-up question.
 
 ## Before you start
 
+**Hosted.** Open the live instance and press **Try the live demo** on the landing
+page. If nobody has used it recently the host may need up to a minute to wake;
+open it a couple of minutes before you present.
+
+**Locally:**
+
 ```bash
 pip install -r requirements.txt
-make demo                          # or: python scripts/seed_demo.py
 uvicorn app.main:app --port 8000
 ```
 
-`make demo` is idempotent — run it again between rehearsals to reset the
-workspace to a clean state. `python scripts/seed_demo.py --fresh` deletes the
-organization and rebuilds it from scratch.
+Open `http://localhost:8000` and press **Try the live demo**. There is nothing to
+seed: the button builds the visitor a private sandbox workspace — organization,
+owner, mailbox attached and triaged — in about a second, and signs them in. It
+works on an empty database, and every visitor starts from the same untouched
+inbox, so approving everything in one rehearsal does not empty the next.
+
+Optional: `make demo` (or `python scripts/seed_demo.py`) also seeds a *shared*
+demo account with a prefilled sign-in, which some sales calls prefer. It is
+idempotent — run it again between rehearsals to reset it — and
+`python scripts/seed_demo.py --fresh` deletes the organization and rebuilds it.
 
 **No network, no API key, no OAuth credentials.** If the venue's wifi fails, the
 demo still runs. The output is identical every time.
@@ -41,8 +53,8 @@ If it says `authored fixture prose` or `the policy's generic sentence` instead,
 the cache is empty — the demo still works, it just falls back to the written
 fixtures. Check this line before you present.
 
-Sign in with `alex.chen@northwind.example` / `demo1234`. The login page shows
-these credentials automatically whenever the demo account exists.
+The shared account, if you seeded it, is `alex.chen@northwind.example` /
+`demo1234`, and the login page prefills it. The one-click demo needs neither.
 
 ---
 
@@ -71,11 +83,17 @@ There is no pricing page. `/pricing` 301s to the homepage, so do not open it.
 > syncing and approvals pause and nothing is deleted. What it costs after that
 > is a conversation, which is why there is no price on the site."
 
-### 3. Sign in — `/login`
+### 3. Open the demo — **Try the live demo**
 
-Use the demo credentials shown on the page.
+Press the button under the headline. One click, no form: you land in `/app/inbox`
+with a two-minute tour across the top, and a **Demo sandbox** strip on every page
+saying what this is.
 
-If someone asks about SSO: the **Sign in with SSO** button appears when `OIDC_ISSUER`,
+> "That just built me a private workspace. Nobody else is in it, nothing I do
+> here is sent anywhere, and it is deleted when I sign out."
+
+If someone asks about sign-in: `/login` is the ordinary form, and it also offers
+the demo button for anyone without an account. If someone asks about SSO: the **Sign in with SSO** button appears when `OIDC_ISSUER`,
 `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are configured. The flow does real
 RS256 verification of the id_token against the issuer's published JWKS.
 
@@ -90,6 +108,10 @@ Three cards: Gmail, Microsoft 365, and the demo mailbox.
 Click **Use the demo mailbox**. This creates a mailbox connection and immediately
 runs a sync — the same code path a real Gmail connection takes. Only the provider
 differs.
+
+(Inside a demo sandbox the demo mailbox is already attached, which is why the
+inbox was full the moment you arrived. To show this step happening, sign up for a
+throwaway workspace at `/signup` and connect it here.)
 
 ### 5. The inbox — `/app/inbox`
 
@@ -169,10 +191,13 @@ The draft is a textarea — change a sentence, then approve.
 > is add a label."
 
 > "Every held draft also carries a verification verdict — a second pass checked
-> the prose against the source message before it queued. Most say
-> 'verified'. One says 'check flagged': the model wrote 'by 25 September' for a
-> message whose deadline is 30 September, and the verifier caught it. That's
-> the system catching its own model inventing a fact, in front of you."
+> the prose against the source message before it queued. Ten say 'verified'. Two
+> say 'check flagged'. In one, the model wrote 'by 25 September' for a message
+> whose deadline is 30 September, and the verifier caught it: it shows the
+> sentence, the source line it failed against, and a button that removes it.
+> That's the system catching its own model inventing a fact, in front of you."
+
+The tour's third step links straight to the first flagged draft.
 
 > "And notice the draft is editable. What you send is what you wrote — and the
 > copilot keeps the pair. Your edits become voice examples for future drafts,
@@ -221,6 +246,11 @@ workspace slug.
 > approvals with a clear 402 — sign-in, settings, export and delete stay open,
 > because those are exactly what you need when access has lapsed."
 
+In a demo sandbox most of this page is deliberately read-only — password, access
+key, escalation contacts, members, export and delete are hidden, because a
+sandbox belongs to an anonymous stranger and the server refuses them anyway. To
+walk through them, sign up for a real throwaway workspace.
+
 ---
 
 ## What is real, and what is not
@@ -247,6 +277,28 @@ Be direct about this. It lands better than hedging.
   generated by the configured model against the real message, through
   `app/llm/drafter.py`, and cached to `data/demo/drafts.json` at seed time. They
   are replayed rather than regenerated, but they are not written by hand.
+
+**The sandbox itself is real too** — and worth explaining if asked why the demo
+is not a shared login. Each click builds a genuine workspace through the same code
+a signup uses (organization, owner, trial license), attaches the demo mailbox and
+triages it with the production pipeline. Because it is private there is nothing to
+reset, and because it is built on demand it works on an empty database. It is
+safe to hang off an unauthenticated button because of what bounds it
+(`app/saas/sandbox.py`, pinned by `tests/test_demo_sandbox.py`):
+
+- **Bounded.** A per-address rate limit (8 per ten minutes) and a hard cap on live
+  sandboxes that refuses new ones rather than evicting someone mid-demo.
+- **Self-cleaning.** Deleted when the session that opened it would have expired,
+  when the visitor signs out, or immediately if the build fails — by the same
+  hard-delete a customer's erasure uses.
+- **Unable to spend.** A sandbox never drafts with a live model, even on a
+  deployment where drafting is on, so a stranger cannot run up the model bill.
+- **Unable to reach out.** No real mailbox can be connected, no member invited, no
+  email sent (its owner's address is on `.invalid`, which never delivers), no
+  password or license changed. The background worker never sweeps it.
+
+The honest limit: the per-address limit trusts the proxy's `X-Forwarded-For`,
+which a client can prepend to, so the *cap* is what bounds a determined abuser.
 
 **Simulated:**
 
@@ -305,17 +357,27 @@ Yes. One container, SQLite by default, `DATABASE_URL` for Postgres. There is a
 Helm chart under `helm/` and a Render blueprint.
 
 **"How is this tested?"**
-Over nine hundred tests. The demo path you just walked is covered end to end in
-`tests/test_web_pages.py`, including the session gate, CSRF, and that approving
-actually transitions the action and records an audit entry.
+Well over a thousand tests; the README has the current count and the command that
+reproduces it. The demo path you just walked is covered end to end in
+`tests/test_web_pages.py` and `tests/test_demo_sandbox.py` — including the session
+gate, CSRF, isolation between visitors, and that approving actually transitions
+the action and records an audit entry — and a real browser drives the same path
+at phone width in `tests/test_web_reflow.py`.
 
 ---
 
 ## If something goes wrong
 
-- **Inbox is empty** — the mailbox is connected but not synced. Click **Sync
-  mailbox**, or re-run `make demo`.
-- **Login rejected** — the demo account doesn't exist yet. Run `make demo`.
+- **The hosted page shows "service waking up"** — the free host slept. Wait a
+  minute; the next visitor will not see it.
+- **Inbox is empty** — you are in a sandbox you have already emptied, or the
+  mailbox is not synced. Click **Sync mailbox**, or sign out and press **Try the
+  live demo** again for a fresh one.
+- **The demo button says it is busy, or that you opened it several times** — the
+  sandbox is rate-limited and capped. Wait a few minutes.
+- **You were sent to the sign-in page mid-demo** — the session or the host's
+  database was reset. Press **Open the live demo** there.
 - **A form returns 403** — the CSRF token expired (they last 8 hours). Reload.
 - **Port in use** — `uvicorn app.main:app --port 8001`.
-- **Total reset** — `python scripts/seed_demo.py --fresh`.
+- **Shared account: login rejected or stale** — `make demo`, or
+  `python scripts/seed_demo.py --fresh` for a total reset.

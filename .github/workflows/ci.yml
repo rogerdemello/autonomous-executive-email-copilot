@@ -111,7 +111,7 @@ jobs:
           tests/test_repositories.py tests/test_saas_api.py
           tests/test_saas_auth_core.py tests/test_saas_licensing.py
           tests/test_saas_data_lifecycle.py tests/test_operator_api.py
-          tests/test_demo_guardrails.py
+          tests/test_demo_guardrails.py tests/test_demo_sandbox.py
 
   invariant-harness:
     runs-on: ubuntu-latest

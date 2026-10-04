@@ -2,12 +2,37 @@
 
 {# Chrome for the signed-in product: sidebar nav + page header. #}
 
+{# Private pages are not search results: a crawler that follows a link in gets
+   the sign-in redirect, and a logged-in page must never be indexed. robots.txt
+   asks the same; this is the version a crawler cannot miss. #}
+{% block robots %}<meta name="robots" content="noindex, nofollow" />{% endblock %}
+
 {% block body %}
 {# The skip link .visually-hidden was written for. Sidebar nav is five links
    plus a sign-out form, which every keyboard and screen-reader user had to
    walk past on every page load to reach the content. #}
 <a class="skip-link" href="#content">Skip to content</a>
-<div class="shell">
+<div class="shell{% if sandbox %} shell--sandbox{% endif %}">
+  {# Inside a visitor's demo sandbox, say what this is on every page: whose it
+     is, that nothing leaves it, and when it goes. A visitor who forgets they
+     are in a fixture — and wonders where their reply went — is a worse outcome
+     than a line of chrome. First child of the grid, spanning every column, so
+     it is the top of the page on a laptop and the first thing on a phone, where
+     the sidebar stacks above the content. #}
+  {% if sandbox %}
+    <div class="sandbox-bar" role="note" aria-label="Demo sandbox">
+      <span class="sandbox-bar__tag">Demo sandbox</span>
+      <span class="sandbox-bar__text">
+        A fictional executive's inbox, private to you. Nothing here is sent anywhere. It is
+        deleted when you sign out, or in about {{ sandbox.hours_left }}
+        hour{{ 's' if sandbox.hours_left != 1 }}.
+      </span>
+      <span class="sandbox-bar__links">
+        <a href="/app/inbox?tour=1#demo-tour">Two-minute tour</a>
+        <a href="/signup">Start your own workspace</a>
+      </span>
+    </div>
+  {% endif %}
   <aside class="side">
     <a class="logo" href="/app/inbox"><span class="glyph">EC</span> Email Copilot</a>
 

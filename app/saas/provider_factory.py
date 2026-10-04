@@ -48,7 +48,19 @@ def _expiry_iso(token_response: dict) -> str | None:
 
 
 def _make_refresher(connection: dict):
-    """Return a zero-arg callable that refreshes and persists the access token."""
+    """Return a zero-arg callable that refreshes and persists the access token.
+
+    A refusal here is the end of the mailbox until a human reconnects it, so it
+    is flagged as such rather than raised as an ordinary error. Until it was,
+    this was the quietest failure in the product: the refresh happens deep
+    inside a provider call, hours or days after the connect, and
+    ``OAuthExchangeError`` escaped all the way out — 500-ing "Sync now", and in
+    the background worker landing in its catch-all, which logs a stack trace and
+    backs off. The connection stayed ``connected``, so the banner never showed,
+    the admins were never emailed, nothing reached the audit log, and the worker
+    re-attempted it every interval forever. The symptom was an inbox that had
+    stopped filling, which is indistinguishable from a quiet week.
+    """
     org_id = connection["org_id"]
     provider_key = connection["provider"]
     account_email = connection["account_email"]
@@ -61,16 +73,48 @@ def _make_refresher(connection: dict):
         provider_obj = oauth.get_provider(provider_key)
         client_id, client_secret = oauth.provider_credentials(provider_key)
         if provider_obj is None or not client_id or not client_secret:
-            raise oauth.OAuthExchangeError(f"{provider_key} is not configured for refresh")
-        resp = oauth.refresh_tokens(
-            provider_obj,
-            refresh_token=vault.decrypt(refresh_token_enc),
-            client_id=client_id,
-            client_secret=client_secret,
-        )
+            raise _mark_broken(
+                connection,
+                f"{provider_key} is no longer configured on this server, so this "
+                "mailbox cannot be refreshed.",
+            )
+        try:
+            resp = oauth.refresh_tokens(
+                provider_obj,
+                refresh_token=vault.decrypt(refresh_token_enc),
+                client_id=client_id,
+                client_secret=client_secret,
+            )
+        except oauth.OAuthExchangeError as exc:
+            if not exc.is_refusal():
+                # Unreachable, or the provider is having a bad minute. Nothing
+                # is wrong with this mailbox, so it must not be flagged and the
+                # customer must not be told to reconnect it: let it raise, and
+                # the worker backs off and tries again on the next sweep.
+                logger.warning(
+                    "Refresh could not be completed for connection %s: %s",
+                    connection.get("id"),
+                    exc,
+                )
+                raise
+            # A refusal — invalid_grant. The customer removed the app, an
+            # administrator revoked it, or a Google consent screen left in
+            # "Testing" hit its seven-day expiry. Nothing here can recover it,
+            # and retrying spends the provider's rate limit on a token that will
+            # never work again.
+            logger.info("Refresh refused for connection %s: %s", connection.get("id"), exc)
+            raise _mark_broken(
+                connection,
+                "Access to this mailbox was revoked or has expired. "
+                "Reconnect it to continue syncing.",
+            ) from exc
         new_access = resp.get("access_token")
         if not new_access:
-            raise oauth.OAuthExchangeError("refresh returned no access_token")
+            raise _mark_broken(
+                connection,
+                "The mailbox provider refreshed without returning an access "
+                "token. Reconnect it to continue syncing.",
+            )
         new_refresh = resp.get("refresh_token")
         MailboxRepository().upsert_connection(
             org_id=org_id,

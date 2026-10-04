@@ -278,12 +278,31 @@ class TestDemoMailbox:
         pending = ProposedActionRepository().list_for_org(org_id, status="proposed")
         assert pending["total"] > 0, "the demo must leave work in the approval queue"
 
-    def test_inbox_shows_messages_and_the_copilot_panel(self, with_demo_mailbox):
+    def test_inbox_lists_the_messages(self, with_demo_mailbox):
         client, _ = with_demo_mailbox
         response = client.get("/app/inbox")
         assert response.status_code == 200
         assert "indemnification" in response.text  # a message from the fixture
-        assert "Copilot" in response.text
+        # The list is the whole screen now and opens nothing by default, so the
+        # reader and the copilot panel belong to the next assertion, not this
+        # one. A message pre-opened beside the list left the message itself
+        # ~256px wide at the viewport a 1080p laptop actually reports.
+        assert 'class="maillist"' in response.text
+        # The panel's own marker, not the word "Copilot": that is in the page
+        # <title> and the sidebar logo on every signed-in page, so asserting its
+        # absence could never pass, and asserting its presence proved nothing.
+        assert "inbox__copilot" not in response.text
+
+    def test_opening_a_message_shows_the_copilot_panel(self, with_demo_mailbox):
+        from app.saas.repository import UserRepository
+
+        client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        target = ProcessedMessageRepository().list_for_org(org_id)["messages"][0]
+
+        response = client.get(f"/app/inbox?message={target['id']}")
+        assert response.status_code == 200
+        assert "inbox__copilot" in response.text
         assert "Priority" in response.text and "Risk" in response.text
 
     def test_inbox_without_a_mailbox_explains_what_to_do(self, signed_in):
@@ -642,10 +661,16 @@ class TestRoleGating:
         assert ProposedActionRepository().get(org_id, target["id"])["status"] == "proposed"
 
     def test_a_member_still_sees_the_inbox_read_only(self, with_demo_mailbox):
+        from app.saas.repository import UserRepository
+
         client, email = with_demo_mailbox
+        org_id = UserRepository().get_by_email_global(email)["org_id"]
+        held = ProposedActionRepository().list_for_org(org_id, status="proposed")["actions"][0]
         self._demote_to_member(email)
 
-        response = client.get("/app/inbox")
+        # Read-only is a property of the message screen, where the draft and
+        # the approve button live, so open one rather than the list.
+        response = client.get(f"/app/inbox?message={held['message_id']}")
         assert response.status_code == 200
         assert "Waiting on an admin" in response.text
 
@@ -1174,3 +1199,61 @@ class TestSettingsManagement:
         )
         assert response.status_code == 303
         assert UserRepository().get_by_email_global(email) is None
+
+
+# --------------------------------------------------------------------------- #
+# A URL that matches nothing
+# --------------------------------------------------------------------------- #
+class TestUnknownUrls:
+    """Somebody pasting a link with a capital letter in it should land on the
+    product, not on a black screen that says {"detail":"Not Found"}."""
+
+    BROWSER = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
+
+    def test_a_browser_gets_a_page_with_a_way_back(self, client):
+        response = client.get("/this-page-does-not-exist", headers=self.BROWSER)
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("text/html")
+        assert "does not exist" in response.text
+        assert 'href="/"' in response.text
+
+    def test_it_offers_the_demo_when_there_is_one(self, client):
+        html = client.get("/Demo", headers=self.BROWSER).text  # paths are case-sensitive
+        assert 'href="/demo"' in html
+
+    def test_it_does_not_offer_a_demo_that_is_off(self, client, monkeypatch):
+        monkeypatch.setenv("DEMO_LOGIN_ENABLED", "false")
+        assert 'href="/demo"' not in client.get("/nope", headers=self.BROWSER).text
+
+    @pytest.mark.parametrize("accept", ["*/*", "application/json", None])
+    def test_machine_clients_keep_the_json_contract(self, client, accept):
+        """curl and every HTTP library send */*; none of them wants HTML."""
+        headers = {"Accept": accept} if accept else {}
+        if accept is None:
+            headers = {"Accept": ""}
+        response = client.get("/this-page-does-not-exist", headers=headers)
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("application/json")
+        assert response.json() == {"detail": "Not Found"}
+
+    def test_only_not_found_is_rewritten(self, client):
+        """A 405 on an API path is still the API's JSON, browser or not."""
+        response = client.delete("/health", headers=self.BROWSER)
+        assert response.status_code == 405
+        assert response.headers["content-type"].startswith("application/json")
+
+    def test_a_specific_message_is_kept(self, with_demo_mailbox):
+        """Only FastAPI's generic "Not Found" is replaced; a real explanation is not."""
+        client, _ = with_demo_mailbox
+        page = client.get("/app/approvals").text
+        response = client.post(
+            "/app/actions/no-such-action/approve", data={"csrf_token": csrf_from(page)}
+        )
+        assert response.status_code == 404
+        assert "That page does not exist" not in response.text
+
+    def test_the_demo_route_is_a_web_path(self):
+        """Left off this list, /demo's own 404 and 503 came back as raw JSON."""
+        from app.web.routes import is_web_path
+
+        assert is_web_path("/demo")

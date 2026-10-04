@@ -1,0 +1,26 @@
+{# Where a reader is told to write, with an honest fallback.
+
+   `sales_email` / `security_email` are None unless the operator configured a
+   real address (app.core.config.is_placeholder_address). The old template
+   interpolated the address unconditionally, so an unconfigured deployment
+   published `sales@example.com` — as a mailto: link in every footer, and as the
+   address to send privacy complaints and vulnerability reports to.
+
+   Import with context so the macros can see the two variables:
+     {% from "_contact.html" import contact_link, security_link with context %} #}
+
+{% macro contact_link() -%}
+  {%- if sales_email -%}
+    <a href="mailto:{{ sales_email }}">{{ sales_email }}</a>
+  {%- else -%}
+    <a href="/contact-sales">the contact form</a>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro security_link() -%}
+  {%- if security_email -%}
+    <a href="mailto:{{ security_email }}">{{ security_email }}</a>
+  {%- else -%}
+    <a href="{{ security_advisory_url }}" rel="noopener">GitHub's private vulnerability reporting</a>
+  {%- endif -%}
+{%- endmacro %}

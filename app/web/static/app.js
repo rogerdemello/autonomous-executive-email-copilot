@@ -131,18 +131,34 @@
     return list ? Array.prototype.slice.call(list.querySelectorAll("[data-msg]")) : [];
   }
 
-  function step(delta) {
+  // On the list, j/k move focus down and up the rows; Enter opens the focused
+  // one, because it is a link and that is what links do. Moving focus rather
+  // than navigating is the whole point of a list screen — you can scan fifty
+  // subjects without loading fifty pages, which is what the old select-is-open
+  // behaviour cost when the list and the reader shared a screen.
+  function stepList(delta) {
     var links = messageLinks();
-    if (!links.length) return;
-    var current = links.findIndex(function (link) {
-      return link.getAttribute("aria-current") === "true";
-    });
-    var next = current < 0 ? 0 : current + delta;
-    if (next < 0 || next >= links.length) return;
-    // A full navigation rather than client-side selection: the reader pane and
-    // the copilot panel are server-rendered per message, so "select" and
-    // "open" are the same act here.
-    window.location.href = links[next].href;
+    if (!links.length) return false;
+    var index = links.indexOf(document.activeElement);
+    var next = index < 0 ? (delta > 0 ? 0 : links.length - 1) : index + delta;
+    if (next >= 0 && next < links.length) {
+      links[next].focus();
+      links[next].scrollIntoView({ block: "nearest" });
+    }
+    return true;
+  }
+
+  // In the reader there is no list to walk, so j/k follow the neighbour links
+  // the server rendered — the same two messages the list would have moved to.
+  function stepReader(delta) {
+    var link = document.querySelector(delta > 0 ? "[data-reader-next]" : "[data-reader-prev]");
+    if (!link || !link.href) return false;
+    window.location.href = link.href;
+    return true;
+  }
+
+  function step(delta) {
+    if (!stepList(delta)) stepReader(delta);
   }
 
   document.addEventListener("keydown", function (event) {
@@ -180,6 +196,16 @@
           event.preventDefault();
           approve.focus();
           approve.scrollIntoView({ block: "center" });
+        }
+        break;
+      }
+      case "Escape": {
+        // Reading a message, Escape puts the list back — the same thing the
+        // back link does, without reaching for it.
+        var back = document.querySelector("[data-reader-back]");
+        if (back) {
+          event.preventDefault();
+          window.location.href = back.href;
         }
         break;
       }

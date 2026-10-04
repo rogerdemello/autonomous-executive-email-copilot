@@ -1,13 +1,16 @@
 """OpenTelemetry integration for the Executive Email Copilot.
 
 Provides:
-- ``configure_otel()`` — one-time setup of TracerProvider, MeterProvider, OTLP exporter
-- ``tracer`` — module-level tracer for creating spans
-- ``meter`` — module-level meter for creating instruments
-- ``in_span()`` — context manager / decorator for instrumenting code paths
+- ``configure_otel()`` — one-time setup of the TracerProvider and, when an endpoint
+  is configured, the OTLP/HTTP span exporter (plus an optional console exporter)
+- ``in_span()`` — context manager for instrumenting code paths
 
-Gracefully degrades when ``opentelemetry-sdk`` is not installed: all calls become
-no-ops and the legacy PrometheusMetrics path continues to work (dual-write).
+This is **tracing**. Metrics are not exported through OpenTelemetry: they live in
+``telemetry/metrics.py`` and are scraped from ``/metrics`` by Prometheus, and
+``get_meter()`` is a no-op kept only so call sites need not change if that moves.
+
+Gracefully degrades when ``opentelemetry-sdk`` is not installed: every call
+becomes a no-op and the Prometheus path continues to work.
 """
 
 from __future__ import annotations
@@ -38,15 +41,29 @@ except ImportError:
     logger.info("OpenTelemetry SDK not installed. Install optional group: pip install '.[otel]'")
 
 
+def build_resource(service_name: str, service_version: str) -> Any:
+    """The resource every span carries: which service, and which release of it.
+
+    The version was a hardcoded ``"1.0.0"`` while the service was at 1.1.0, so a
+    trace could not be tied to the build that produced it — the first thing you
+    want when a regression shows up in one.
+    """
+    return Resource.create(
+        attributes={"service.name": service_name, "service.version": service_version}
+    )
+
+
 def configure_otel(
     service_name: str = "exec-email-copilot",
     otlp_endpoint: str | None = None,
     enable_console: bool = False,
+    service_version: str = "dev",
 ) -> None:
     """One-time setup of OpenTelemetry tracing.
 
     Args:
         service_name: Service name for resource attributes.
+        service_version: Release string stamped on every span as ``service.version``.
         otlp_endpoint: OTLP HTTP endpoint (e.g., ``http://tempo:4318/v1/traces``).
             Falls back to ``OTEL_EXPORTER_OTLP_ENDPOINT`` env var.
         enable_console: Also export spans to console (stderr) for debugging.
@@ -57,14 +74,7 @@ def configure_otel(
 
     global _tracer, _meter
 
-    resource = Resource.create(
-        attributes={
-            "service.name": service_name,
-            "service.version": "1.0.0",
-        }
-    )
-
-    provider = _TracerProvider(resource=resource)
+    provider = _TracerProvider(resource=build_resource(service_name, service_version))
     endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
 
     if endpoint:
@@ -93,7 +103,7 @@ def get_tracer():
 
 
 def get_meter():
-    """Get the module-level meter, creating a no-op one if OTEL is not configured."""
+    """A no-op meter. Metrics are exported by Prometheus, not OpenTelemetry (see the module docstring)."""
     if _meter is not None:
         return _meter
     return _NoOpMeter()
