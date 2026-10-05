@@ -1,0 +1,334 @@
+tests/test_web_reflow.py
+  s_bca1af7ce8e965::t_24c6bf55221885 1,119-120,122-123,125,143,147,158,166,177,192,206-209,214-215,217,220,225-226
+  s_bca1af7ce8e965::t_9ff6a8633d28cd 121,124,126-129,198-205,210-213,216,218-219,221-224,227
+app/web/templates/_app.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 109-110
+app/saas/learning.py
+  s_bca1af7ce8e965::t_1a86eaaa296e1e 160,168
+docs/API.md
+  s_bca1af7ce8e965::t_68e4104ce3cbe9 1-358
+app/web/templates/waiting.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 126
+CHANGELOG.md
+  s_bca1af7ce8e965::t_ede1a21dbf1989 295-303,321
+  s_bca1af7ce8e965::t_95f142ea2e4047 275-288
+  s_bca1af7ce8e965::t_e20ee15805a28c 289-294
+continue.md
+  s_bca1af7ce8e965::t_823d70f7b46b0f 36-38
+  s_bca1af7ce8e965::t_35c4c27019cc69 15,94-97,99,103-111
+  s_bca1af7ce8e965::t_644463391d879d 14
+  s_bca1af7ce8e965::t_a98d7951246941 75-81
+app/web/templates/_public.html
+  s_bca1af7ce8e965::t_728a66130f6890 6-7
+app/web/templates/base.html
+  s_bca1af7ce8e965::t_5be89a5be9b182 2-3,73
+  s_bca1af7ce8e965::t_728a66130f6890 71-72
+tests/test_web_security.py
+  s_bca1af7ce8e965::t_24c6bf55221885 214,218
+  s_bca1af7ce8e965::t_b31bf6168d65c4 235
+app/web/templates/operator.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 59,87,128-129,184,231
+app/web/static/app.js
+  s_bca1af7ce8e965::t_5be89a5be9b182 3-5,13,93
+docs/TECHNICAL_REFERENCE.md
+  s_bca1af7ce8e965::t_ede1a21dbf1989 345,578-579
+app/web/templates/settings.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 151,172,207
+app/web/templates/login.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 72
+app/web/templates/inbox.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 332,382
+tests/test_web_pages.py
+  s_bca1af7ce8e965::t_36effe19ec7ea7 1321-1370
+  s_bca1af7ce8e965::t_9ff6a8633d28cd 1260-1262,1264,1273-1274,1277-1280,1290,1304,1312,1315
+  s_bca1af7ce8e965::t_4b629dcbea6f36 1282-1284,1286
+  s_bca1af7ce8e965::t_ed757407e2c270 1263,1265-1272,1275-1276,1281,1285,1287-1289,1291-1303,1305-1311,1313-1314,1316-1320
+README.md
+  s_bca1af7ce8e965::t_ede1a21dbf1989 269
+  s_bca1af7ce8e965::t_0d97388a9ba104 10,12,26,41,60,97,99,101,103,105,108-109,114-115,119-120,156,159,169,188,194,201,206,297-304
+  s_bca1af7ce8e965::t_d343acf742ef32 14-18,21,30-32,36-40,42-55,67-69,79-81,84-87,98,100,102,106-107,110-113,116-118,121-140,144-145,165-168,170-182,186-187,189,200,202,213,220-221,223,226-228,230-231,235-236,239-268,270-275,277,280-290,293,295,305-307
+docs/ROADMAP.md
+  s_bca1af7ce8e965::t_ede1a21dbf1989 67
+app/web/static/app.css
+  s_bca1af7ce8e965::t_d8767d78a539b9 2576,2743-2745
+  s_bca1af7ce8e965::t_8b075c198d8946 70-71
+  s_bca1af7ce8e965::t_f0f296cfc9bde1 8-13,68-69,293,310-311,2118,2421
+data/demo/inbox.json
+  s_bca1af7ce8e965::t_5a01db058305a5 11
+  s_bca1af7ce8e965::t_cd707f61ff32ce 6,18,24,34,38,48,51,63,78,92,95,107,110,113,122,125,127,137,140,142,153,155,157,167-168,170,172,182-183,188,196,201,211,216,224-225,230,239,244,253,266,281,294,300,308,323,330,338,379,384,397,407,412,434,438,448,453,461,466,494,502,528,546,567-568,598,637,645,663,671,684,697
+data/demo/drafts.json
+  s_bca1af7ce8e965::t_cd707f61ff32ce 5-6,8-9,11,13,15-16,18-19,23,25-26,28-29,33,35-36,38-39,43,45-46,48-49,53,55-56,58-59,61,63,65,73,75-76,78-79,81,83,85-86,88-89,91,93,95-96,98-99,101,103,105-106,108-109,111,113
+app/web/templates/landing.html
+  s_bca1af7ce8e965::t_784826eedc3687 15,367
+  s_bca1af7ce8e965::t_76f18a84ea61f2 56
+  s_bca1af7ce8e965::t_497fd7bf1a75ea 17
+app/web/static/js-init.js
+  s_bca1af7ce8e965::t_5be89a5be9b182 1-11,14,16
+app/main.py
+  s_bca1af7ce8e965::t_1a86eaaa296e1e 130-131,191,194-195
+app/web/templates/approvals.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 184
+app/saas/sync_service.py
+  s_bca1af7ce8e965::t_1a86eaaa296e1e 823,848-849
+tests/test_saas_marketing.py
+  s_bca1af7ce8e965::t_36effe19ec7ea7 58
+  s_bca1af7ce8e965::t_a479574aead81e 275-276
+app/web/templates/terms.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 38,57,124
+app/web/templates/admin_consent.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 12-13,33
+app/saas/billing.py
+  s_bca1af7ce8e965::t_1a86eaaa296e1e 195-198
+app/web/templates/privacy.html
+  s_bca1af7ce8e965::t_bc8e2767c42bcc 159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "autter_version": "1.6.9",
+  "base_commit_sha": "51c316a45e4ba43ad325821a2e3e65a61ddf2041",
+  "branch": "main",
+  "prompts": {
+    "s_bca1af7ce8e965": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "81508951-5fd1-460a-8f80-2b186588a45e",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:74bdb19c0fdeeb1bb7de6bdc8b033669b377f5cf3067aa704f44c40f96db1cf0",
+      "total_additions": 1111,
+      "total_deletions": 1423,
+      "accepted_lines": 12964,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_bca1af7ce8e965": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "81508951-5fd1-460a-8f80-2b186588a45e",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Roger <rogerdemello289@gmail.com>",
+      "messages_url": "cas:74bdb19c0fdeeb1bb7de6bdc8b033669b377f5cf3067aa704f44c40f96db1cf0",
+      "stats": {
+        "total_additions": 1111,
+        "total_deletions": 1423,
+        "accepted_lines": 12964,
+        "overriden_lines": 0,
+        "files": {
+          "CHANGELOG.md": {
+            "total_additions": 32,
+            "total_deletions": 3,
+            "accepted_lines": 582,
+            "overriden_lines": 0
+          },
+          "README.md": {
+            "total_additions": 226,
+            "total_deletions": 590,
+            "accepted_lines": 307,
+            "overriden_lines": 0
+          },
+          "app/main.py": {
+            "total_additions": 5,
+            "total_deletions": 5,
+            "accepted_lines": 5,
+            "overriden_lines": 0
+          },
+          "app/saas/billing.py": {
+            "total_additions": 4,
+            "total_deletions": 4,
+            "accepted_lines": 209,
+            "overriden_lines": 0
+          },
+          "app/saas/learning.py": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 211,
+            "overriden_lines": 0
+          },
+          "app/saas/sync_service.py": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 853,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.css": {
+            "total_additions": 32,
+            "total_deletions": 370,
+            "accepted_lines": 2765,
+            "overriden_lines": 0
+          },
+          "app/web/static/app.js": {
+            "total_additions": 8,
+            "total_deletions": 29,
+            "accepted_lines": 210,
+            "overriden_lines": 0
+          },
+          "app/web/static/js-init.js": {
+            "total_additions": 19,
+            "total_deletions": 0,
+            "accepted_lines": 19,
+            "overriden_lines": 0
+          },
+          "app/web/static/theme-init.js": {
+            "total_additions": 7,
+            "total_deletions": 6,
+            "accepted_lines": 0,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_app.html": {
+            "total_additions": 2,
+            "total_deletions": 10,
+            "accepted_lines": 118,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_operator.html": {
+            "total_additions": 0,
+            "total_deletions": 8,
+            "accepted_lines": 22,
+            "overriden_lines": 0
+          },
+          "app/web/templates/_public.html": {
+            "total_additions": 2,
+            "total_deletions": 10,
+            "accepted_lines": 88,
+            "overriden_lines": 0
+          },
+          "app/web/templates/admin_consent.html": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 60,
+            "overriden_lines": 0
+          },
+          "app/web/templates/approvals.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 230,
+            "overriden_lines": 0
+          },
+          "app/web/templates/base.html": {
+            "total_additions": 5,
+            "total_deletions": 5,
+            "accepted_lines": 80,
+            "overriden_lines": 0
+          },
+          "app/web/templates/inbox.html": {
+            "total_additions": 2,
+            "total_deletions": 2,
+            "accepted_lines": 431,
+            "overriden_lines": 0
+          },
+          "app/web/templates/landing.html": {
+            "total_additions": 4,
+            "total_deletions": 125,
+            "accepted_lines": 380,
+            "overriden_lines": 0
+          },
+          "app/web/templates/login.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 90,
+            "overriden_lines": 0
+          },
+          "app/web/templates/operator.html": {
+            "total_additions": 6,
+            "total_deletions": 6,
+            "accepted_lines": 240,
+            "overriden_lines": 0
+          },
+          "app/web/templates/privacy.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 295,
+            "overriden_lines": 0
+          },
+          "app/web/templates/settings.html": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 383,
+            "overriden_lines": 0
+          },
+          "app/web/templates/terms.html": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 140,
+            "overriden_lines": 0
+          },
+          "app/web/templates/waiting.html": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 130,
+            "overriden_lines": 0
+          },
+          "continue.md": {
+            "total_additions": 27,
+            "total_deletions": 21,
+            "accepted_lines": 337,
+            "overriden_lines": 0
+          },
+          "data/demo/drafts.json": {
+            "total_additions": 58,
+            "total_deletions": 58,
+            "accepted_lines": 116,
+            "overriden_lines": 0
+          },
+          "data/demo/inbox.json": {
+            "total_additions": 74,
+            "total_deletions": 74,
+            "accepted_lines": 732,
+            "overriden_lines": 0
+          },
+          "docs/API.md": {
+            "total_additions": 358,
+            "total_deletions": 0,
+            "accepted_lines": 358,
+            "overriden_lines": 0
+          },
+          "docs/ROADMAP.md": {
+            "total_additions": 1,
+            "total_deletions": 1,
+            "accepted_lines": 359,
+            "overriden_lines": 0
+          },
+          "docs/TECHNICAL_REFERENCE.md": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 666,
+            "overriden_lines": 0
+          },
+          "scripts/optimize_images.py": {
+            "total_additions": 0,
+            "total_deletions": 1,
+            "accepted_lines": 81,
+            "overriden_lines": 0
+          },
+          "tests/test_saas_marketing.py": {
+            "total_additions": 3,
+            "total_deletions": 3,
+            "accepted_lines": 518,
+            "overriden_lines": 0
+          },
+          "tests/test_web_pages.py": {
+            "total_additions": 133,
+            "total_deletions": 22,
+            "accepted_lines": 1370,
+            "overriden_lines": 0
+          },
+          "tests/test_web_reflow.py": {
+            "total_additions": 78,
+            "total_deletions": 43,
+            "accepted_lines": 227,
+            "overriden_lines": 0
+          },
+          "tests/test_web_security.py": {
+            "total_additions": 4,
+            "total_deletions": 6,
+            "accepted_lines": 352,
+            "overriden_lines": 0
+          }
+        }
+      }
+    }
+  }
+}
