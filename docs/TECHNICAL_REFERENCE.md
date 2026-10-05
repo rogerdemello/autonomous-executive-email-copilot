@@ -342,7 +342,7 @@ Implemented features:
 
 Jinja templates plus one stylesheet. No bundler, no build step, no `node_modules`.
 Every action is a plain HTML form POST followed by a redirect, so the app works
-with JavaScript disabled; `static/app.js` adds only a theme toggle, a confirm on
+with JavaScript disabled; `static/app.js` adds only scroll reveals, keyboard shortcuts, a confirm on
 destructive actions, and double-submit protection.
 
 | Route | Auth | Purpose |
@@ -575,8 +575,8 @@ Supports webhook POST dispatch for triggered alerts.
 - `templates/base.html`, `_public.html`, `_app.html`: shared chrome
 - `templates/landing.html`, `login.html`, `signup.html`, `contact_sales.html`, `privacy.html`, `terms.html`: public pages
 - `templates/connect.html`, `inbox.html`, `approvals.html`, `activity.html`, `settings.html`: the product
-- `static/app.css`: the whole design system, light and dark
-- `static/app.js`: progressive enhancement only
+- `static/app.css`: the whole design system (one theme, light)
+- `static/app.js`: progressive enhancement only; `static/js-init.js`: stamps `data-js` before first paint
 
 ### Tests (`tests/`)
 

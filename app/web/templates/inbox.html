@@ -329,7 +329,7 @@
              worst possible first impression, and it is what this used to say. #}
           <h3>Reading your mailbox…</h3>
           <p>
-            The copilot is working through your inbox now — classifying each
+            The copilot is working through your inbox now: classifying each
             message, ranking it by deadline and risk, and drafting the replies
             worth sending. A first pass usually takes a couple of minutes.
           </p>
@@ -379,7 +379,7 @@
               <span class="maillist__text">
                 <span class="maillist__subj">{{ message.subject }}</span>
                 {% if message.body_preview %}
-                  <span class="maillist__peek"> — {{ message.body_preview }}</span>
+                  <span class="maillist__peek"> · {{ message.body_preview }}</span>
                 {% endif %}
               </span>
               {# Marks and time share one grid track: an empty marks span would

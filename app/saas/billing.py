@@ -192,10 +192,10 @@ class BillingService:
                 text = (
                     f":moneybag: *New {lead.get('kind')} lead*\n"
                     f"• Email: {lead.get('email')}\n"
-                    f"• Name: {lead.get('name') or '—'}\n"
-                    f"• Company: {lead.get('company') or '—'}\n"
-                    f"• Seats: {lead.get('seats') or '—'}\n"
-                    f"• Message: {lead.get('message') or '—'}"
+                    f"• Name: {lead.get('name') or 'n/a'}\n"
+                    f"• Company: {lead.get('company') or 'n/a'}\n"
+                    f"• Seats: {lead.get('seats') or 'n/a'}\n"
+                    f"• Message: {lead.get('message') or 'n/a'}"
                 )
                 httpx.post(webhook, json={"text": text}, timeout=5.0)
             except Exception:  # pragma: no cover - notification is best-effort

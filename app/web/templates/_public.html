@@ -3,8 +3,8 @@
 {# Chrome for the public, logged-out pages: landing, login, signup, legal. #}
 
 {% block body %}
-{# The same barrier the app shell's sidebar is: six header links and a theme
-   toggle before the content, on every public page including the two legal ones
+{# The same barrier the app shell's sidebar is: six header links
+   before the content, on every public page including the two legal ones
    somebody may be reading with a screen reader because they have to. #}
 <a class="skip-link" href="#content">Skip to content</a>
 
@@ -16,14 +16,6 @@
       <a class="hide" href="/#tour">See it work</a>
       <a class="hide" href="/#proof">Proof</a>
       {% if demo_enabled %}<a class="hide" href="/demo">Live demo</a>{% endif %}
-      <button
-        class="theme-toggle"
-        type="button"
-        data-theme-toggle
-        aria-label="Switch between light and dark theme"
-      >
-        ◐
-      </button>
       {% if current_user %}
         <a class="btn" href="/app/inbox">Open app</a>
       {% else %}

@@ -5,10 +5,6 @@
 {% block main %}
 <section class="wrap hero-v3" style="border-top: 0">
   <div class="hero-v3__copy">
-    <a class="badge" href="/#tour">
-      <span class="badge__new">New</span> Spam filtering &amp; verified drafts
-      <span class="arr">→</span>
-    </a>
     <h1>The corner-office inbox that <span class="soft">runs itself.</span></h1>
     <p class="lede">
       An assistant that works the whole inbox. It files the spam, surfaces what matters by
@@ -16,9 +12,9 @@
       it answers, with your sign-off where it counts.
     </p>
     <div class="cta cta--center">
-      <a class="btn btn--primary" href="/signup">Start free — connect your inbox <span class="arr">→</span></a>
+      <a class="btn btn--primary" href="/signup">Start free and connect your inbox <span class="arr">→</span></a>
       {# A stranger who is not ready to hand over a mailbox should be one click
-         from the product — not on a sign-in form asking for a password nobody
+         from the product, not on a sign-in form asking for a password nobody
          gave them. This builds them a private sandbox and signs them in
          (routes.open_demo). Offered only where the demo is enabled, so the page
          never links to a dead end. #}
@@ -33,7 +29,6 @@
     </div>
     <p class="note">
       No card · <b>Gmail and Microsoft 365</b> · your drafts never send without you
-      {% if demo_enabled %}<br />The demo opens in one click: no sign-up, nothing to type.{% endif %}
     </p>
   </div>
 
@@ -58,42 +53,12 @@
           width="1440"
           height="900"
           fetchpriority="high"
-          alt="The copilot's inbox: {{ bench.demo.messages }} messages triaged, {{ bench.demo.auto_applied }} actions applied automatically, {{ bench.demo.held_for_approval }} waiting. An incident thread is open with the copilot's reasoning beside it and a drafted reply held for approval."
+          alt="The copilot's inbox: {{ bench.demo.messages }} messages triaged, {{ bench.demo.auto_applied }} actions applied automatically, {{ bench.demo.held_for_approval }} waiting for a human. Each row shows the sender, the subject, a priority dot and a risk tag."
         />
       </picture>
     </div>
-    <div class="float-chip float-chip--1" aria-hidden="true">
-      <span class="chip chip--danger">spam</span> filed, no reply sent
-    </div>
-    <div class="float-chip float-chip--2" aria-hidden="true">
-      <span class="chip chip--good">verified</span> draft matches the source
-    </div>
-    <div class="float-chip float-chip--3" aria-hidden="true">
-      <span class="chip chip--warn">held</span> awaiting your approval
-    </div>
   </div>
 </section>
-
-<div class="ticker" aria-hidden="true">
-  <div class="ticker__track">
-    <span>Every message classified and ranked</span><span>·</span>
-    <span>Drafts in your voice</span><span>·</span>
-    <span>Fact-checked before you see them</span><span>·</span>
-    <span>Approvals held for humans</span><span>·</span>
-    <span>Follow-ups tracked in both directions</span><span>·</span>
-    <span>Legal &amp; finance auto-routed</span><span>·</span>
-    <span>Every action audit-logged</span><span>·</span>
-    <span>Benchmarked before it ships</span><span>·</span>
-    <span>Every message classified and ranked</span><span>·</span>
-    <span>Drafts in your voice</span><span>·</span>
-    <span>Fact-checked before you see them</span><span>·</span>
-    <span>Approvals held for humans</span><span>·</span>
-    <span>Follow-ups tracked in both directions</span><span>·</span>
-    <span>Legal &amp; finance auto-routed</span><span>·</span>
-    <span>Every action audit-logged</span><span>·</span>
-    <span>Benchmarked before it ships</span><span>·</span>
-  </div>
-</div>
 
 <section id="how" class="wrap">
   <div class="sec-head" data-reveal>
@@ -228,12 +193,6 @@
       against its source, assembled so every action is grounded in your mailbox, explained to you,
       and yours to approve.
     </p>
-    <div class="stack-row">
-      <span class="chip chip--accent">Deterministic routing</span>
-      <span class="chip chip--accent">Model-drafted prose</span>
-      <span class="chip chip--accent">Draft verification</span>
-      <span class="chip chip--accent">Injection screening</span>
-    </div>
   </div>
   <div class="pillars pillars--quad">
     <div class="pillar" data-reveal>
@@ -271,85 +230,6 @@
         are detected, and anything with legal or financial stakes always routes to a human.
       </p>
     </div>
-  </div>
-</section>
-
-<section id="day" class="wrap">
-  <div class="day-grid">
-    <div class="sec-head" data-reveal>
-      <p class="eyebrow">A working day</p>
-      <h2>You open the inbox once. It was managed all day.</h2>
-      <p class="muted day-grid__note">
-        The copilot works continuously; you spend minutes, not hours. Anything consequential waits
-        for you; everything else is already handled and on the record. The counts below are a real
-        run of the policy over the demo mailbox you can open yourself; the clock times are the
-        shape of a day, not a measurement.
-      </p>
-      {# Photo: Unsplash (free license), served locally to satisfy the img-src 'self' CSP. #}
-      <figure class="day-photo" data-reveal>
-        <picture>
-          <source type="image/webp" srcset="/static/img/office-1200.webp" />
-          <img
-            src="/static/img/office.jpg"
-            width="1200"
-            height="801"
-            loading="lazy"
-            alt="A calm, modern office in the morning; nobody is at a desk answering email."
-          />
-        </picture>
-        <figcaption>The inbox is handled. The office can wait until nine.</figcaption>
-      </figure>
-    </div>
-    {# The counts come from data/landing_metrics.json: the shipped demo mailbox
-       put through the same enrich -> policy -> proposals path a connected
-       Gmail account takes. Edit a fixture subject line and these move. The
-       times are the shape of a day, not a measurement, which is what the
-       caption below says. #}
-    <ol class="day">
-      <li class="day__item" data-reveal>
-        <span class="day__time">06:40</span>
-        <span class="day__node" aria-hidden="true"></span>
-        <div class="day__body">
-          <h3>Overnight mail triaged</h3>
-          <p>
-            {{ bench.demo.messages }} messages classified and ranked before your first coffee:
-            {{ bench.demo.urgent }} marked urgent, {{ bench.demo.spam_filed }} filed as spam,
-            {{ bench.demo.deferred }} deferred with a label.
-          </p>
-        </div>
-      </li>
-      <li class="day__item" data-reveal style="--d: 0.1s">
-        <span class="day__time">08:15</span>
-        <span class="day__node" aria-hidden="true"></span>
-        <div class="day__body">
-          <h3>{{ bench.demo.held_for_approval }} actions waiting for you</h3>
-          <p>
-            {{ bench.demo.replies_drafted }} drafted replies and
-            {{ bench.demo.escalated }} escalations, each sitting in Approvals with the copilot's
-            rationale beside it. Amend, approve, or reject; one click either way.
-          </p>
-        </div>
-      </li>
-      <li class="day__item" data-reveal style="--d: 0.2s">
-        <span class="day__time">11:02</span>
-        <span class="day__node" aria-hidden="true"></span>
-        <div class="day__body">
-          <h3>Counsel thread escalated</h3>
-          <p>An indemnification clause is flagged <em>legal</em> and routed to the right owner; it never risks an autopilot reply.</p>
-        </div>
-      </li>
-      <li class="day__item" data-reveal style="--d: 0.3s">
-        <span class="day__time">16:30</span>
-        <span class="day__node" aria-hidden="true"></span>
-        <div class="day__body">
-          <h3>{{ bench.demo.auto_applied }} actions applied without you</h3>
-          <p>
-            Every classification, draft, and escalation is in the audit log: searchable,
-            exportable, and owned by your tenant.
-          </p>
-        </div>
-      </li>
-    </ol>
   </div>
 </section>
 
@@ -481,11 +361,10 @@
 
 <section class="wrap close">
   <div data-reveal>
-    <p class="eyebrow close__mark">✳</p>
     <h2>Give yourself an inbox that runs itself.</h2>
     <p>Connect a mailbox and see your first verified drafts today, or talk to us first.</p>
     <div class="cta cta--center">
-      <a class="btn btn--primary" href="/signup">Start free — connect your inbox <span class="arr">→</span></a>
+      <a class="btn btn--primary" href="/signup">Start free and connect your inbox <span class="arr">→</span></a>
       {% if demo_enabled %}
         <form method="post" action="/demo">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />

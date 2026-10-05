@@ -64,7 +64,7 @@ Bar: `pytest` 100% green, zero deprecation warnings, every doc claim backed by a
 > server-rendered Jinja under `app/web` with no bundler and no Node tooling;
 > its coverage lives in `tests/test_web_pages.py`. The `/ws/dashboard`
 > WebSocket API outlived its frontend and remains tested (`tests/test_dashboard.py`).
-- [x] Dedicated accessibility & responsive pass on the server-rendered UI — done. `tests/test_web_a11y.py` sweeps every public, signed-in, sandbox and operator page (one `<h1>`, a `<main>` landmark, accessible names, table captions); `tests/test_web_reflow.py` drives a real browser and asserts no page scrolls sideways at 320px in either theme (WCAG 1.4.10).
+- [x] Dedicated accessibility & responsive pass on the server-rendered UI — done. `tests/test_web_a11y.py` sweeps every public, signed-in, sandbox and operator page (one `<h1>`, a `<main>` landmark, accessible names, table captions); `tests/test_web_reflow.py` drives a real browser and asserts no page scrolls sideways at 320px (WCAG 1.4.10).
 
 ## Phase 5 — Benchmark & simulation rigor ✅ CORE COMPLETE (additive items deferred)
 - [x] Documented `strict_unit_interval` + `atan` reward transform in grader.py; property tests (open-unit + monotonicity sweeps) for both; hard-task weight check. (Used dependency-free sweeps instead of hypothesis.)

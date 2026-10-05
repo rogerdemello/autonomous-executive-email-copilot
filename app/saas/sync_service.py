@@ -820,7 +820,7 @@ class InboxSyncService:
         """Dispatch an approved action to the provider's write surface."""
         action_type = action["action_type"]
         if action_type == "reply":
-            body = action.get("content") or "Acknowledged — we will follow up shortly."
+            body = action.get("content") or "Acknowledged. We will follow up shortly."
             return provider.send_reply(provider_message_id, body)
         if action_type == "escalate":
             return self._execute_escalation(provider, action, provider_message_id, org_id=org_id)
@@ -845,8 +845,8 @@ class InboxSyncService:
             return WriteResult(
                 ok=False,
                 detail=(
-                    f"no mailbox is configured for escalations to {named} — "
-                    f"add one in Settings, then retry this action"
+                    f"no mailbox is configured for escalations to {named}. "
+                    f"Add one in Settings, then retry this action"
                 ),
             )
         body = (f"Escalating to {role.replace('_', ' ')}.\n\n{action.get('content') or ''}").strip()

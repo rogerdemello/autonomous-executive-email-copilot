@@ -157,7 +157,7 @@ class FeedbackService:
         learned: list[str] = []
         for s in sorted(suppressed, key=lambda s: -s.total):
             learned.append(
-                f"Stopped proposing {s.action_type} for {s.sender_role} senders — "
+                f"Stopped proposing {s.action_type} for {s.sender_role} senders: "
                 f"you rejected {s.rejected} of the last {s.total}. These are filed "
                 f"as deferred instead."
             )
@@ -165,7 +165,7 @@ class FeedbackService:
             phrase = f"{s.accepted} of {s.total}" if s.edited else f"all {s.total}"
             learned.append(
                 f"{s.action_type.capitalize()} drafts for {s.sender_role} senders are "
-                f"landing — you accepted {phrase} recently"
+                f"landing: you accepted {phrase} recently"
                 + (f" ({s.edited} with edits)." if s.edited else ".")
             )
         edited_total = sum(b["edited"] for b in by_action.values())

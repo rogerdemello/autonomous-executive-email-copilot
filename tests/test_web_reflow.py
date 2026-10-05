@@ -1,4 +1,4 @@
-"""No page may scroll sideways at 320px, in either theme.
+"""No page may scroll sideways at 320px.
 
 WCAG 1.4.10 puts the floor at 320 CSS pixels. This is checked with a real
 browser because the failure is a *computed layout* property: the CSS that
@@ -116,6 +116,17 @@ def live_server() -> str:
     server.should_exit = True
 
 
+def _context(browser):
+    """A phone-width browser on an operating system that prefers dark.
+
+    There is one theme, and it is light. The OS is held at dark throughout so that a
+    regression to following it would show up here as a dark page, not as a pass.
+    """
+    return browser.new_context(
+        viewport={"width": VIEWPORT_WIDTH, "height": 800}, color_scheme="dark"
+    )
+
+
 def _sign_up_and_connect(page, base: str) -> None:
     page.goto(f"{base}/signup")
     page.fill("#org_name", "Northwind Industries")
@@ -129,14 +140,11 @@ def _sign_up_and_connect(page, base: str) -> None:
     page.wait_for_load_state("networkidle")
 
 
-@pytest.mark.parametrize("theme", ["light", "dark"])
-def test_no_page_scrolls_sideways_at_320px(live_server, theme):
+def test_no_page_scrolls_sideways_at_320px(live_server):
     failures = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        context = browser.new_context(
-            viewport={"width": VIEWPORT_WIDTH, "height": 800}, color_scheme=theme
-        )
+        context = _context(browser)
         page = context.new_page()
         _sign_up_and_connect(page, live_server)
 
@@ -147,7 +155,7 @@ def test_no_page_scrolls_sideways_at_320px(live_server, theme):
             viewport_width = page.evaluate("document.documentElement.clientWidth")
             if document_width > viewport_width + 1:
                 failures.append(
-                    f"{path} [{theme}]: document is {document_width}px wide in a "
+                    f"{path}: document is {document_width}px wide in a "
                     f"{viewport_width}px viewport — {page.evaluate(_CULPRITS_JS)}"
                 )
         browser.close()
@@ -155,8 +163,7 @@ def test_no_page_scrolls_sideways_at_320px(live_server, theme):
     assert not failures, "horizontal scrolling at 320px:\n  " + "\n  ".join(failures)
 
 
-@pytest.mark.parametrize("theme", ["light", "dark"])
-def test_the_demo_sandbox_does_not_scroll_sideways_at_320px(live_server, theme):
+def test_the_demo_sandbox_does_not_scroll_sideways_at_320px(live_server):
     """The recruiter's path, in a real browser at phone width: click the button on
     the landing page, land in the sandbox, and look at every page with the banner
     and the tour card on it. Reached by the actual button, not a crafted request,
@@ -167,9 +174,7 @@ def test_the_demo_sandbox_does_not_scroll_sideways_at_320px(live_server, theme):
     failures = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        context = browser.new_context(
-            viewport={"width": VIEWPORT_WIDTH, "height": 800}, color_scheme=theme
-        )
+        context = _context(browser)
         page = context.new_page()
         page.goto(live_server + "/")
         page.click("form[action='/demo'] button[type=submit]")
@@ -184,9 +189,39 @@ def test_the_demo_sandbox_does_not_scroll_sideways_at_320px(live_server, theme):
             viewport_width = page.evaluate("document.documentElement.clientWidth")
             if document_width > viewport_width + 1:
                 failures.append(
-                    f"{path} [{theme}]: document is {document_width}px wide in a "
+                    f"{path}: document is {document_width}px wide in a "
                     f"{viewport_width}px viewport — {page.evaluate(_CULPRITS_JS)}"
                 )
         browser.close()
 
     assert not failures, "horizontal scrolling at 320px in the sandbox:\n  " + "\n  ".join(failures)
+
+
+def _luminance(rgb: str) -> float:
+    """Relative brightness 0..1 of a computed ``rgb(r, g, b)`` string."""
+    r, g, b = (int(part) for part in rgb[rgb.index("(") + 1 : rgb.index(")")].split(",")[:3])
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+
+
+def test_there_is_only_a_light_theme(live_server):
+    """It used to follow ``prefers-color-scheme`` and then offered a dark toggle:
+    anyone on a dark OS got a dark landing page wrapped around screenshots of a
+    light product. Dark is gone — no preference is consulted and nothing offers it.
+    """
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        context = browser.new_context(viewport={"width": 1280, "height": 800}, color_scheme="dark")
+        # A visitor whose browser still holds the dark choice they once made.
+        context.add_init_script("localStorage.setItem('ec-theme', 'dark')")
+        page = context.new_page()
+        for path in ("/", "/login", "/demo", "/privacy", "/terms", "/signup"):
+            page.goto(live_server + path)
+            page.wait_for_load_state("networkidle")
+            assert page.locator("[data-theme-toggle], .theme-toggle").count() == 0, path
+            assert page.evaluate("document.documentElement.getAttribute('data-theme')") is None
+            background = page.evaluate("getComputedStyle(document.body).backgroundColor")
+            assert _luminance(background) > 0.85, f"{path} is dark on a dark OS: {background}"
+
+        # ...and the stale choice is cleared rather than left in their browser.
+        assert page.evaluate("localStorage.getItem('ec-theme')") is None
+        browser.close()

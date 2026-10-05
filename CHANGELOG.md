@@ -272,6 +272,35 @@ below marked *public demo* are that pass.
 
 ### Changed
 
+- **The home page is shorter, and nothing a visitor reads contains an em dash.**
+  Gone from the landing page: the "New" badge, the floating chips over the
+  screenshot, the scrolling ticker, the row of capability chips, and the "A working
+  day" timeline with its stock office photo (the clock times were invented, and the
+  photo was the only image that was not the product; `office.jpg` and
+  `office-1200.webp` are deleted). Em dashes are removed from every page and
+  template string, the README, and the demo mailbox itself: subjects, bodies,
+  rationales and suggested replies in `data/demo/inbox.json`. The cached drafts are
+  keyed by a hash of the message content, so every reworded subject missed its
+  cache entry; `drafts.json` was **re-keyed rather than regenerated**, so the
+  model's wording is untouched and the policy's decisions are identical (94
+  proposals before and after). `TestNoEmDashesInWhatAVisitorReads` renders every
+  public and workspace page and fails if one comes back. Source comments, this
+  file and the internal docs were deliberately not rewritten.
+- **The README is about the product again.** Roughly 400 of its 670 lines were the
+  benchmark simulator's HTTP reference, which buried the product under `curl`
+  examples. That reference moved, verbatim, to `docs/API.md`; the README now leads
+  with the live demo, the four decisions that define the project, a map from each
+  claim to its code and its test, and a "Where it stands" section that says what is
+  a fixture, what is untested against a real mailbox, and what is a recorded run.
+- **The site is light-only: the dark theme, its toggle and the OS-preference rule
+  are gone.** The stylesheet followed `prefers-color-scheme`, so anyone on a dark
+  OS got a dark landing page wrapped around screenshots of a *light* product — a
+  mismatch that read as a mistake. It was first made light-by-default, then, at the
+  owner's request, removed outright: no dark token set, no header toggle on the
+  public, app or operator pages, no theme script, and `theme-init.js` is now
+  `js-init.js` because all it still does is stamp `data-js`. A visitor who had
+  saved a dark choice has it cleared on their next page load. The reflow test
+  holds the browser at a dark OS and fails if any page comes out dark.
 - **The shared demo account is now optional.** It still exists — `make demo`
   seeds it, its login still prefills, and it is still fenced from every
   administrative action — but nothing on the landing page depends on it.
@@ -289,7 +318,7 @@ below marked *public demo* are that pass.
 - **The accessibility sweep and the 320px reflow test now cover `/demo` and a real
   sandbox session** — the banner on every page and the tour card — and the reflow
   test reaches the sandbox by clicking the landing page's button in a real browser
-  at phone width, in both themes.
+  at phone width.
 - **One canonical list of escalation roles** (`app.core.models.ESCALATION_ROLES`,
   with `escalation_role_for`). Six places spelled it out for themselves — the
   baseline policy, the LLM policy, the agent's guardrail and its validator, and

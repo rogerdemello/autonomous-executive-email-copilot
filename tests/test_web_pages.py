@@ -1257,3 +1257,114 @@ class TestUnknownUrls:
         from app.web.routes import is_web_path
 
         assert is_web_path("/demo")
+
+
+# --------------------------------------------------------------------------- #
+# One theme, and it is light
+# --------------------------------------------------------------------------- #
+class TestThereIsOnlyALightTheme:
+    """There is no dark theme, no toggle, and no inference from the OS.
+
+    The stylesheet used to follow `prefers-color-scheme`, and then offered a dark
+    toggle. A visitor on a dark OS saw a dark landing page wrapped around
+    screenshots of a light product, so the dark theme was removed. These need no
+    browser, so they run everywhere; the Playwright test in test_web_reflow.py
+    proves the behaviour, and these stop the cause coming back.
+    """
+
+    @staticmethod
+    def _static(name: str) -> str:
+        from app.core.paths import STATIC_DIR
+
+        return (STATIC_DIR / name).read_text(encoding="utf-8")
+
+    def test_the_stylesheet_has_no_dark_tokens_or_scheme_queries(self):
+        import re
+
+        # Rules, not prose: the stylesheet's own comment explains what was removed.
+        css = re.sub(r"/\*.*?\*/", "", self._static("app.css"), flags=re.S)
+        assert "prefers-color-scheme" not in css
+        assert "data-theme" not in css
+        assert ".theme-toggle" not in css
+        assert "color-scheme: dark" not in css
+        assert "color-scheme: light;" in css
+
+    def test_no_script_reads_or_sets_a_theme(self):
+        for name in ("app.js", "js-init.js"):
+            code = self._static(name)
+            # js-init.js deliberately names the old key once, to clear it.
+            code = code.replace('localStorage.removeItem("ec-theme")', "")
+            assert "data-theme" not in code, name
+            assert "matchMedia" not in code, name
+            assert "setItem" not in code, name
+
+    def test_no_template_offers_a_theme_toggle(self):
+        """Every template, including the operator console's own."""
+        from app.core.paths import TEMPLATES_DIR
+
+        offenders = [
+            path.name
+            for path in TEMPLATES_DIR.glob("*.html")
+            if "data-theme-toggle" in path.read_text(encoding="utf-8")
+            or 'class="theme-toggle"' in path.read_text(encoding="utf-8")
+        ]
+        assert offenders == []
+
+    def test_the_pages_a_visitor_sees_carry_no_toggle(self, client, signed_in):
+        for path in ("/", "/login", "/demo", "/privacy"):
+            html = client.get(path).text
+            assert "data-theme" not in html, path
+            assert "Switch between light and dark" not in html, path
+        member, _email = signed_in
+        for path in ("/app/inbox", "/app/settings"):
+            assert "Switch between light and dark" not in member.get(path).text, path
+
+
+class TestNoEmDashesInWhatAVisitorReads:
+    """Prose with an em dash in it reads as machine-written, so none reaches a visitor.
+
+    This covers what is actually shown: every public page, every workspace page
+    with the demo mailbox loaded, the 404 page, and the fixture the demo mailbox
+    is built from (its subjects, bodies and drafts all render in the inbox).
+    Source comments are not rendered and are out of scope.
+    """
+
+    DASHES = ("\u2014", "&mdash;", "&#8212;", "&#x2014;")
+
+    def _offenders(self, text: str) -> list[str]:
+        return [d for d in self.DASHES if d in text]
+
+    def test_the_demo_fixtures_have_none(self):
+        from app.core.paths import DEMO_DIR
+
+        for name in ("inbox.json", "drafts.json"):
+            text = (DEMO_DIR / name).read_text(encoding="utf-8")
+            assert self._offenders(text) == [], name
+
+    def test_public_pages_have_none(self, client):
+        for path in (
+            "/",
+            "/login",
+            "/signup",
+            "/forgot-password",
+            "/privacy",
+            "/terms",
+            "/contact-sales",
+            "/demo",
+            "/no-such-page",
+        ):
+            text = client.get(path).text
+            assert self._offenders(text) == [], path
+
+    def test_workspace_pages_have_none(self, with_demo_mailbox):
+        client, _email = with_demo_mailbox
+        for path in (
+            "/app/inbox",
+            "/app/approvals",
+            "/app/waiting",
+            "/app/activity",
+            "/app/settings",
+            "/app/connect",
+        ):
+            text = client.get(path).text
+            assert self._offenders(text) == [], path

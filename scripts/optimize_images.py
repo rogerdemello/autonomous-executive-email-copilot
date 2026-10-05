@@ -31,7 +31,6 @@ PLAN: dict[str, list[int]] = {
     "product-inbox.png": [1440, 2240],  # hero frame, ~1120 CSS px
     "product-spam.png": [1000, 1600],  # tour row, ~620 CSS px
     "product-approve.png": [1000, 1600],
-    "office.jpg": [1200],
 }
 
 QUALITY = 82

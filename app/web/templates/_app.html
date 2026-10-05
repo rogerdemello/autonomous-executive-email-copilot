@@ -79,14 +79,6 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
           <button class="btn btn--sm" type="submit">Sign out</button>
         </form>
-        <button
-          class="theme-toggle"
-          type="button"
-          data-theme-toggle
-          aria-label="Switch between light and dark theme"
-        >
-          ◐
-        </button>
       </div>
     </div>
   </aside>
@@ -114,8 +106,8 @@
          page, not an event, and alert would re-interrupt on each navigation. #}
       {% if mailbox_broken and active != "connect" %}
         <div class="banner banner--error" role="status">
-          A connected mailbox has stopped syncing and needs to be reconnected —
-          new mail from it is not being triaged.
+          A connected mailbox has stopped syncing and needs to be reconnected.
+          New mail from it is not being triaged.
           <a href="/app/connect">Reconnect it</a>.
         </div>
       {% endif %}

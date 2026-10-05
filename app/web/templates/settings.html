@@ -148,7 +148,7 @@
 
       {% if model_usage.exhausted %}
         <p class="muted">
-          Drafts are still being written — from cached and rule-based prose
+          Drafts are still being written, from cached and rule-based prose
           rather than the model. Triage, verification, follow-up tracking and
           sending are unaffected. This resets when the month rolls over.
         </p>
@@ -169,7 +169,7 @@
   </div>
   <div class="card__body">
     <p class="muted">
-      When the copilot escalates a message, it names a role — not a person.
+      When the copilot escalates a message, it names a role, not a person.
       These are the mailboxes those roles resolve to. An escalation you approve
       is drafted as a forward to the address below, with the original attached;
       nothing is sent without you. Until a role has an address, escalations to
@@ -204,7 +204,7 @@
                   </label>
                   <input id="escalation_{{ contact.role }}" name="email" type="email"
                          class="mono escalation-contact" value="{{ contact.email }}"
-                         placeholder="nobody@ — escalations cannot be sent"
+                         placeholder="No address set: escalations cannot be sent"
                          autocomplete="off" />
                   <button class="btn btn--sm" type="submit">Save</button>
                 </form>

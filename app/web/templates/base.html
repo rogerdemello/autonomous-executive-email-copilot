@@ -1,6 +1,6 @@
 <!doctype html>
-{# data-theme is stamped by theme-init.js before first paint, from localStorage.
-   It used to interpolate a `theme` variable that no route has ever set. #}
+{# One theme, light. (There was a dark theme behind a header toggle; it was removed
+   on purpose — see the top of app.css.) js-init.js stamps `data-js` on <html>. #}
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -68,9 +68,9 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230e6e62'/><text x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%2306110f' text-anchor='middle'>EC</text></svg>"
     />
-    {# No defer: the saved theme must apply before first paint. Kept in a file
-       rather than inline so the CSP needs no inline-script allowance. #}
-    <script src="{{ asset_url('theme-init.js') }}"></script>
+    {# No defer: it must run before the body renders. Kept in a file rather than
+       inline so the CSP needs no inline-script allowance. #}
+    <script src="{{ asset_url('js-init.js') }}"></script>
     {% block head_extra %}{% endblock %}
   </head>
   <body>

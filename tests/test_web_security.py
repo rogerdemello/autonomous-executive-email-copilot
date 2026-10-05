@@ -211,11 +211,11 @@ class TestSecurityHeaders:
         assert "max-age=31536000" in hsts
 
     def test_csp_allows_no_inline_scripts(self):
-        """base.html moved its theme snippet into /static/theme-init.js so the
+        """base.html keeps its init snippet in /static/js-init.js so the
         CSP can hold the line at script-src 'self'. Pin both halves."""
         from app.core.paths import STATIC_DIR, TEMPLATES_DIR
 
-        assert (STATIC_DIR / "theme-init.js").is_file()
+        assert (STATIC_DIR / "js-init.js").is_file()
         base = (TEMPLATES_DIR / "base.html").read_text(encoding="utf-8")
         assert "<script>" not in base
 
@@ -232,9 +232,7 @@ class TestStaticAssetCaching:
     been there before, which is the owner and the one recruiter who already looked.
     """
 
-    ASSET = re.compile(
-        r'(?:href|src)="(/static/(?:app\.css|app\.js|theme-init\.js)\?v=[0-9a-f]{12})"'
-    )
+    ASSET = re.compile(r'(?:href|src)="(/static/(?:app\.css|app\.js|js-init\.js)\?v=[0-9a-f]{12})"')
 
     def test_pages_reference_fingerprinted_urls(self, client):
         for path in ("/", "/login", "/privacy"):

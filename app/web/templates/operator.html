@@ -56,7 +56,7 @@
       </span>
       {% if totals.at_budget %}
         <span class="chip chip--danger">
-          {{ totals.at_budget }} at cap — drafting rule-based prose
+          {{ totals.at_budget }} at cap: drafting rule-based prose
         </span>
       {% endif %}
     </div>
@@ -84,7 +84,7 @@
 {% if worker.enabled and worker.stale %}
   <div class="banner banner--error" role="alert">
     The background sync worker has not completed a pass recently. Nothing is
-    being triaged on its own — customers' approval queues have stopped filling.
+    being triaged on its own, and customers' approval queues have stopped filling.
   </div>
 {% endif %}
 
@@ -125,8 +125,8 @@
         {% for row in workspaces %}
           <tr>
             <td>{{ row.name }}</td>
-            <td class="mono">{{ row.owner_email or "—" }}</td>
-            <td class="mono">{{ row.created_at or "—" }}</td>
+            <td class="mono">{{ row.owner_email or "n/a" }}</td>
+            <td class="mono">{{ row.created_at or "n/a" }}</td>
             <td>{{ row.members }}</td>
             <td>
               {% if not row.active %}
@@ -181,7 +181,7 @@
             <tr>
               <td class="mono">{{ pass_.at[11:19] }}</td>
               {% if pass_.crashed %}
-                <td colspan="4" class="muted">the pass itself crashed — see the logs</td>
+                <td colspan="4" class="muted">the pass itself crashed; see the logs</td>
                 <td><span class="chip chip--danger">crash</span></td>
               {% else %}
                 <td>{{ pass_.checked }}</td>
@@ -228,7 +228,7 @@
             <tr>
               <td class="mono">{{ lead.created_at[:10] }}</td>
               <td class="mono">{{ lead.email }}</td>
-              <td>{{ lead.company or "—" }}</td>
+              <td>{{ lead.company or "n/a" }}</td>
               <td>{{ lead.status }}</td>
             </tr>
           {% endfor %}

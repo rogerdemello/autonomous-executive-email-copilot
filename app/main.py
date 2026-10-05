@@ -127,8 +127,8 @@ async def lifespan(_app: FastAPI):
                 'python -c "import secrets; print(secrets.token_urlsafe(48))"'
             )
         logger.warning(
-            "AUTH_SECRET_KEY is not set — using an insecure development signing "
-            "secret. Set AUTH_SECRET_KEY to a long random value in production; "
+            "AUTH_SECRET_KEY is not set, so an insecure development signing "
+            "secret is in use. Set AUTH_SECRET_KEY to a long random value in production; "
             "all session tokens and license keys are signed with it."
         )
     # Bring the schema up to date. A failure here is logged and leaves the
@@ -188,11 +188,11 @@ outage costs wording rather than triage.
 
 Two surfaces share this server:
 
-- **The product** (`auth`, `organization`, `billing`, `mailbox`, `inbox`) —
+- **The product** (`auth`, `organization`, `billing`, `mailbox`, `inbox`):
   multi-tenant accounts, roles, mailbox sync and the approval queue. Authenticate
   with `POST /auth/login` and send the token as `Authorization: Bearer <token>`.
-- **The benchmark** it grew out of (`benchmark`, `approval-simulator`, `learning`)
-  — a Gym-style `reset`/`step`/`state` environment and graders, kept intact under
+- **The benchmark** it grew out of (`benchmark`, `approval-simulator`, `learning`):
+  a Gym-style `reset`/`step`/`state` environment and graders, kept intact under
   `research/`. Open the live app with one click at `/demo`.
 
 Endpoints are stable within a major version; breaking changes will be introduced

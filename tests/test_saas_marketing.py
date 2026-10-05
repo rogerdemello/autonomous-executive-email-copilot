@@ -55,7 +55,7 @@ def test_landing_renders(client):
 def test_landing_leads_with_the_self_serve_cta(client):
     """The motion is self-serve: connect an inbox, don't book a call."""
     body = client.get("/").text
-    assert "Start free — connect your inbox" in body
+    assert "Start free and connect your inbox" in body
     assert 'href="/signup"' in body
 
 
@@ -272,8 +272,8 @@ class TestPublicCopyMatchesTheProduct:
         assert (
             "Code decides, the model writes" in body
         )  # app/copilot/policy.py + app/llm/drafter.py
-        assert "Draft verification" in body  # app/llm/verifier.py
-        assert "Injection screening" in body  # app/llm/safety/guardrails.py
+        assert "Drafts are fact-checked" in body  # app/llm/verifier.py
+        assert "Injection-aware by default" in body  # app/llm/safety/guardrails.py
 
 
 class TestLinkPreviewAndCrawlers:

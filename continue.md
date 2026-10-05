@@ -11,8 +11,8 @@ would.** It found what the test suite structurally could not — the live "Try t
 live demo" button led to a blank sign-in form, every public page published
 `sales@example.com`, and the page layout broke for anyone with a cached
 stylesheet. See [the public demo](#the-public-demo) below, and the `[Unreleased]`
-section of `CHANGELOG.md` entries marked *public demo*. **Nothing from that pass
-is committed or deployed yet** — see "State of the tree".
+section of `CHANGELOG.md` entries marked *public demo*. **All of that pass
+is on `main`**, which Render redeploys; see "State of the tree".
 
 The 2026-08-31 launch pass (phases 0–6) is **merged to `main`** via PRs #5 and
 #6. On top of it, a pre-launch hardening pass closed the gaps that only appear
@@ -33,8 +33,9 @@ product against a stateful fake of the real provider APIs — see
 [the integration layer](#the-integration-layer) below. It is where a provider
 change belongs now, and it is what found the revoked-token bug described there.
 
-Gates are green as of 2026-10-04: **1362 tests, 84.9% coverage**, ruff check and
-format, mypy, bandit, the landing-metrics check, and the draft-quality gate (10/11).
+Gates are green as of 2026-10-05: **1371 tests** (coverage last measured at 84.9%),
+ruff check and format, mypy, bandit, the landing-metrics check, and the draft-quality
+gate (10/11).
 The full suite with coverage takes ~15–25 minutes on this machine.
 
 ---
@@ -71,6 +72,13 @@ What to know before touching it:
 - **Seeding was 3.7s per workspace, almost entirely SQLite `fsync`s** (264 commits).
   WAL + `synchronous=NORMAL` in `app/core/db.py` made it 0.8s, which is why
   there is no template-cloning machinery. Measure before building any.
+- **There is exactly one theme, and it is light — by the owner's explicit
+  instruction.** Do not add a dark mode, a toggle, or a `prefers-color-scheme`
+  rule, however helpful it looks. It had been dark-by-OS-preference, which put a
+  dark landing page around screenshots of a light product; the owner asked for
+  light, then for the dark option to be removed. `tests/test_web_pages.py::
+  TestThereIsOnlyALightTheme` and the Playwright test in `test_web_reflow.py`
+  (browser held at a dark OS) fail if it comes back.
 - **`.tour`, `.tour__row` and `.tour__text` are the landing page's.** The sandbox's
   tour card is `.demo-tour`. And app.css gives every `<section>` 62px of padding
   and a top border, so a card that is a `<section>` looks broken.
@@ -83,26 +91,24 @@ What to know before touching it:
 
 ## State of the tree
 
-**Nothing from 2026-09-26 or 2026-10-04 is committed, pushed or deployed.** `HEAD` is
-`5039ecf`; `git status` is ~65 modified files plus new ones. Two layers are mixed
-in it, and they overlap in `CHANGELOG.md`, `continue.md`, `app/web/routes.py`,
-`app/web/static/app.css`, `app/web/templates/inbox.html` and
-`tests/test_web_pages.py`, so splitting them into two commits needs `git add -p`:
+Everything is committed and pushed to `main`. The demo sandbox and its gateway fix
+landed in `15ff7eb` and `3aa6a8c`; the last batch (the README rewrite and
+`docs/API.md`, the light-only theme, the home page cleanup, and the em dash removal
+from visible text and the demo fixtures) is the commit on top of them.
 
-1. The real-mailbox pass: `oauth.py`, `provider_factory.py`, the inbox reader,
-   `tests/integration/`.
-2. The public-demo pass: everything under "The public demo" above, plus the
-   erasure fix, the placeholder-email fix, fingerprinted assets, link previews,
-   the corrected landing copy, and the docs.
-
-**Pushing to `main` deploys** — `render.yaml` has `autoDeploy: true` — and the live
+**Pushing to `main` deploys**: `render.yaml` has `autoDeploy: true`, and the live
 service is not the one this blueprint describes (LAUNCH_CHECKLIST section 0). After a
 deploy, press the button from a private window before telling anyone.
 
-New files to remember are untracked: `app/saas/sandbox.py`, `app/web/assets.py`,
-`app/web/templates/{_contact,_tour,demo}.html`, `app/web/static/img/{og-card.jpg,
-product-flagged.png}`, `.github/workflows/keepalive.yml`, `tests/test_demo_sandbox.py`,
-`tests/integration/`.
+**Em dashes.** None reach a visitor (pages, README, demo fixtures), and a test holds
+that. They remain in source comments, docstrings, `CHANGELOG.md` and the internal
+docs. Do not touch the prompt strings in `app/llm/` as part of a sweep: changing
+them changes what the model is told.
+
+**Editing `data/demo/inbox.json`** changes the draft cache key of any message with a
+cached draft, so the draft silently goes missing and the draft-quality gate drops.
+Re-key `data/demo/drafts.json` in the same change (old key from the old content, new
+key from the new; `app.llm.draft_cache.draft_key`), rather than regenerating it.
 
 ## What the hardening pass changed, and why it mattered
 

@@ -1,37 +1,16 @@
 /* Progressive enhancement only.
  *
- * Every page works as plain HTML with forms — this file adds a theme toggle
- * and a confirmation on destructive actions. Nothing here is load-bearing, so
- * a JS error or a blocked script cannot break the demo.
+ * Every page works as plain HTML with forms — this file adds scroll reveals,
+ * keyboard shortcuts and a confirmation on destructive actions. Nothing here is
+ * load-bearing, so a JS error or a blocked script cannot break the demo.
  */
 (function () {
   "use strict";
 
-  // --- Theme toggle -------------------------------------------------------
-  // base.html already applied the stored theme before paint; this only handles
-  // the click and persists the choice.
-  function currentTheme() {
-    var explicit = document.documentElement.getAttribute("data-theme");
-    if (explicit === "light" || explicit === "dark") return explicit;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  }
-
-  document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      var next = currentTheme() === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      try {
-        localStorage.setItem("ec-theme", next);
-      } catch (e) {
-        /* private mode: the toggle still works for this page view */
-      }
-    });
-  });
-
   // --- Scroll reveals ------------------------------------------------------
   // Elements marked data-reveal fade/rise in as they enter the viewport. The
   // hidden initial state only applies under html[data-js] (set by
-  // theme-init.js), so nothing can be stranded invisible if this file fails.
+  // js-init.js), so nothing can be stranded invisible if this file fails.
   var revealables = document.querySelectorAll("[data-reveal]");
   if (revealables.length) {
     if ("IntersectionObserver" in window) {
@@ -111,7 +90,7 @@
 
   // --- Keyboard navigation -------------------------------------------------
   // The single biggest gap against Superhuman was that this app had no
-  // keyboard surface at all beyond the theme toggle. Still progressive
+  // keyboard surface at all. Still progressive
   // enhancement: every one of these does something the mouse can already do,
   // so a blocked script costs speed and nothing else.
   //
